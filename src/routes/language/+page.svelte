@@ -1,0 +1,267 @@
+<script lang="ts">
+	import { onDestroy } from 'svelte';
+	import { resolve } from '$app/paths';
+	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
+	import Prose from '$lib/components/ui/Prose.svelte';
+	import Wide from '$lib/components/ui/Wide.svelte';
+	import Math from '$lib/components/ui/Math.svelte';
+	import WordVectors from '$lib/components/demos/language/WordVectors.svelte';
+	import Tokenizer from '$lib/components/demos/language/Tokenizer.svelte';
+	import Scribe from '$lib/components/demos/language/Scribe.svelte';
+	import Inspector from '$lib/components/demos/language/Inspector.svelte';
+	import Walkthrough from '$lib/components/demos/language/Walkthrough.svelte';
+	import { scribe } from '$lib/components/demos/language/lab.svelte';
+
+	// one engine serves the scribe, the meter and the walkthrough (the first two
+	// plates are pure CPU and own nothing); the page is the engine's lifetime
+	onDestroy(() => scribe.disposeAll());
+</script>
+
+<ChapterShell slug="language">
+	<Prose>
+		<p>
+			Cover the next word of a sentence with your thumb and guess it. "The little dog wagged his
+			____" is barely a puzzle; "my favorite word is ____" is a coin toss over a dictionary. Guess,
+			uncover, compare, score yourself; slide one word to the right and play again. That game is
+			this chapter's entire subject — and the claim worth sitting with is that nothing else is
+			needed. A large language model is this game, won at scale.
+		</p>
+		<p>
+			Before a machine can play it, though, there is a problem to solve. Gradient descent works on
+			numbers; it needs a slope to walk down. Words are not numbers, and the obvious fix — number
+			the dictionary, so "cat" is 3,412 — is worse than useless, because that numbering claims cat
+			and 3,411 are neighbors when nothing about the language agrees. What the model needs is for
+			<em>similar words to sit near each other</em>, so that a gradient learned about one word does
+			some good for its neighbors.
+		</p>
+		<p>
+			So each word gets a <em>vector</em> instead: a short list of numbers, a position in a space of
+			many dimensions. Nobody assigns those numbers. They are learned, and they are learned by the
+			very game this chapter is about. Push a word's vector toward the words that tend to sit beside
+			it, pull it away from words drawn at random, and after enough sentences the space arranges
+			itself — animals collecting in one region, names in another, "he" beside "she". This recipe is
+			<em>skip-gram</em>, the heart of word2vec, and it is small enough to run in the page you are
+			reading.
+		</p>
+	</Prose>
+
+	<Wide>
+		<WordVectors />
+	</Wide>
+
+	<Prose>
+		<p>
+			What you are looking at is a flattened shadow of a sixteen-dimensional space — two principal
+			directions of it, the rest projected away — so read distances loosely. What survives the
+			flattening is the grouping, and the neighbor list beside it is computed in the full space, by
+			<em>cosine similarity</em>: the angle between two vectors, ignoring their length. Nothing
+			labeled any of this. The only pressure applied was "predict your neighbors", and geometry was
+			the answer.
+		</p>
+		<p>
+			The vector arithmetic is the famous part. If the step from "boy" to "girl" is roughly the same
+			displacement as from "he" to "she", then subtracting one and adding the other should land near
+			the fourth word — and on this corpus it does. With 220 words and sixteen dimensions the hits
+			are approximate and easy to break; at web scale, on billions of words, this stops being a
+			party trick and becomes the substrate every language model computes on.
+		</p>
+		<p>
+			One question remains before the real model: vectors for <em>what</em>, exactly? Words are a
+			convenient story, but a vocabulary of English words is both enormous and never enough —
+			someone will always write "unbelievability". Real models predict <em>tokens</em>: word-pieces,
+			fragments like "wag" and "ged", and nobody designs those either. They are grown out of the
+			data by <em>byte-pair encoding</em>, an algorithm of almost embarrassing plainness: start from
+			the raw alphabet, count every adjacent pair in the corpus, fuse the most frequent pair into a
+			new token, repeat. Common words end up as single tokens, rare words shatter into a few, and
+			every entry in the vocabulary is a vote cast by frequency.
+		</p>
+		<p>
+			The plate below runs that exact loop — not a replay of a stored merge list, the algorithm
+			itself — on the 1.5 million characters this chapter's model reads. It needs no GPU and trains
+			no network; it only counts. Watch which fusions this corpus elects first.
+		</p>
+	</Prose>
+
+	<Wide>
+		<Tokenizer />
+	</Wide>
+
+	<Prose>
+		<h2
+			class="mt-4 font-serif text-[1.55rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 32;"
+		>
+			The game itself
+		</h2>
+		<p>
+			Now the machine. A model that plays left to right, predicting each token from everything
+			before it, is called <em>autoregressive</em>. The design gives up nothing, because
+			probability's chain rule factors any sequence exactly:
+		</p>
+		<Math display tex={'P(x_1, x_2, \\ldots, x_T) \\;=\\; \\prod_{t=1}^{T} P(x_t \\mid x_{<t})'} />
+		<p>
+			The left side is the thing we actually want — a probability for whole sentences, paragraphs,
+			books. The right side is one small question, <em>what comes next?</em>, asked once per
+			position. Answer the small question well and the identity hands you everything else.
+		</p>
+		<p>
+			And the answers cost nothing to grade. In <a href={resolve('/digits')}>Chapter 3</a> every
+			training example needed a person to write down the answer — ten thousand digits, ten thousand
+			labels. Here the label is the text itself: the covered token was there all along, put down for
+			free by whoever wrote the sentence. Every position in every sentence is a graded exercise that
+			nobody had to grade. This is <em>self-supervised learning</em>, and the zero price of its
+			labels is precisely why it scales to the whole internet while hand-labeled datasets stall at
+			millions.
+		</p>
+		<p>
+			Training scores each answer by the probability the model gave to the token that actually came;
+			the <em>cross-entropy</em> is its average surprise,
+		</p>
+		<Math
+			display
+			tex={'\\htmlClass{eq-a}{\\mathcal{L}} \\;=\\; -\\,\\frac{1}{T} \\sum_{t=1}^{T} \\log P(x_t \\mid x_{<t})'}
+		/>
+		<p>
+			measured in <em>nats</em>, the natural-log unit of surprise. Learn to read that number like a
+			gauge: at loss 1.2 the model is, on average, as uncertain as someone choosing among
+			<Math tex={'e^{1.2} \\approx 3.3'} /> plausible next characters. One deliberate choice below — this
+			model's tokens are single <em>characters</em>, not the word-pieces you just grew, because
+			character models are slow enough to watch: you will see spelling get invented. With 69
+			characters, a model that knows nothing sits at <Math tex="\ln 69 \approx 4.23" />, all 69
+			doors held equally open. The ultramarine curve starts exactly there, and every hundredth of a
+			nat it sheds is a regularity of English found and kept.
+		</p>
+	</Prose>
+
+	<Wide>
+		<Scribe />
+	</Wide>
+
+	<Prose>
+		<h2
+			class="mt-4 font-serif text-[1.55rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 32;"
+		>
+			From noise to grammar
+		</h2>
+		<p>
+			If you let the scribe run, you watched an order of acquisition that nobody programmed. First
+			the noise picked up English's letter frequencies — too many e's and spaces to be random. Then
+			pairs: q found u, h learned to trail t and s. Then word-shapes, then real words with spaces in
+			the right places, and eventually clauses whose subject and verb mostly agree. Spelling arrived
+			before syntax for a plain reason: gradient descent spends its budget where the loss falls
+			fastest, and short, local regularities pay off first. The curriculum fell out of prediction
+			pressure alone.
+		</p>
+		<p>
+			Notice what that implies about the tokenizer two plates up. This scribe spent its first
+			hundred steps learning where the spaces go — a regularity byte-pair encoding would have handed
+			it for free, cashed into the vocabulary before training even began. Same corpus, coarser
+			atoms, longer reach: a context window of the same length holds twice the story. Characters
+			were the pedagogical choice here, not the efficient one.
+		</p>
+		<p>
+			There is a colder way to say what happened: the model compressed the corpus. Cross-entropy is
+			literally a size — a nat is <Math tex="1/\ln 2 \approx 1.44" /> bits, so a scribe reading at 1.4
+			nats per character has squeezed these stories to about 2 bits each, against the 6.1 bits of uniform
+			guessing. You cannot do that without knowing things: that q buys u, that "the" outnumbers "teh",
+			that dogs wag tails and not the reverse. Prediction and compression are one skill in two vocabularies,
+			and the loss chart doubles as a receipt for how much structure the model has taken in.
+		</p>
+		<p>
+			You may also have noticed the scribe's register — sunny, simple, faintly like a bedtime story,
+			whatever you prompt it with. Its whole world is 1.5 million characters of children's stories,
+			so that is the only English in existence for it. A model is its diet. The large models
+			everyone talks to differ from this one less in kind than in menu: they have read a substantial
+			fraction of everything, and every register — helpful, legalistic, purple — is in there,
+			waiting on the prompt.
+		</p>
+		<p>
+			The loss you watched was an average over thousands of positions, and averages hide texture.
+			Some characters are nearly free; some cost dearly. The meter below un-averages the number: it
+			bills a sentence character by character and, for each one, shows the <em>entropy</em> of the model's
+			guess — how widely it was hedging — along with the five candidates it liked best.
+		</p>
+	</Prose>
+
+	<Wide>
+		<Inspector />
+	</Wide>
+
+	<Prose>
+		<h2
+			class="mt-4 font-serif text-[1.55rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 32;"
+		>
+			Inside one guess
+		</h2>
+		<p>
+			So far the model has been a box that eats context and emits a distribution. Open it. The
+			scribe is a <em>transformer</em>, the architecture behind essentially every model in this
+			book's orbit, and a single guess travels five stages — each one visible, with real numbers, in
+			the last plate of this chapter.
+		</p>
+		<p>
+			<strong>One:</strong> every character becomes a vector, exactly as words did in the first
+			plate, plus a second vector encoding <em>where</em> it sits — attention has no inherent sense
+			of order, so position must be added by hand. <strong>Two:</strong> each vector is projected
+			three ways, into a <em>query</em> (what am I looking for?), a <em>key</em> (what do I offer?)
+			and a <em>value</em> (what I would pass along), split across four
+			<em>heads</em> that each work in their own 24 dimensions.
+		</p>
+		<p>
+			<strong>Three:</strong> the heads compare every query against every key, and the scores become
+			<em>attention</em> — a budget of exactly 1.0 per position, spent across the past. This is
+			where tokens read each other, and the only stage where information moves between positions.
+			Half the picture is structurally empty: position <Math tex="i" /> may never look at
+			<Math tex="i+1" />. Hiding the future is the game's one rule, and the mask is where it is
+			enforced.
+		</p>
+		<p>
+			<strong>Four:</strong> each token thinks alone. Its vector is widened fourfold, rectified —
+			negatives clipped to zero, the block's only nonlinearity — and squeezed back to size; most of
+			the parameters live here. Stages two through four form one <em>block</em>, and blocks stack:
+			this model has two, frontier models roughly a hundred. <strong>Five:</strong> the final vector meets
+			one last matrix that turns 96 numbers into 69 scores, one per character, and a softmax turns scores
+			into probabilities. Draw one, append it, run the pass again. That loop is all "generating text"
+			has ever meant.
+		</p>
+	</Prose>
+
+	<Wide>
+		<Walkthrough />
+	</Wide>
+
+	<Prose>
+		<h2
+			class="mt-4 font-serif text-[1.55rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 32;"
+		>
+			The same game, a billionfold
+		</h2>
+		<p>
+			Everything in this chapter scales without changing shape. Take the scribe's loss, its update
+			rule <Math tex={'\\theta \\leftarrow \\theta - \\gamma \\nabla_\\theta \\mathcal{L}'} />, the
+			five stages you just walked; multiply the parameters by a few million, the corpus by a
+			billion, and the training run by months on thousands of GPUs — and you have the large language
+			models everyone talks to. They descend the same cross-entropy on the same next-token game, and
+			their loss charts look like yours with more zeros on the axis. What you trained here is not a
+			metaphor for them. It is one of them, small.
+		</p>
+		<p>
+			Scale buys a continuation of exactly what you watched: fluency first, then knowledge — because
+			past a certain point the cheapest way to keep shaving nats off "the capital of France is ____"
+			is to know the capital of France. It does not buy truth, since the objective rewards the
+			plausible continuation and confident nonsense is often the most plausible continuation of
+			confident nonsense. And nowhere in <Math tex={'\\mathcal{L}'} /> is there a goal: nothing in the
+			game prefers being helpful, or honest, or anything at all beyond sounding like the diet.
+		</p>
+		<p>
+			That is not a flaw in the training so much as a boundary of it. Prediction has no preferences.
+			To give a model preferences — to make it want to be useful rather than merely likely — you
+			need a signal that judges outcomes instead of continuations: a reward. Consequences are a
+			different teacher, and they get
+			<a href={resolve('/reward')}>the next chapter</a>.
+		</p>
+	</Prose>
+</ChapterShell>

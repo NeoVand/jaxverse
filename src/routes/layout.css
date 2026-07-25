@@ -1,0 +1,303 @@
+/* ── jaxverse design system ──────────────────────────────────────────────────
+   One warm paper surface, ink, a single ultramarine accent, and a vermilion
+   counter-color for two-class demos. Newsreader (opsz) carries the prose,
+   Inter carries the interface, JetBrains Mono carries every number.
+   Dark mode mirrors the same relationships on warm near-black. */
+
+@import '@fontsource-variable/newsreader/opsz.css';
+@import '@fontsource-variable/newsreader/opsz-italic.css';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/jetbrains-mono';
+
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+
+:root {
+	/* surfaces */
+	--paper: #faf9f5;
+	--surface: #ffffff;
+	--surface-2: #f3f1ea;
+	--line: #e5e2d8;
+	--line-soft: #efede4;
+
+	/* ink */
+	--ink: #1d1c18;
+	--ink-2: #605d54;
+	--ink-3: #a3a094;
+
+	/* the two voices */
+	--accent: #2b45d8; /* ultramarine — class A, links, live things */
+	--accent-soft: #eceefc;
+	--warm: #d3541f; /* vermilion — class B, contrast */
+	--warm-soft: #fbeee6;
+
+	/* judgment */
+	--good: #22774d;
+	--bad: #bb3a2b;
+
+	/* ten categories (MNIST digits etc.) — muted, even lightness */
+	--cat-0: #4457d4;
+	--cat-1: #b0651c;
+	--cat-2: #268577;
+	--cat-3: #c14b6e;
+	--cat-4: #6a6ae0;
+	--cat-5: #8b7413;
+	--cat-6: #2c88b8;
+	--cat-7: #b8542f;
+	--cat-8: #7862c4;
+	--cat-9: #4d8a37;
+
+	/* type */
+	--font-serif: 'Newsreader Variable', 'Iowan Old Style', Georgia, serif;
+	--font-sans: 'Inter Variable', system-ui, -apple-system, sans-serif;
+	--font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', monospace;
+
+	/* chrome */
+	--glass: color-mix(in srgb, var(--paper) 78%, transparent);
+	--header-h: 52px;
+
+	color-scheme: light;
+}
+
+/* dark follows the system unless the user pinned a theme */
+@media (prefers-color-scheme: dark) {
+	:root:not(.light) {
+		--paper: #141310;
+		--surface: #1b1a16;
+		--surface-2: #232119;
+		--line: #2e2c24;
+		--line-soft: #23211b;
+
+		--ink: #e9e6dc;
+		--ink-2: #a29e91;
+		--ink-3: #6c695e;
+
+		--accent: #93a3ff;
+		--accent-soft: #22243c;
+		--warm: #ff8e57;
+		--warm-soft: #382317;
+
+		--good: #58b98a;
+		--bad: #e57057;
+
+		--cat-0: #7f8ef4;
+		--cat-1: #d99a52;
+		--cat-2: #55b3a4;
+		--cat-3: #e07d9c;
+		--cat-4: #9d9df1;
+		--cat-5: #bfa937;
+		--cat-6: #5fb3dd;
+		--cat-7: #e08a63;
+		--cat-8: #a893ea;
+		--cat-9: #7fb865;
+
+		--glass: color-mix(in srgb, var(--paper) 72%, transparent);
+		color-scheme: dark;
+	}
+}
+
+:root.dark {
+	--paper: #141310;
+	--surface: #1b1a16;
+	--surface-2: #232119;
+	--line: #2e2c24;
+	--line-soft: #23211b;
+
+	--ink: #e9e6dc;
+	--ink-2: #a29e91;
+	--ink-3: #6c695e;
+
+	--accent: #93a3ff;
+	--accent-soft: #22243c;
+	--warm: #ff8e57;
+	--warm-soft: #382317;
+
+	--good: #58b98a;
+	--bad: #e57057;
+
+	--cat-0: #7f8ef4;
+	--cat-1: #d99a52;
+	--cat-2: #55b3a4;
+	--cat-3: #e07d9c;
+	--cat-4: #9d9df1;
+	--cat-5: #bfa937;
+	--cat-6: #5fb3dd;
+	--cat-7: #e08a63;
+	--cat-8: #a893ea;
+	--cat-9: #7fb865;
+
+	--glass: color-mix(in srgb, var(--paper) 72%, transparent);
+	color-scheme: dark;
+}
+
+/* expose tokens to Tailwind utilities: bg-paper, text-ink-2, border-line, … */
+@theme inline {
+	--color-paper: var(--paper);
+	--color-surface: var(--surface);
+	--color-surface-2: var(--surface-2);
+	--color-line: var(--line);
+	--color-line-soft: var(--line-soft);
+	--color-ink: var(--ink);
+	--color-ink-2: var(--ink-2);
+	--color-ink-3: var(--ink-3);
+	--color-accent: var(--accent);
+	--color-accent-soft: var(--accent-soft);
+	--color-warm: var(--warm);
+	--color-warm-soft: var(--warm-soft);
+	--color-good: var(--good);
+	--color-bad: var(--bad);
+	--font-serif: var(--font-serif);
+	--font-sans: var(--font-sans);
+	--font-mono: var(--font-mono);
+}
+
+/* ── base ── */
+
+html {
+	background: var(--paper);
+	scroll-padding-top: calc(var(--header-h) + 24px);
+}
+
+body {
+	background: var(--paper);
+	color: var(--ink);
+	font-family: var(--font-sans);
+	font-size: 15px;
+	line-height: 1.6;
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+}
+
+::selection {
+	background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+	border-radius: 2px;
+}
+
+/* ── chapter prose: the reading voice ── */
+
+.chapter-prose {
+	font-family: var(--font-serif);
+	font-size: 1.125rem;
+	line-height: 1.72;
+	font-variation-settings: 'opsz' 17;
+	color: var(--ink);
+}
+
+.chapter-prose p {
+	margin-block: 1.1em;
+}
+
+.chapter-prose strong {
+	font-weight: 640;
+}
+
+.chapter-prose em {
+	font-style: italic;
+	font-variation-settings:
+		'opsz' 17,
+		'wght' 430;
+}
+
+.chapter-prose a {
+	color: inherit;
+	text-decoration: underline;
+	text-decoration-color: color-mix(in srgb, var(--accent) 55%, transparent);
+	text-underline-offset: 3px;
+	transition: text-decoration-color 120ms ease;
+}
+
+.chapter-prose a:hover {
+	text-decoration-color: var(--accent);
+}
+
+.chapter-prose code {
+	font-family: var(--font-mono);
+	font-size: 0.82em;
+	background: var(--surface-2);
+	border: 1px solid var(--line-soft);
+	border-radius: 4px;
+	padding: 0.08em 0.35em;
+}
+
+/* equation term coloring — used via \htmlClass{eq-a}{…} inside <Math> */
+.eq-a {
+	color: var(--accent);
+}
+.eq-w {
+	color: var(--warm);
+}
+.eq-g {
+	color: var(--good);
+}
+.eq-m {
+	color: var(--ink-3);
+}
+
+/* small tracked label — the interface eyebrow voice */
+.eyebrow {
+	font-family: var(--font-sans);
+	font-size: 0.6875rem;
+	font-weight: 560;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--ink-3);
+}
+
+/* tabular numbers wherever metrics appear */
+.num {
+	font-family: var(--font-mono);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.01em;
+}
+
+/* ── scrollbars: hairline, quiet ── */
+* {
+	scrollbar-width: thin;
+	scrollbar-color: var(--line) transparent;
+}
+*::-webkit-scrollbar {
+	width: 5px;
+	height: 5px;
+}
+*::-webkit-scrollbar-thumb {
+	background: var(--line);
+	border-radius: 3px;
+}
+*::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+/* ── motion discipline ── */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+/* skip link for keyboard users */
+.skip-link {
+	position: fixed;
+	top: -100px;
+	left: 16px;
+	z-index: 100;
+	background: var(--surface);
+	border: 1px solid var(--line);
+	color: var(--ink);
+	padding: 8px 14px;
+	border-radius: 6px;
+	transition: top 120ms ease;
+}
+.skip-link:focus {
+	top: 12px;
+}
