@@ -163,11 +163,10 @@ export class BpeTrainer {
 }
 
 /** Drive merges up to `maxMerges`, one per beat. A merge computes in ~1.4 ms —
- * faster than the eye — so `paceMs` (a number, or a getter so a speed control
- * can change it mid-run) spaces the beats out for reading. The merge itself is
- * still computed live on its turn; only the wait between merges is a display
- * choice. Re-entrant: call again with the same trainer and a higher target to
- * keep merging where it left off. */
+ * faster than the eye — so `paceMs` spaces the beats out for reading. The
+ * merge itself is still computed live on its turn; only the wait between
+ * merges is a display choice. Re-entrant: call again with the same trainer
+ * and a higher target to keep merging where it left off. */
 export async function trainBpe(
 	trainer: BpeTrainer,
 	opts: { maxMerges?: number; paceMs?: number | (() => number); shouldStop?: () => boolean },

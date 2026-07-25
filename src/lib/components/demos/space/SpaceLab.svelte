@@ -19,7 +19,6 @@
 		hexRgb
 	} from './common';
 	import Btn from '$lib/components/ui/Btn.svelte';
-	import SpeedChips from '$lib/components/ui/SpeedChips.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import Slider from '$lib/components/ui/Slider.svelte';
 	import { progress } from '$lib/data/progress.svelte';
@@ -41,7 +40,6 @@
 	// guided runs a touch gentler so the warp stays legible before saturation
 	// svelte-ignore state_referenced_locally
 	let logLr = $state(variant === 'guided' ? -2.35 : -2.1);
-	let speed = $state(1);
 
 	// ── run state ──
 	let phase = $state<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -163,17 +161,15 @@
 		const myGen = gen;
 		while (training && engine && myGen === gen) {
 			try {
-				// speed multiplies the chunk; 0 = max (long chunks, sparse syncs)
-				const chunk = speed === 0 ? 240 : 40 * speed;
 				await engine.train(
-					chunk,
+					40,
 					(m) => {
 						step = m.step;
 						lossNow = m.loss;
 						msPerStep = msPerStep ? msPerStep * 0.7 + m.stepMs * 0.3 : m.stepMs;
 						lossHist = [...lossHist.slice(-239), m.loss];
 					},
-					speed === 0 ? 12 : 8
+					8
 				);
 				if (myGen !== gen || !engine) return;
 				const ev = await engine.eval();
@@ -757,7 +753,6 @@
 					/>
 				</svg>
 			</span>
-			<SpeedChips bind:value={speed} />
 			{#if variant === 'free'}
 				<span class="w-44">
 					<Slider

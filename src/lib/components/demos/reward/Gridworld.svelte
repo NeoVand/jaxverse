@@ -11,7 +11,6 @@
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import Slider from '$lib/components/ui/Slider.svelte';
-	import SpeedChips from '$lib/components/ui/SpeedChips.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import { progress } from '$lib/data/progress.svelte';
 	import {
@@ -31,7 +30,7 @@
 	import { mulberry32 } from '$lib/optim-rl/rng';
 
 	const SEED = 2049;
-	const BASE_EPS = 40; // learning episodes per second at speed ×1
+	const BASE_EPS = 40; // learning episodes per second
 	const KEEP = 300; // sparkline window
 
 	// ── the learner: non-reactive, mutated in place ──
@@ -44,7 +43,6 @@
 	// ── reactive state ──
 	let ready = $state(false);
 	let playing = $state(false);
-	let speed = $state(1);
 	let lr = $state(0.1);
 	let showPolicy = $state(true);
 	let showValue = $state(false);
@@ -128,24 +126,6 @@
 		checkSolved();
 	}
 
-	// One $state write per frame, not per episode — at max speed hundreds of
-	// episodes finish in a single frame.
-	function learnBatch(budgetMs: number) {
-		const t0 = performance.now();
-		const r: number[] = [];
-		const w: number[] = [];
-		do {
-			const ep = learnOne();
-			r.push(ep.totalReward);
-			w.push(ep.end === 'goal' ? 1 : 0);
-			if (ep.end === 'goal') lastGoalEp = episodes + r.length;
-		} while (performance.now() - t0 < budgetMs);
-		episodes += r.length;
-		returns = [...returns, ...r].slice(-KEEP);
-		wins = [...wins, ...w].slice(-KEEP);
-		checkSolved();
-	}
-
 	function stepTen() {
 		let last: Episode | null = null;
 		for (let i = 0; i < 10; i++) {
@@ -188,14 +168,10 @@
 			const dt = lastT ? Math.min(100, t - lastT) : 16;
 			lastT = t;
 			if (playing) {
-				if (speed === 0) {
-					learnBatch(7);
-				} else {
-					headlessAcc += (dt / 1000) * BASE_EPS * speed;
-					let n = Math.floor(headlessAcc);
-					headlessAcc -= n;
-					while (n-- > 0) record(learnOne());
-				}
+				headlessAcc += (dt / 1000) * BASE_EPS;
+				let n = Math.floor(headlessAcc);
+				headlessAcc -= n;
+				while (n-- > 0) record(learnOne());
 				if (visEp) {
 					visEp.t += dt;
 					if (visEp.t >= visEp.ms) visEp = null;
@@ -567,9 +543,6 @@
 						edit
 					</button>
 				</span>
-				{#if !reduced}
-					<SpeedChips bind:value={speed} />
-				{/if}
 				<div class="ml-auto w-40 min-w-36">
 					<Slider
 						label="learning rate"

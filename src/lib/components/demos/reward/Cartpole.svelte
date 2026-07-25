@@ -9,7 +9,6 @@
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import Slider from '$lib/components/ui/Slider.svelte';
-	import SpeedChips from '$lib/components/ui/SpeedChips.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import {
 		actionForce,
@@ -57,7 +56,6 @@
 	// ── reactive state ──
 	let ready = $state(false);
 	let training = $state(false);
-	let speed = $state(1);
 	let lr = $state(0.05);
 	let episodes = $state(0);
 	let rets = $state<number[]>([]);
@@ -115,7 +113,7 @@
 		};
 		if (training) cartReinforceUpdate(theta, baseline, ep, lr);
 		recordReturn(ep.steps);
-		holdUntil = speed === 1 && ep.steps < MAX_STEPS ? now + 280 : 0;
+		holdUntil = ep.steps < MAX_STEPS ? now + 280 : 0;
 		resetSim();
 	}
 
@@ -142,8 +140,8 @@
 		if (isFailed(sim) || liveActions.length >= MAX_STEPS) finishLive(now);
 	}
 
-	// Batch the sparkline update: at max speed hundreds of episodes finish per
-	// frame, and one $state reassignment per episode would be pure churn.
+	// Batch the sparkline update: one $state reassignment per episode would be
+	// pure churn when a burst finishes many episodes at once.
 	function trainBatch(runUntil: (done: number, t0: number) => boolean) {
 		const t0 = performance.now();
 		const fresh: number[] = [];
@@ -155,10 +153,6 @@
 		} while (runUntil(fresh.length, t0));
 		episodes += fresh.length;
 		rets = [...rets, ...fresh].slice(-KEEP);
-	}
-
-	function trainHeadless(budgetMs: number) {
-		trainBatch((_n, t0) => performance.now() - t0 < budgetMs);
 	}
 
 	function trainBurst() {
@@ -191,14 +185,7 @@
 		const frame = (t: number) => {
 			raf = requestAnimationFrame(frame);
 			lastT = t;
-			if (t >= holdUntil) {
-				if (speed === 0) {
-					if (training) trainHeadless(7);
-					for (let i = 0; i < 3; i++) stepSim(t);
-				} else {
-					for (let i = 0; i < speed; i++) stepSim(t);
-				}
-			}
+			if (t >= holdUntil) stepSim(t);
 			draw();
 		};
 		raf = requestAnimationFrame(frame);
@@ -403,9 +390,6 @@
 						<RotateCcw size={13} aria-hidden="true" /> Reset θ
 					</Btn>
 				</div>
-				{#if !reduced}
-					<SpeedChips bind:value={speed} />
-				{/if}
 				<div class="ml-auto w-40 min-w-36">
 					<Slider
 						label="learning rate"

@@ -6,7 +6,6 @@
 	import { ArrowUp, Pause, Play, Replace } from 'lucide-svelte';
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Plate from '$lib/components/ui/Plate.svelte';
-	import SpeedChips from '$lib/components/ui/SpeedChips.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import { progress } from '$lib/data/progress.svelte';
 	import { lab, LR_SFT } from './rook-context.svelte';
@@ -31,7 +30,6 @@
 	let running = $state(false);
 	let evaling = $state(false);
 	let switching = $state(false);
-	let speed = $state(1);
 	let lossNow = $state(NaN);
 	let sftSteps = $state(0);
 	let capturePts = $state<Pt[]>([]);
@@ -43,7 +41,7 @@
 	let reached = $state(false);
 
 	const switched = $derived(lab.corpus === 'sft');
-	const chunkSize = $derived(speed === 0 ? 150 : 25 * speed);
+	const chunkSize = 25;
 
 	async function evalNow(g: number): Promise<void> {
 		if (!lab.engine || !lab.data) return;
@@ -202,7 +200,6 @@
 						{#if running && Number.isFinite(lossNow)}· loss {lossNow.toFixed(2)}{/if}
 					</span>
 					<span class="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2">
-						<SpeedChips bind:value={speed} />
 						<Btn onclick={() => void toggleTrain()}>
 							{#if running}
 								<Pause size={12} aria-hidden="true" /> Pause

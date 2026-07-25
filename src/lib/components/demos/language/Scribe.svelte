@@ -9,16 +9,14 @@
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Slider from '$lib/components/ui/Slider.svelte';
-	import SpeedChips from '$lib/components/ui/SpeedChips.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import LabGate from './LabGate.svelte';
-	import { scribe, AUTO_PROMPT, CHUNK_FOR, UNIFORM_NATS } from './lab.svelte';
+	import { scribe, AUTO_PROMPT, TRAIN_CHUNK, UNIFORM_NATS } from './lab.svelte';
 
 	let promptText = $state(AUTO_PROMPT);
 	let temperature = $state(0.8);
 
 	const usable = $derived(scribe.phase === 'ready' || scribe.phase === 'training');
-	const chunk = $derived(CHUNK_FOR(scribe.speed));
 	const latest = $derived(scribe.samples[0] ?? null);
 	const archive = $derived(scribe.samples.slice(1));
 
@@ -106,8 +104,7 @@
 				<Btn onclick={() => void scribe.reset()} title="Back to the step-0 weights">
 					<RotateCcw size={13} aria-hidden="true" /> Reset
 				</Btn>
-				<SpeedChips bind:value={scribe.speed} />
-				<span class="num text-[11px] text-ink-3">{chunk} steps per burst, then a sample</span>
+				<span class="num text-[11px] text-ink-3">{TRAIN_CHUNK} steps per burst, then a sample</span>
 				{#if scribe.spoke}
 					<span class="ml-auto font-serif text-[13px] italic" style="color: var(--good);">
 						it speaks — keep going and listen to the grammar arrive

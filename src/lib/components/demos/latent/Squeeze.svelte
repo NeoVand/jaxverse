@@ -5,7 +5,6 @@
 	import { onDestroy } from 'svelte';
 	import { Play, Pause, RotateCcw } from 'lucide-svelte';
 	import Btn from '$lib/components/ui/Btn.svelte';
-	import SpeedChips from '$lib/components/ui/SpeedChips.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import { lab, layersFor } from './latent-context.svelte';
 	import { DIM, TileStrip, logSpan, readTokens, setupCanvas, sparkPath } from './common';
@@ -168,7 +167,6 @@
 					</button>
 				{/each}
 			</span>
-			<SpeedChips bind:value={lab.speed} />
 			{#if lab.trained}
 				<span class="ml-auto font-serif text-[13px] text-good italic">
 					legible — the map below is formed

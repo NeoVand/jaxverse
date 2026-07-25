@@ -108,11 +108,8 @@ theme switches. Redraw loops pick this up automatically.
   booting show the quiet loading row; the first button the reader sees is the
   one that DOES something (Train, Play, Sample). Never boot on mount directly
   (prerender + reader may never scroll there).
-- Every training demo offers the house speed control:
-  `<SpeedChips bind:value={speed} />` (`$lib/components/ui/SpeedChips.svelte`,
-  options [1, 3, 0], 0 = max). Apply the multiplier to your own pacing —
-  steps per chunk, pacing delays, episodes per frame; at 0 drop all display
-  pacing and run flat out.
+- Training demos run at one house pace — steps per chunk, pacing delays,
+  episodes per frame are fixed constants tuned for reading. No speed controls.
 - Engine lifecycle: `let engine: MlpEngine | null = null` (NOT $state);
   a `phase` $state: 'idle' | 'loading' | 'ready' | 'training' | 'error' |
   'no-webgpu' drives the UI. `onDestroy(() => engine?.dispose())`.

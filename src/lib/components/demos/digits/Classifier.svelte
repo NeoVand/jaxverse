@@ -10,7 +10,6 @@
 	import { loadMnist } from '$lib/data/mnist';
 	import { progress } from '$lib/data/progress.svelte';
 	import Btn from '$lib/components/ui/Btn.svelte';
-	import SpeedChips from '$lib/components/ui/SpeedChips.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import { lab, themePulse, watchTheme } from './digits-context.svelte';
 	import { DIM, argmax, blit, hexRgb, inkImage, readTokens, sparkPath } from './common';
@@ -24,7 +23,6 @@
 	});
 
 	let training = $state(false);
-	let speed = $state(1); // SpeedChips multiplier; 0 = max
 	let errorMsg = $state('');
 	let sampleIdx = $state<number[]>([]);
 	let guesses = $state<number[]>([]);
@@ -116,9 +114,8 @@
 		const myGen = gen;
 		const engine = lab.engine;
 		while (training && engine && myGen === gen) {
-			// SpeedChips scales the chunk between evals; max = 100-step chunks
-			const chunk = speed === 0 ? 100 : 25 * speed;
-			const syncEvery = speed === 0 ? 8 : 4;
+			const chunk = 25;
+			const syncEvery = 4;
 			try {
 				await engine.train(
 					chunk,
@@ -225,9 +222,6 @@
 			<Btn onclick={resetWeights} title="Fresh random weights">
 				<RotateCcw size={12} aria-hidden="true" /> Reset
 			</Btn>
-			<span class="ml-auto">
-				<SpeedChips bind:value={speed} />
-			</span>
 		{/if}
 	</div>
 

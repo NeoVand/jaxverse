@@ -7,7 +7,6 @@
 	import { ArrowUp, Pause, Play } from 'lucide-svelte';
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Plate from '$lib/components/ui/Plate.svelte';
-	import SpeedChips from '$lib/components/ui/SpeedChips.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import { progress } from '$lib/data/progress.svelte';
 	import { lab, LR_RL } from './rook-context.svelte';
@@ -33,7 +32,6 @@
 	let iter = $state(0);
 	let updates = $state(0);
 	let skips = $state(0);
-	let speed = $state(1);
 	let compiling = $state(false);
 	let skippedLast = $state(false);
 	let prefixShown = $state<string[]>([]);
@@ -44,7 +42,7 @@
 	let errMsg = $state('');
 
 	// display pacing only — the work itself always runs full-tilt
-	const breathMs = $derived(speed === 0 ? 0 : speed === 1 ? 150 : 40);
+	const breathMs = 150;
 
 	async function toggleRun(): Promise<void> {
 		if (running) {
@@ -232,9 +230,6 @@
 				<span class="text-[12.5px] text-ink-3">
 					G = 8 rollouts · ≤14 plies each
 					{#if iter === 0}· the first iteration also compiles two GPU kernels{/if}
-				</span>
-				<span class="ml-auto">
-					<SpeedChips bind:value={speed} />
 				</span>
 				{#if errMsg}
 					<span class="text-[12px] text-bad">{errMsg}</span>

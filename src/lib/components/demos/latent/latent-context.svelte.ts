@@ -1,5 +1,5 @@
 // The chapter's one autoencoder, shared page-wide. Plate I ("the squeeze")
-// owns Train/Reset/speed and the bottleneck-width toggle; Plates II and III
+// owns Train/Reset and the bottleneck-width toggle; Plates II and III
 // read the same weights live. Consumers re-derive their pixels from `tick`,
 // which bumps once per trained chunk — the plates stay in sync without
 // knowing about each other. Plate I disposes the lab when the page unmounts.
@@ -18,9 +18,8 @@ export const DECODER_FROM = 3;
 /** Held-out mse below this reads as "digits, not fog" — the milestone. */
 export const TRAINED_VAL = 0.045;
 
-// speed ×1 keeps the contract's 25–50-step chunks; max is capped at 100/8
-const chunkFor = (s: number) =>
-	s === 0 ? { steps: 100, sync: 8 } : s >= 3 ? { steps: 80, sync: 8 } : { steps: 40, sync: 4 };
+// 40-step chunks keep the contract's 25–50-step honest-eval cadence
+const CHUNK = { steps: 40, sync: 4 };
 
 function clamp01(a: Float32Array): Float32Array {
 	// the read-out layer is linear; displays want honest 0..1 pixels
@@ -34,8 +33,6 @@ class LatentLab {
 	/** True while the engine is re-initing for a new bottleneck width. */
 	rebuilding = $state(false);
 	latentDim = $state<2 | 3>(2);
-	/** House speed multiplier: 1, 3, or 0 (= max). */
-	speed = $state(1);
 	step = $state(0);
 	lossNow = $state(NaN);
 	valLoss = $state(NaN);
@@ -157,7 +154,7 @@ class LatentLab {
 		const myGen = this.gen;
 		while (this.training && this.loopId === id && this.engine && myGen === this.gen) {
 			try {
-				const { steps, sync } = chunkFor(this.speed);
+				const { steps, sync } = CHUNK;
 				await this.engine.train(
 					steps,
 					(m) => {

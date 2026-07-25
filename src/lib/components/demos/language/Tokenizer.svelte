@@ -9,7 +9,6 @@
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Slider from '$lib/components/ui/Slider.svelte';
-	import SpeedChips from '$lib/components/ui/SpeedChips.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import { loadCorpus } from '$lib/data/corpus';
 	import { BpeTrainer, trainBpe, RUN_MERGES, type MergeRecord } from './bpe-live';
@@ -27,15 +26,14 @@
 	let playing = $state(false);
 	let originalLen = $state(0);
 	let target = $state(RUN_MERGES);
-	let speed = $state(1);
 	let lastMs = $state(0);
 
 	let trainer: BpeTrainer | null = null; // deliberately not $state
 	let gen = 0;
 	let timer: ReturnType<typeof setInterval> | null = null;
 
-	// ×1 = 70 ms between merges, ×3 = 22 ms, max = no display pacing at all
-	const paceFor = (s: number) => (s === 0 ? 0 : Math.round(70 / s));
+	// 70 ms between merges — spaced out for reading, not for the machine
+	const PACE_MS = 70;
 	const scrubbable = $derived((phase === 'paused' || phase === 'done') && merges.length > 0);
 
 	async function boot() {
@@ -68,7 +66,7 @@
 			t,
 			{
 				maxMerges: target,
-				paceMs: () => paceFor(speed),
+				paceMs: () => PACE_MS,
 				shouldStop: () => myGen !== gen
 			},
 			(m) => {
@@ -219,7 +217,6 @@
 					<Btn kind="primary" onclick={pauseTraining}>
 						<Pause size={13} aria-hidden="true" /> Pause
 					</Btn>
-					<SpeedChips bind:value={speed} />
 					<span class="num text-[11px] text-ink-3">
 						merge {merges.length} of {target} · each one re-counts the whole corpus
 					</span>
@@ -387,8 +384,8 @@
 					compression is the score: each merge shortens the corpus by one token per fusion it makes.
 					nothing here is prerecorded — there is no merge list in this page to replay. every count
 					is measured by scanning your own copy of the corpus, and the millisecond figure above is
-					how long that scan took on this machine. change the speed and the numbers stay identical;
-					only the waiting changes.
+					how long that scan took on this machine. the pause between merges is only for reading; the
+					merge itself takes about a millisecond.
 				</p>
 			</div>
 		{/if}

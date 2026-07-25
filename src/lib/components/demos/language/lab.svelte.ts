@@ -23,11 +23,9 @@ export const SCRIBE_CONFIG: ModelConfig = {
 export const UNIFORM_NATS = Math.log(SCRIBE_CONFIG.vocab);
 export const AUTO_PROMPT = 'Once upon a time';
 /** Steps per training burst — held-out eval and a fresh desk sample after each.
- * The speed control picks the chunk: bigger chunks mean fewer sampling pauses,
- * so the loss curve advances faster at the cost of a slower-updating desk.
  * (The LM worker syncs the loss every step by design — pipelining measured
  * slower in jax-js, upstream #151 — so chunk size is the only pacing knob.) */
-export const CHUNK_FOR = (speed: number): number => (speed === 0 ? 120 : speed === 3 ? 80 : 40);
+export const TRAIN_CHUNK = 40;
 const SAMPLE_CHARS = 160;
 /** The worker keeps only the last blockSize/2 prompt tokens; mirror that cap. */
 const MAX_PROMPT = SCRIBE_CONFIG.blockSize / 2;
@@ -72,8 +70,6 @@ class ScribeLab {
 	samples = $state<DeskSample[]>([]);
 	sampling = $state(false);
 	spoke = $state(false);
-	/** Speed multiplier from SpeedChips; drives the training chunk size. */
-	speed = $state(1);
 
 	readonly paramCount = countParams(SCRIBE_CONFIG);
 	readonly device = 'webgpu';
@@ -172,7 +168,7 @@ class ScribeLab {
 		while (this.playing && this.engine && myGen === this.gen) {
 			const e = this.engine;
 			try {
-				await e.train(CHUNK_FOR(this.speed), (m) => {
+				await e.train(TRAIN_CHUNK, (m) => {
 					if (myGen !== this.gen) return;
 					this.step = m.step;
 					this.lossNow = m.loss;

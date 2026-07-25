@@ -3,7 +3,6 @@
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import Slider from '$lib/components/ui/Slider.svelte';
-	import SpeedChips from '$lib/components/ui/SpeedChips.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import { heatmapRGBA, parseColor } from '$lib/optim/colormap';
 	import { contourPaths } from '$lib/optim/contours';
@@ -29,13 +28,16 @@
 
 	let { onraced }: { onraced?: () => void } = $props();
 
-	const STEP_HZ = 40; // optimizer updates per second at speed ×1
-	const MAX_STEPS_FRAME = 16; // speed 'max': per-frame batch, no clock
+	const STEP_HZ = 40; // optimizer updates per second
 	const WD = 0.1; // decoupled weight decay — only AdamW feels it
 	const DIVERGE_AT = 1e6; // past this a racer is frozen and flagged
 	const TRAIL_MAX = 220;
-	const MESH = 48; // 3-D wireframe resolution (quads per side)
+	const MESH = 128; // 3-D surface resolution (quads per side)
 	const H_SCALE = 0.55; // 3-D terrain relief, world units
+	// Static world-space light for the 3-D surface — high and from the left,
+	// nearly unit length, so flats stay airy and walls collect ink.
+	const LIGHT: [number, number, number] = [-0.4, 0.8, 0.45];
+	const SHADE_LEVELS = 256; // paper→ink LUT resolution for surface fills
 
 	interface TrailPt {
 		x: number;
@@ -66,7 +68,6 @@
 	let running = $state(false);
 	let t = $state(0);
 	let view = $state<'2d' | '3d'>('2d');
-	let speed = $state(1);
 	let dragging = $state(false);
 	let enabled = $state<Record<OptimizerId, boolean>>({
 		gd: true,
@@ -90,13 +91,14 @@
 	let raced = false;
 	let reducedMotion = false; // read by handlers, never by the template
 	let yaw = 0.7;
-	let pitch = 0.42;
+	let pitch = 0.55;
 	let zoom = 1;
 	let dragLast: [number, number] | null = null;
 
-	// grids and 3-D height meshes are pure per-preset caches
+	// grids, 3-D height meshes, and per-quad shade indices: per-preset caches
 	const grids: Partial<Record<PresetId, LossGrid>> = {};
 	const meshes: Partial<Record<PresetId, Float32Array>> = {};
+	const shades: Partial<Record<PresetId, Uint8Array>> = {};
 
 	function gridFor(id: PresetId): LossGrid {
 		return (grids[id] ??= computeGrid(presetById(id)));
@@ -121,10 +123,50 @@
 		return m;
 	}
 
-	// projection scratch, reused every 3-D frame
+	/** Per-quad LUT index into the paper→ink ramp: the exact log-loss shading
+	 *  the 2-D heatmap uses (basins collect ink), deepened by a Lambert term
+	 *  from the surface normal so the relief reads in both themes. Static per
+	 *  preset — terrain and light never move relative to each other. */
+	function shadeFor(id: PresetId): Uint8Array {
+		let s = shades[id];
+		if (!s) {
+			const p = presetById(id);
+			const mesh = meshFor(id);
+			const n1 = MESH + 1;
+			const AZ = (p.yMax - p.yMin) / (p.xMax - p.xMin);
+			const dX = 2 / MESH; // world cell size along x (half-width 1)
+			const dZ = (2 * AZ) / MESH;
+			s = new Uint8Array(MESH * MESH);
+			for (let j = 0; j < MESH; j++) {
+				for (let i = 0; i < MESH; i++) {
+					const k00 = j * n1 + i;
+					const h00 = mesh[k00];
+					const h10 = mesh[k00 + 1];
+					const h01 = mesh[k00 + n1];
+					const h11 = mesh[k00 + n1 + 1];
+					// loss term: same direction as the heatmap, deeper for 3-D
+					const t = (h00 + h10 + h01 + h11) / 4;
+					const wLoss = 0.58 * Math.pow(1 - t, 1.25);
+					// Lambert term from the world-space normal of this quad
+					const dhdx = (((h10 + h11 - h00 - h01) / 2) * H_SCALE) / dX;
+					const dhdz = (((h01 + h11 - h00 - h10) / 2) * H_SCALE) / dZ;
+					const inv = 1 / Math.hypot(dhdx, 1, dhdz);
+					const lambert = Math.max(0, (-dhdx * LIGHT[0] + LIGHT[1] - dhdz * LIGHT[2]) * inv);
+					const w = Math.min(1, 0.05 + wLoss + 0.24 * (1 - lambert));
+					s[j * MESH + i] = Math.round(w * (SHADE_LEVELS - 1));
+				}
+			}
+			shades[id] = s;
+		}
+		return s;
+	}
+
+	// projection + painter's-sort scratch, reused every 3-D frame
 	const sx3 = new Float32Array((MESH + 1) * (MESH + 1));
 	const sy3 = new Float32Array((MESH + 1) * (MESH + 1));
 	const sd3 = new Float32Array((MESH + 1) * (MESH + 1));
+	const quadOrder = new Uint32Array(MESH * MESH);
+	const quadDepth = new Float32Array(MESH * MESH);
 
 	function fmtGamma(g: number): string {
 		return g.toPrecision(2);
@@ -339,6 +381,8 @@
 		let tokenKey = '';
 		let heatKey = '';
 		let contourKey = '';
+		let lutKey = '';
+		let lut: string[] = [];
 		let rings: Path2D[] = [];
 		const heat = document.createElement('canvas');
 
@@ -461,11 +505,23 @@
 				return [W / 2 + vx * K, H * 0.52 - vy * K, vz];
 			};
 
-			// project the terrain lattice once, then bucket wireframe segments
-			// by mean depth: near strokes dark, far strokes fading out
+			// paper→ink fill ramp, rebuilt only on theme flips
+			const lk = `${tk.paper}|${tk.ink}`;
+			if (lk !== lutKey) {
+				lutKey = lk;
+				const paper = parseColor(tk.paper);
+				const ink = parseColor(tk.ink);
+				lut = Array.from({ length: SHADE_LEVELS }, (_, i) => {
+					const w = i / (SHADE_LEVELS - 1);
+					const r = Math.round(paper[0] + (ink[0] - paper[0]) * w);
+					const g = Math.round(paper[1] + (ink[1] - paper[1]) * w);
+					const b = Math.round(paper[2] + (ink[2] - paper[2]) * w);
+					return `rgb(${r},${g},${b})`;
+				});
+			}
+
+			// project the terrain lattice once…
 			const n1 = MESH + 1;
-			let dMin = Infinity;
-			let dMax = -Infinity;
 			for (let j = 0; j < n1; j++) {
 				const y = pr.yMin + (j / MESH) * spanY;
 				for (let i = 0; i < n1; i++) {
@@ -475,33 +531,52 @@
 					sx3[k] = X;
 					sy3[k] = Y;
 					sd3[k] = D;
-					if (D < dMin) dMin = D;
-					if (D > dMax) dMax = D;
 				}
 			}
-			const dSpan = dMax - dMin || 1;
 
-			const BUCKETS = 6;
-			const paths = Array.from({ length: BUCKETS }, () => new Path2D());
-			const seg = (a: number, b: number) => {
-				const q = (0.5 * (sd3[a] + sd3[b]) - dMin) / dSpan; // 1 = nearest
-				const p = paths[Math.min(BUCKETS - 1, Math.max(0, Math.round(q * (BUCKETS - 1))))];
-				p.moveTo(sx3[a], sy3[a]);
-				p.lineTo(sx3[b], sy3[b]);
-			};
-			for (let j = 0; j < n1; j++) {
-				for (let i = 0; i < MESH; i++) {
-					seg(j * n1 + i, j * n1 + i + 1); // along x
-					if (j < MESH) seg(i * n1 + j, (i + 1) * n1 + j); // along y
+			// …then paint quads far to near, each filled from the shade LUT.
+			// Each quad is inflated half a pixel from its centroid so adjacent
+			// fills overlap and antialiasing never opens paper-colored seams.
+			const shade = shadeFor(presetId);
+			const nq = MESH * MESH;
+			for (let q = 0; q < nq; q++) {
+				quadOrder[q] = q;
+				const i = q % MESH;
+				const j = (q / MESH) | 0;
+				const k00 = j * n1 + i;
+				quadDepth[q] = sd3[k00] + sd3[k00 + 1] + sd3[k00 + n1] + sd3[k00 + n1 + 1];
+			}
+			quadOrder.sort((a, b) => quadDepth[a] - quadDepth[b]);
+
+			const GROW = 0.5; // px pushed outward from the quad centroid
+			let lastShade = -1;
+			for (let s = 0; s < nq; s++) {
+				const q = quadOrder[s];
+				const i = q % MESH;
+				const j = (q / MESH) | 0;
+				const k00 = j * n1 + i;
+				const k10 = k00 + 1;
+				const k01 = k00 + n1;
+				const k11 = k01 + 1;
+				const ci = shade[q];
+				if (ci !== lastShade) {
+					lastShade = ci;
+					ctx.fillStyle = lut[ci];
 				}
+				const mx = (sx3[k00] + sx3[k10] + sx3[k01] + sx3[k11]) / 4;
+				const my = (sy3[k00] + sy3[k10] + sy3[k01] + sy3[k11]) / 4;
+				ctx.beginPath();
+				for (let c = 0; c < 4; c++) {
+					const k = c === 0 ? k00 : c === 1 ? k10 : c === 2 ? k11 : k01;
+					const dx = sx3[k] - mx;
+					const dy = sy3[k] - my;
+					const g = 1 + GROW / (Math.hypot(dx, dy) || 1);
+					if (c === 0) ctx.moveTo(mx + dx * g, my + dy * g);
+					else ctx.lineTo(mx + dx * g, my + dy * g);
+				}
+				ctx.closePath();
+				ctx.fill();
 			}
-			ctx.lineWidth = 1;
-			ctx.strokeStyle = tk.hairline;
-			for (let k = 0; k < BUCKETS; k++) {
-				ctx.globalAlpha = 0.22 + (k / (BUCKETS - 1)) * 0.65;
-				ctx.stroke(paths[k]);
-			}
-			ctx.globalAlpha = 1;
 
 			// trails ride the surface…
 			ctx.lineCap = 'round';
@@ -593,15 +668,11 @@
 				dirty = true;
 			}
 			if (running && !reducedMotion) {
-				if (speed === 0) {
-					stepAll(MAX_STEPS_FRAME);
-				} else {
-					acc += (dt / 1000) * STEP_HZ * speed;
-					const n = Math.floor(acc);
-					if (n > 0) {
-						acc -= n;
-						stepAll(Math.min(n, 8));
-					}
+				acc += (dt / 1000) * STEP_HZ;
+				const n = Math.floor(acc);
+				if (n > 0) {
+					acc -= n;
+					stepAll(Math.min(n, 8));
 				}
 			}
 			draw();
@@ -734,7 +805,6 @@
 				<Btn onclick={stepOnce}><StepForward size={13} aria-hidden="true" /> Step</Btn>
 				<Btn onclick={resetRace}><RotateCcw size={13} aria-hidden="true" /> Reset</Btn>
 			</div>
-			<SpeedChips bind:value={speed} />
 			<div class="min-w-56 flex-1">
 				<Slider
 					label="learning rate γ"

@@ -4,7 +4,6 @@
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Slider from '$lib/components/ui/Slider.svelte';
-	import SpeedChips from '$lib/components/ui/SpeedChips.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import { MlpEngine } from '$lib/nn/mlp-engine';
 	import type { LayerWeights } from '$lib/nn/engine';
@@ -74,7 +73,6 @@
 	let phase = $state<'idle' | 'loading' | 'ready' | 'training' | 'error'>('idle');
 	let rebuilding = $state(false);
 	let errorMsg = $state('');
-	let speed = $state(1); // SpeedChips multiplier; 0 = max
 	let step = $state(0);
 	let lossNow = $state(NaN);
 	let msNow = $state(NaN);
@@ -87,10 +85,8 @@
 	let weightsView = $state<LayerWeights[] | null>(null);
 	let hoveredUnit = $state<number | null>(null);
 
-	// Speed scales the steps trained per chunk; 'max' (0) also syncs the
-	// visuals less often so the worker is never waiting on the display.
-	const chunkSteps = () => (speed === 0 ? 200 : 40 * speed);
-	const syncEvery = () => (speed === 0 ? 8 : 3);
+	const chunkSteps = () => 40;
+	const syncEvery = () => 3;
 
 	// Fired once by use:inview when the plate scrolls near — never on mount.
 	async function boot() {
@@ -169,10 +165,7 @@
 				progress.reach('neuron:trained');
 			}
 			chunksSinceRefresh++;
-			if (
-				chunksSinceRefresh >= syncEvery() ||
-				(speed !== 0 && performance.now() - lastRefreshAt > 300)
-			)
+			if (chunksSinceRefresh >= syncEvery() || performance.now() - lastRefreshAt > 300)
 				await refreshViz();
 		}
 	}
@@ -716,7 +709,6 @@
 			<Btn onclick={() => void resetWeights()} disabled={controlsLocked}>
 				<RotateCcw size={13} aria-hidden="true" /> Reset weights
 			</Btn>
-			<SpeedChips bind:value={speed} />
 			{#if sparkPath}
 				<div class="ml-auto flex items-center gap-2">
 					<span class="eyebrow text-[9.5px]">loss · log</span>

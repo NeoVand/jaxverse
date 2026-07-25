@@ -31,7 +31,7 @@
 	<header class="relative mx-auto max-w-2xl px-5 pt-16 pb-10 sm:pt-24">
 		<span
 			aria-hidden="true"
-			class="pointer-events-none absolute -top-2 right-2 font-serif italic select-none sm:-right-16"
+			class="pointer-events-none absolute top-6 right-2 font-serif italic select-none sm:-right-16"
 			style="font-size: clamp(7rem, 18vw, 13rem); line-height: 1; color: var(--ink); opacity: 0.055; font-variation-settings: 'opsz' 72;"
 		>
 			{chapter.n}

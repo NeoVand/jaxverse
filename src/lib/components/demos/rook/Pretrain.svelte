@@ -6,7 +6,6 @@
 	import { Pause, Play } from 'lucide-svelte';
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Plate from '$lib/components/ui/Plate.svelte';
-	import SpeedChips from '$lib/components/ui/SpeedChips.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import { lab, LR_PRETRAIN } from './rook-context.svelte';
 	import {
@@ -28,7 +27,6 @@
 
 	let running = $state(false);
 	let evaling = $state(false);
-	let speed = $state(1);
 	let lossNow = $state(NaN);
 	let msPerStep = $state(0);
 	let valNow = $state<number | null>(null);
@@ -37,7 +35,7 @@
 
 	const waypoints = $derived(lab.manifest?.waypoints ?? []);
 	const atWaypoint = $derived(lab.liveSteps === 0 && lab.stage === 'pretrained');
-	const chunkSize = $derived(speed === 0 ? 150 : 25 * speed);
+	const chunkSize = 25;
 
 	// One baseline measurement after the inview boot, so the gauge and sample
 	// boards aren't blank. Guarded: once, and never mid-loop.
@@ -147,7 +145,6 @@
 					{/each}
 				</span>
 				<span class="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2">
-					<SpeedChips bind:value={speed} />
 					{#if running}
 						<span class="num text-[11.5px] text-ink-3">
 							loss {Number.isFinite(lossNow) ? lossNow.toFixed(2) : '—'} · {msPerStep.toFixed(0)} ms/step

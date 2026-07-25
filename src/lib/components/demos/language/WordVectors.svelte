@@ -7,7 +7,6 @@
 	import { Pause, Play } from 'lucide-svelte';
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import Btn from '$lib/components/ui/Btn.svelte';
-	import SpeedChips from '$lib/components/ui/SpeedChips.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import { loadCorpus } from '$lib/data/corpus';
 	import { buildWordCorpus, SkipGram, fitPca2, project, type WordCorpus } from './embeddings';
@@ -15,7 +14,6 @@
 	type Phase = 'idle' | 'loading' | 'running' | 'paused' | 'done' | 'error';
 	let phase = $state<Phase>('idle');
 	let errorMsg = $state('');
-	let speed = $state(1);
 	let tick = $state(0); // bumps once per training chunk
 	let pairsSeen = $state(0);
 	let lossNow = $state(NaN);
@@ -33,11 +31,8 @@
 	let lastFit = 0;
 	let lastBeat = 0;
 
-	// ×1 ≈ 60k pairs/s (structure in a few seconds), max = flat out
-	function pacing(s: number): { chunk: number; pace: number } {
-		if (s === 0) return { chunk: 50_000, pace: 0 };
-		return { chunk: 4000 * s, pace: 66 };
-	}
+	// ≈ 60k pairs/s — structure appears in a few seconds
+	const PACING = { chunk: 4000, pace: 66 };
 
 	async function boot() {
 		if (phase !== 'idle' && phase !== 'error') return;
@@ -68,7 +63,7 @@
 		const myGen = gen;
 		lastBeat = performance.now();
 		while (myGen === gen && s.pairsSeen < s.budget) {
-			const { chunk, pace } = pacing(speed);
+			const { chunk, pace } = PACING;
 			s.trainPairs(Math.min(chunk, s.budget - s.pairsSeen));
 			const now = performance.now();
 			const inst = chunk / Math.max(1e-3, (now - lastBeat) / 1000);
@@ -255,7 +250,6 @@
 						<Play size={13} aria-hidden="true" /> Resume
 					</Btn>
 				{/if}
-				<SpeedChips bind:value={speed} />
 				<span class="num text-[11px] text-ink-3">
 					skip-gram · 16 dims · top 220 words · {phase === 'done'
 						? 'budget reached — the geometry has settled'
