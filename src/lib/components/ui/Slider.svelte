@@ -10,7 +10,7 @@
 		/** Format the value readout; defaults to the raw number. */
 		format?: (v: number) => string;
 		disabled?: boolean;
-		tone?: 'accent' | 'warm' | 'ink';
+		tone?: 'accent' | 'warm' | 'teal' | 'ink';
 	}
 
 	let {
@@ -26,7 +26,13 @@
 
 	const pct = $derived(((value - min) / (max - min)) * 100);
 	const toneColor = $derived(
-		tone === 'warm' ? 'var(--warm)' : tone === 'ink' ? 'var(--ink-2)' : 'var(--accent)'
+		tone === 'warm'
+			? 'var(--warm)'
+			: tone === 'teal'
+				? 'var(--cat-2)'
+				: tone === 'ink'
+					? 'var(--ink-2)'
+					: 'var(--accent)'
 	);
 
 	let uid = $props.id();

@@ -232,6 +232,9 @@ body {
 .eq-w {
 	color: var(--warm);
 }
+.eq-b {
+	color: var(--cat-2); /* teal — bias terms (the neuron chapter's third voice) */
+}
 .eq-g {
 	color: var(--good);
 }

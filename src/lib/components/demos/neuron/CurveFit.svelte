@@ -6,9 +6,10 @@
 	import Slider from '$lib/components/ui/Slider.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import { MlpEngine } from '$lib/nn/mlp-engine';
-	import type { LayerWeights } from '$lib/nn/engine';
+	import type { Activation, LayerWeights } from '$lib/nn/engine';
 	import { progress } from '$lib/data/progress.svelte';
-	import ArchDiagram from './ArchDiagram.svelte';
+	import ArchDiagram, { type NodeRef } from '$lib/components/ui/ArchDiagram.svelte';
+	import WeightLegend from '$lib/components/ui/WeightLegend.svelte';
 	import { DATA_N, GRID_N, PRESETS, evenXs, makePerm, type TargetId } from './targets';
 
 	// ── fixed data ────────────────────────────────────────────────────────────
@@ -40,15 +41,17 @@
 
 	// ── architecture ──────────────────────────────────────────────────────────
 	const WIDTHS = [2, 4, 8, 16, 32];
+	const DEPTHS = [1, 2, 3] as const;
+	const ACTIVATIONS: Activation[] = ['tanh', 'relu', 'gelu', 'silu'];
 	let widthIdx = $state(3);
-	let depth = $state<1 | 2>(2);
-	let activation = $state<'tanh' | 'relu'>('tanh');
+	let depth = $state<1 | 2 | 3>(2);
+	let activation = $state<Activation>('tanh');
 	const width = $derived(WIDTHS[widthIdx]);
 	const archKey = $derived(`${depth}:${width}:${activation}`);
 
 	function cfg() {
 		return {
-			layers: depth === 1 ? [1, width, 1] : [1, width, width, 1],
+			layers: [1, ...Array(depth).fill(width), 1],
 			activation,
 			loss: 'mse' as const,
 			lr: 8e-3,
@@ -81,9 +84,11 @@
 	let device = $state('');
 
 	let predY = $state<Float32Array | null>(null);
-	let palette = $state<{ curves: Float32Array[]; total: number } | null>(null);
+	// One curve per neuron: `layers[li][j]` is hidden layer li's unit j output
+	// over the plot grid; `v[j]` is the final hidden layer's output weight.
+	let palette = $state<{ layers: Float32Array[][]; v: number[]; total: number } | null>(null);
 	let weightsView = $state<LayerWeights[] | null>(null);
-	let hoveredUnit = $state<number | null>(null);
+	let hovered = $state<NodeRef | null>(null);
 
 	const chunkSteps = () => 40;
 	const syncEvery = () => 3;
@@ -126,19 +131,27 @@
 			if (engine !== e) return; // superseded by a rebuild
 			predY = p;
 			weightsView = ws;
-			// The palette: every unit of the *final* hidden layer, scaled by its
-			// output weight v_j (the last weight matrix is W×1, so w[j] = v_j).
-			const hidden = acts.layers[acts.layers.length - 2];
-			const hw = acts.widths[acts.widths.length - 2];
-			const out = ws[ws.length - 1];
-			const shown = Math.min(hw, 16);
-			const curves: Float32Array[] = [];
-			for (let j = 0; j < shown; j++) {
-				const cj = new Float32Array(GRID_N);
-				for (let i = 0; i < GRID_N; i++) cj[i] = out.w[j] * hidden[i * hw + j];
-				curves.push(cj);
+			// The palette: every hidden neuron's output curve, layer by layer.
+			// acts.layers is [hidden 1, …, hidden D, output]; the output curve is
+			// already in predY, so only the hidden layers are unpacked here.
+			const hiddenCount = acts.layers.length - 1;
+			const layers: Float32Array[][] = [];
+			for (let li = 0; li < hiddenCount; li++) {
+				const flat = acts.layers[li];
+				const lw = acts.widths[li];
+				const shown = Math.min(lw, 16);
+				const units: Float32Array[] = [];
+				for (let j = 0; j < shown; j++) {
+					const cj = new Float32Array(GRID_N);
+					for (let i = 0; i < GRID_N; i++) cj[i] = flat[i * lw + j];
+					units.push(cj);
+				}
+				layers.push(units);
 			}
-			palette = { curves, total: hw };
+			// Final hidden layer's output weights v_j (last weight matrix is W×1).
+			const out = ws[ws.length - 1];
+			const v = layers[hiddenCount - 1].map((_, j) => out.w[j]);
+			palette = { layers, v, total: acts.widths[hiddenCount - 1] };
 		} finally {
 			refreshInFlight = false;
 			lastRefreshAt = performance.now();
@@ -212,7 +225,7 @@
 		if (!engine || archKey === builtKey) return;
 		rebuildingNow = true;
 		rebuilding = true;
-		hoveredUnit = null;
+		hovered = null;
 		const wasPlaying = playing;
 		playing = false;
 		const old = engine;
@@ -397,28 +410,64 @@
 		return d;
 	});
 
-	// Palette tiles share one y-scale so heights are comparable across units.
-	function tilePath(vals: Float32Array, m: number, h: number): string {
+	// Palette tiles: squat little plots that keep their aspect ratio, all sharing
+	// one y-scale so heights are comparable across units.
+	const TILE_W = 76;
+	const TILE_H = 48;
+	function tilePath(vals: Float32Array, m: number): string {
 		let d = '';
 		for (let i = 0; i < vals.length; i++) {
-			const x = (i / (vals.length - 1)) * 100;
-			const y = (1 - (vals[i] + m) / (2 * m)) * h;
+			const x = (i / (vals.length - 1)) * TILE_W;
+			const y = (1 - (vals[i] + m) / (2 * m)) * TILE_H;
 			d += `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(2)}`;
 		}
 		return d;
 	}
 
+	// Groups: one per shown hidden layer, each on its own shared y-scale. The
+	// first hidden layer is skipped when deeper ones exist — its units are just
+	// re-tilted copies of the raw activation, so it earns little for its space.
+	// The final layer shows v-scaled contributions, the curve's thickness
+	// tracking |v| exactly like the edges in the diagram. `col` names the
+	// matching diagram column so hover can run both ways; `fill` pads the last
+	// grid row so the hairline grid stays rectangular.
 	const paletteView = $derived.by(() => {
-		if (!palette) return null;
-		let m = 0.45;
-		for (const c of palette.curves) for (const val of c) m = Math.max(m, Math.abs(val));
-		if (predY) for (const val of predY) m = Math.max(m, Math.abs(val));
-		m *= 1.08;
+		const p = palette;
+		if (!p) return null;
+		const last = p.layers.length - 1;
+		let vmax = 0.1;
+		for (const val of p.v) vmax = Math.max(vmax, Math.abs(val));
+		const groups = p.layers
+			.map((units, li) => ({ units, li }))
+			.filter(({ li }) => li > 0 || li === last)
+			.map(({ units, li }) => {
+				const curves =
+					li === last
+						? units.map((h, j) => {
+								const c = new Float32Array(GRID_N);
+								for (let i = 0; i < GRID_N; i++) c[i] = p.v[j] * h[i];
+								return c;
+							})
+						: units;
+				let m = 0.45;
+				for (const c of curves) for (const val of c) m = Math.max(m, Math.abs(val));
+				m *= 1.08;
+				const name = last === 0 ? 'hidden layer' : `hidden layer ${li + 1}`;
+				return {
+					col: li + 1,
+					label: li === last ? `${name} · each × its output weight v` : `${name} · raw outputs`,
+					tiles: curves.map((c, j) => ({
+						d: tilePath(c, m),
+						v: li === last ? p.v[j] : null,
+						sw: li === last ? 0.9 + (1.7 * Math.abs(p.v[j])) / vmax : 1.4
+					})),
+					fill: (8 - (curves.length % 8)) % 8
+				};
+			});
 		return {
-			tiles: palette.curves.map((c) => tilePath(c, m, 40)),
-			sum: predY ? tilePath(predY, m, 48) : '',
-			shown: palette.curves.length,
-			total: palette.total
+			groups,
+			shown: groups[groups.length - 1].tiles.length,
+			total: p.total
 		};
 	});
 
@@ -437,6 +486,16 @@
 		return d;
 	});
 
+	// Only neurons that own a tile spotlight the palette; the rest (input,
+	// output, a skipped first layer) still light up their edges in the diagram.
+	const hoverInPalette = $derived.by(() => {
+		const h = hovered;
+		const pv = paletteView;
+		return (
+			h !== null && pv !== null && pv.groups.some((g) => g.col === h.col && h.idx < g.tiles.length)
+		);
+	});
+
 	const fmtLoss = (val: number) =>
 		!isFinite(val) ? '—' : val >= 1e-3 ? val.toFixed(4) : val.toExponential(1);
 	const fmtMs = (val: number) => (!isFinite(val) ? '—' : val.toFixed(1));
@@ -444,9 +503,9 @@
 </script>
 
 <Plate
-	n={2}
+	n={3}
 	title="The curve workshop"
-	caption="Left: the network itself — every edge is one weight, drawn thicker as it grows, ultramarine positive, vermilion negative. Right: the dashed target and the network's fit; below, the palette — each numbered row is one hidden unit's contribution, and the model's output is their sum."
+	caption="Left: the network itself, live — every edge is one weight, read by the legend beneath it. Right: the dashed target and the network's fit. Below, the palette — the curves the deeper layers output, ending in the last hidden layer's contributions: colored by the sign of each output weight, thicker as it grows, and summing exactly to the fit. Hover any node or tile; the highlight runs both ways."
 >
 	{#snippet status()}
 		{#if phase === 'idle'}
@@ -466,30 +525,22 @@
 		{/if}
 	{/snippet}
 
-	<div use:inview={boot}>
-		<!-- target chips -->
-		<div class="flex flex-wrap items-center gap-x-2 gap-y-2 px-4 pt-3.5 pb-2.5">
-			<span class="eyebrow mr-1.5">Target</span>
-			{#each PRESETS as p (p.id)}
-				<button
-					class="chip"
-					class:chip-on={targetId === p.id}
-					aria-pressed={targetId === p.id}
-					onclick={() => selectTarget(p.id)}>{p.label}</button
-				>
-			{/each}
-			<button
-				class="chip"
-				class:chip-on={targetId === 'draw'}
-				aria-pressed={targetId === 'draw'}
-				onclick={() => selectTarget('draw')}
-			>
-				<Pencil size={12} aria-hidden="true" /> draw
-			</button>
-		</div>
+	{#snippet actions()}
+		<Btn kind="primary" onclick={toggleTrain} disabled={controlsLocked}>
+			{#if phase === 'training'}
+				<Pause size={13} aria-hidden="true" /> Pause
+			{:else}
+				<Play size={13} aria-hidden="true" /> Train
+			{/if}
+		</Btn>
+		<Btn onclick={() => void resetWeights()} disabled={controlsLocked}>
+			<RotateCcw size={13} aria-hidden="true" /> Reset
+		</Btn>
+	{/snippet}
 
+	<div use:inview={boot}>
 		{#if phase === 'error'}
-			<div class="flex flex-wrap items-center gap-3 px-4 pb-2.5">
+			<div class="flex flex-wrap items-center gap-3 px-4 py-2.5">
 				<span class="num text-[11.5px]" style="color: var(--bad);">
 					{errorMsg || 'the training worker failed to start'}
 				</span>
@@ -498,19 +549,16 @@
 		{/if}
 
 		<!-- the stage: architecture left, fit right -->
-		<div class="grid border-t border-line-soft sm:grid-cols-[280px_1fr]">
+		<div class="grid sm:grid-cols-[minmax(300px,390px)_1fr]">
 			<div
-				class="order-2 border-t border-line-soft px-3 pt-2.5 pb-1 sm:order-1 sm:border-t-0 sm:border-r"
+				class="order-2 flex flex-col justify-center border-t border-line-soft px-3 pt-2.5 pb-2 sm:order-1 sm:border-t-0 sm:border-r"
 			>
 				<span class="eyebrow block px-1">The network</span>
 				{#if weightsView}
-					<ArchDiagram
-						weights={weightsView}
-						hovered={hoveredUnit}
-						onhover={(i) => (hoveredUnit = i)}
-					/>
+					<ArchDiagram weights={weightsView} {hovered} onhover={(h) => (hovered = h)} />
+					<WeightLegend />
 				{:else}
-					<div class="flex h-[264px] items-center justify-center">
+					<div class="flex h-[240px] items-center justify-center">
 						<span class="num text-[11px] text-ink-3">
 							{phase === 'error' ? 'no worker' : 'waking the training worker…'}
 						</span>
@@ -611,84 +659,83 @@
 				<span class="eyebrow">The palette</span>
 				{#if paletteView && paletteView.total > paletteView.shown}
 					<span class="num text-[10px] text-ink-3"
-						>showing {paletteView.shown} of {paletteView.total} units</span
+						>showing {paletteView.shown} of {paletteView.total} units per layer</span
 					>
 				{/if}
 			</div>
 			<p class="mt-0.5 text-[11px] leading-relaxed text-ink-3">
-				each row = one hidden unit's <span class="num">v·{activation}(wx + b)</span>; the output is
-				their sum
+				the curves the deeper layers output — the last hidden layer is drawn as
+				<span class="num">v·{activation}(…)</span>, ultramarine where its output weight
+				<span class="num">v</span> is positive, vermilion where negative, thicker as |v| grows; the fit
+				above is exactly their sum. hover any tile or any node in the diagram — the highlight runs both
+				ways
 			</p>
 			{#if paletteView}
-				<div class="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
-					{#each paletteView.tiles as tile, j (j)}
-						<!-- hover-only affordance: highlights the matching node in the diagram -->
-						<div
-							class="relative rounded transition-opacity duration-100"
-							class:opacity-30={hoveredUnit !== null && hoveredUnit !== j}
-							style={hoveredUnit === j ? 'background: var(--warm-soft);' : ''}
-							role="presentation"
-							onpointerenter={() => (hoveredUnit = j)}
-							onpointerleave={() => (hoveredUnit = null)}
-						>
-							<svg
-								viewBox="0 0 100 40"
-								preserveAspectRatio="none"
-								class="block h-10 w-full"
-								aria-hidden="true"
-							>
-								<line
-									x1="0"
-									x2="100"
-									y1="20"
-									y2="20"
-									stroke="var(--line-soft)"
-									stroke-width="1"
-									vector-effect="non-scaling-stroke"
-								/>
-								<path
-									d={tile}
-									fill="none"
-									stroke="var(--warm)"
-									stroke-opacity="0.6"
-									stroke-width="1.5"
-									vector-effect="non-scaling-stroke"
-								/>
-							</svg>
-							<span
-								class="num absolute top-0.5 left-1 text-[9px]"
-								style="color: {hoveredUnit === j ? 'var(--warm)' : 'var(--ink-3)'};">#{j + 1}</span
-							>
+				<div
+					class="mt-2.5 grid grid-cols-4 gap-px overflow-hidden rounded-md border border-line-soft bg-line-soft sm:grid-cols-8"
+				>
+					{#each paletteView.groups as group (group.col)}
+						<div class="col-span-full bg-surface px-2 pt-1 pb-0.5">
+							<span class="eyebrow text-[9px]">{group.label}</span>
 						</div>
+						{#each group.tiles as tile, j (j)}
+							{@const isHi = hovered !== null && hovered.col === group.col && hovered.idx === j}
+							<!-- hover-only affordance: highlights the matching node in the diagram -->
+							<div
+								class="relative bg-surface transition-opacity duration-100"
+								class:opacity-30={hoverInPalette && !isHi}
+								style={isHi ? 'background: var(--surface-2);' : ''}
+								role="presentation"
+								onpointerenter={() => (hovered = { col: group.col, idx: j })}
+								onpointerleave={() => (hovered = null)}
+							>
+								<svg viewBox="0 0 {TILE_W} {TILE_H}" class="block w-full" aria-hidden="true">
+									<line
+										x1="0"
+										x2={TILE_W}
+										y1={TILE_H / 2}
+										y2={TILE_H / 2}
+										stroke="var(--line)"
+										stroke-width="1"
+										vector-effect="non-scaling-stroke"
+									/>
+									<line
+										x1={TILE_W / 2}
+										x2={TILE_W / 2}
+										y1="0"
+										y2={TILE_H}
+										stroke="var(--line-soft)"
+										stroke-width="1"
+										stroke-dasharray="2 3"
+										vector-effect="non-scaling-stroke"
+									/>
+									<path
+										d={tile.d}
+										fill="none"
+										stroke={tile.v !== null && tile.v < 0 ? 'var(--warm)' : 'var(--accent)'}
+										stroke-opacity={isHi ? 1 : tile.v === null ? 0.7 : 0.85}
+										stroke-width={tile.sw}
+										stroke-linejoin="round"
+										vector-effect="non-scaling-stroke"
+									/>
+								</svg>
+								<span
+									class="num absolute top-0.5 left-1 text-[8.5px]"
+									style="color: {isHi ? 'var(--ink)' : 'var(--ink-3)'};">#{j + 1}</span
+								>
+								{#if tile.v !== null}
+									<span
+										class="num absolute right-1 bottom-0.5 text-[8.5px]"
+										style="color: {tile.v >= 0 ? 'var(--accent)' : 'var(--warm)'};"
+										>{tile.v >= 0 ? '+' : '−'}{Math.abs(tile.v).toFixed(1)}</span
+									>
+								{/if}
+							</div>
+						{/each}
+						{#each { length: group.fill }, fi (fi)}
+							<div class="bg-surface" aria-hidden="true"></div>
+						{/each}
 					{/each}
-				</div>
-				<div class="mt-3 rounded-md px-2 pt-1.5 pb-1" style="background: var(--accent-soft);">
-					<span class="eyebrow" style="color: var(--accent);">sum — the model's output</span>
-					{#if paletteView.sum}
-						<svg
-							viewBox="0 0 100 48"
-							preserveAspectRatio="none"
-							class="mt-1 block h-12 w-full"
-							aria-hidden="true"
-						>
-							<line
-								x1="0"
-								x2="100"
-								y1="24"
-								y2="24"
-								stroke="var(--line-soft)"
-								stroke-width="1"
-								vector-effect="non-scaling-stroke"
-							/>
-							<path
-								d={paletteView.sum}
-								fill="none"
-								stroke="var(--accent)"
-								stroke-width="2"
-								vector-effect="non-scaling-stroke"
-							/>
-						</svg>
-					{/if}
 				</div>
 			{:else}
 				<div class="mt-2.5 flex h-16 items-center justify-center">
@@ -697,56 +744,45 @@
 			{/if}
 		</div>
 
-		<!-- training controls -->
-		<div class="flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-line-soft px-4 py-3.5">
-			<Btn kind="primary" onclick={toggleTrain} disabled={controlsLocked}>
-				{#if phase === 'training'}
-					<Pause size={13} aria-hidden="true" /> Pause
-				{:else}
-					<Play size={13} aria-hidden="true" /> Train
-				{/if}
-			</Btn>
-			<Btn onclick={() => void resetWeights()} disabled={controlsLocked}>
-				<RotateCcw size={13} aria-hidden="true" /> Reset weights
-			</Btn>
-			{#if sparkPath}
-				<div class="ml-auto flex items-center gap-2">
-					<span class="eyebrow text-[9.5px]">loss · log</span>
-					<svg viewBox="0 0 100 24" preserveAspectRatio="none" class="h-6 w-24" aria-hidden="true">
-						<path
-							d={sparkPath}
-							fill="none"
-							stroke="var(--accent)"
-							stroke-width="1.5"
-							vector-effect="non-scaling-stroke"
-						/>
-					</svg>
+		<!-- one compact bench: target + architecture side by side -->
+		<div class="flex flex-wrap items-end gap-x-5 gap-y-3 border-t border-line-soft px-4 py-3.5">
+			<div>
+				<span class="eyebrow mb-1 block">target</span>
+				<div class="flex flex-wrap items-center gap-1.5">
+					{#each PRESETS as p (p.id)}
+						<button
+							class="chip"
+							class:chip-on={targetId === p.id}
+							aria-pressed={targetId === p.id}
+							onclick={() => selectTarget(p.id)}>{p.label}</button
+						>
+					{/each}
+					<button
+						class="chip"
+						class:chip-on={targetId === 'draw'}
+						aria-pressed={targetId === 'draw'}
+						onclick={() => selectTarget('draw')}
+					>
+						<Pencil size={12} aria-hidden="true" /> draw
+					</button>
 				</div>
-			{/if}
-		</div>
-
-		<!-- architecture controls -->
-		<div class="flex flex-wrap items-end gap-x-6 gap-y-3 border-t border-line-soft px-4 py-3.5">
+			</div>
 			<div>
 				<span class="eyebrow mb-1 block">hidden layers</span>
 				<div class="seg" role="group" aria-label="number of hidden layers">
-					<button
-						class:on={depth === 1}
-						aria-pressed={depth === 1}
-						disabled={controlsLocked}
-						onclick={() => (depth = 1)}>1</button
-					>
-					<button
-						class:on={depth === 2}
-						aria-pressed={depth === 2}
-						disabled={controlsLocked}
-						onclick={() => (depth = 2)}>2</button
-					>
+					{#each DEPTHS as d (d)}
+						<button
+							class:on={depth === d}
+							aria-pressed={depth === d}
+							disabled={controlsLocked}
+							onclick={() => (depth = d)}>{d}</button
+						>
+					{/each}
 				</div>
 			</div>
-			<div class="w-36">
+			<div class="w-32">
 				<Slider
-					label="width W"
+					label="width"
 					bind:value={widthIdx}
 					min={0}
 					max={4}
@@ -759,23 +795,40 @@
 			<div>
 				<span class="eyebrow mb-1 block">activation</span>
 				<div class="seg" role="group" aria-label="activation function">
-					<button
-						class:on={activation === 'tanh'}
-						aria-pressed={activation === 'tanh'}
-						disabled={controlsLocked}
-						onclick={() => (activation = 'tanh')}>tanh</button
-					>
-					<button
-						class:on={activation === 'relu'}
-						aria-pressed={activation === 'relu'}
-						disabled={controlsLocked}
-						onclick={() => (activation = 'relu')}>relu</button
-					>
+					{#each ACTIVATIONS as a (a)}
+						<button
+							class:on={activation === a}
+							aria-pressed={activation === a}
+							disabled={controlsLocked}
+							onclick={() => (activation = a)}>{a}</button
+						>
+					{/each}
 				</div>
 			</div>
-			<span class="num ml-auto pb-0.5 text-[11px] text-ink-2" aria-live="polite">
-				{paramCount.toLocaleString('en-US')} params · {device || '—'}
-			</span>
+			<div class="ml-auto flex flex-col items-end gap-1 pb-0.5">
+				{#if sparkPath}
+					<div class="flex items-center gap-2">
+						<span class="eyebrow text-[9.5px]">loss · log</span>
+						<svg
+							viewBox="0 0 100 24"
+							preserveAspectRatio="none"
+							class="h-5 w-24"
+							aria-hidden="true"
+						>
+							<path
+								d={sparkPath}
+								fill="none"
+								stroke="var(--accent)"
+								stroke-width="1.5"
+								vector-effect="non-scaling-stroke"
+							/>
+						</svg>
+					</div>
+				{/if}
+				<span class="num text-[10.5px] text-ink-3" aria-live="polite">
+					{paramCount.toLocaleString('en-US')} params · {device || '—'}
+				</span>
+			</div>
 		</div>
 	</div>
 </Plate>

@@ -174,6 +174,20 @@
 		</span>
 	{/snippet}
 
+	{#snippet actions()}
+		<Btn kind={auto ? 'primary' : 'ghost'} onclick={() => (auto = !auto)} disabled={diverged}>
+			{#if auto}
+				<Pause size={13} aria-hidden="true" /> Auto
+			{:else}
+				<Play size={13} aria-hidden="true" /> Auto
+			{/if}
+		</Btn>
+		<Btn onclick={stepOnce} disabled={diverged}>
+			<StepForward size={13} aria-hidden="true" /> Step
+		</Btn>
+		<Btn onclick={reset}><RotateCcw size={13} aria-hidden="true" /> Reset</Btn>
+	{/snippet}
+
 	<div class="p-4 sm:p-5">
 		<div class="mx-auto max-w-[640px]">
 			<div class="mb-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="Loss curve">
@@ -288,31 +302,16 @@
 			</svg>
 		</div>
 
-		<div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
-			<div class="flex items-center gap-2">
-				<Btn kind={auto ? 'primary' : 'ghost'} onclick={() => (auto = !auto)} disabled={diverged}>
-					{#if auto}
-						<Pause size={13} aria-hidden="true" /> Auto
-					{:else}
-						<Play size={13} aria-hidden="true" /> Auto
-					{/if}
-				</Btn>
-				<Btn onclick={stepOnce} disabled={diverged}>
-					<StepForward size={13} aria-hidden="true" /> Step
-				</Btn>
-				<Btn onclick={reset}><RotateCcw size={13} aria-hidden="true" /> Reset</Btn>
-			</div>
-			<div class="min-w-48 flex-1">
-				<Slider
-					label="step size γ"
-					bind:value={gamma}
-					min={0.05}
-					max={1.15}
-					step={0.01}
-					format={(v) => v.toFixed(2)}
-					tone="accent"
-				/>
-			</div>
+		<div class="mx-auto mt-3 max-w-[640px]">
+			<Slider
+				label="step size γ"
+				bind:value={gamma}
+				min={0.05}
+				max={1.15}
+				step={0.01}
+				format={(v) => v.toFixed(2)}
+				tone="accent"
+			/>
 		</div>
 	</div>
 </Plate>

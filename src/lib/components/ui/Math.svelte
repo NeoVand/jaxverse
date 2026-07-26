@@ -12,7 +12,8 @@
 	let { tex, display = false }: Props = $props();
 
 	// \htmlClass is allowed so equations can color-code their terms with the
-	// site's own tokens: eq-a (accent), eq-w (warm), eq-g (good), eq-m (muted).
+	// site's own tokens: eq-a (accent), eq-w (warm), eq-b (teal bias),
+	// eq-g (good), eq-m (muted).
 	const html = $derived(
 		katex.renderToString(tex, {
 			displayMode: display,

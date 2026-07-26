@@ -59,10 +59,11 @@ column, demos as numbered _plates_ (figures), math interleaved and beautiful.
 
 - `Math` — `<Math tex={'…'} />` inline, `<Math display tex={'…'} />` block.
   KaTeX. Color terms with `\htmlClass{eq-a}{\gamma}` → accent; `eq-w` warm,
-  `eq-g` good, `eq-m` muted. Color only terms the surrounding prose or a demo
-  refers to by that color.
+  `eq-b` teal (bias terms), `eq-g` good, `eq-m` muted. Color only terms the
+  surrounding prose or a demo refers to by that color.
 - `Plate` — every demo's frame. `<Plate n={1} title="The landscape" caption="…">
-{#snippet status()}<span>…</span>{/snippet} …stage… </Plate>`.
+{#snippet status()}<span>…</span>{/snippet}
+{#snippet actions()}<Btn …>Train</Btn>{/snippet} …stage… </Plate>`.
   `n` numbers plates _within a chapter_ starting at 1. The caption explains
   what the reader is looking at, italic, one or two sentences.
 - `Slider` — `<Slider label="learning rate γ" bind:value min max step format={(v) => …} tone="accent|warm|ink" />`
@@ -117,6 +118,12 @@ theme switches. Redraw loops pick this up automatically.
   held-out curves; keep a `stopFlag` so Stop works mid-run.
 - Status snippet shows live numbers: `step 240 · loss 0.312 · 12 ms/step`
   in `.num`.
+- Control placement (the compact-plate contract): the transport —
+  Train/Pause, Play, Step, Reset — lives in the Plate header via the
+  `actions` snippet, never in a row of its own. Smaller choices (dataset,
+  width, depth, activation, learning rate) live _below_ the stage, or in a
+  side column harmonized with a network inspector. Keep the whole plate
+  under one desktop viewport; prefer a third column to another row.
 - Every control must do something the reader can _see_. If a slider wouldn't
   visibly change the demo, cut it.
 - WebGPU: `MlpEngine` falls back to cpu/wasm automatically (small models are

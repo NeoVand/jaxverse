@@ -11,7 +11,7 @@
  *   backends: the early-chapter models are small enough to train anywhere.
  */
 
-export type Activation = 'tanh' | 'relu';
+export type Activation = 'tanh' | 'relu' | 'gelu' | 'silu';
 export type LossKind = 'mse' | 'xent';
 
 export interface MlpConfig {

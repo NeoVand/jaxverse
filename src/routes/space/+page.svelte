@@ -3,7 +3,6 @@
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import Wide from '$lib/components/ui/Wide.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
-	import Plate from '$lib/components/ui/Plate.svelte';
 	import SpaceLab from '$lib/components/demos/space/SpaceLab.svelte';
 	import { resolve } from '$app/paths';
 </script>
@@ -25,14 +24,17 @@
 			crease left behind.
 		</p>
 		<p>Look at what one layer actually computes:</p>
-		<Math display tex="h \;=\; \tanh(W x + b)" />
+		<Math display tex="h \;=\; \sigma(W x + b)" />
 		<p>
-			The affine part <Math tex="Wx + b" /> rotates, stretches, and shifts the plane. Then
-			<Math tex="\tanh" /> squashes each coordinate smoothly toward the interval
-			<Math tex="(-1, 1)" />. Nothing here can cut, tear, or glue. When
-			<Math tex="W" /> is invertible, the layer is a <em>homeomorphism</em> — a continuous deformation
-			with a continuous inverse, the kind of move you could perform with a sheet of soft rubber. A deep
-			network is a chain of such moves, finished by one boring linear classifier:
+			The affine part <Math tex="Wx + b" /> rotates, stretches, and shifts the plane. Then the bend
+			<Math tex="\sigma" /> warps each coordinate — the classic
+			<Math tex="\tanh" /> squashes it smoothly toward the interval
+			<Math tex="(-1, 1)" />, though it pays for that gentleness in training time; the plates below
+			open with gelu, which bends nearly as smoothly and learns in a fraction of the steps. Nothing
+			here can cut, tear, or glue. When <Math tex="W" /> is invertible and the bend is smoothly invertible,
+			as tanh is, the layer is a <em>homeomorphism</em> — a continuous deformation with a continuous inverse,
+			the kind of move you could perform with a sheet of soft rubber. A deep network is a chain of such
+			moves, finished by one boring linear classifier:
 		</p>
 		<Math
 			display
@@ -46,13 +48,12 @@
 	</Prose>
 
 	<Wide>
-		<Plate
+		<SpaceLab
+			variant="guided"
 			n={1}
 			title="The experiment — rings, and a network two numbers wide"
-			caption="Left: the data as it is, with the network's current verdict washed behind it. Right: the same points — the same grid — after the network's deformation, and the one straight cut the final layer makes. Train, and watch it strain: a ring inside a ring cannot be pulled apart without leaving the plane."
-		>
-			<SpaceLab variant="guided" />
-		</Plate>
+			caption="Left: the data as it is, with the network's current verdict washed behind it. Middle: the same points — the same grid — after the network's deformation, and the one straight cut the final layer makes. Right: the network itself, live — every edge is one weight, read by the legend. Train, and watch it strain: a ring inside a ring cannot be pulled apart without leaving the plane. Then flip hidden from 2-D to 3-D and watch the same cut succeed."
+		/>
 	</Wide>
 
 	<Prose>
@@ -89,13 +90,12 @@
 	</Prose>
 
 	<Wide>
-		<Plate
+		<SpaceLab
+			variant="free"
 			n={2}
 			title="The playground — pick your tangle"
-			caption="Spirals are the classic stress test. Watch the hidden view: tanh bends space in soft waves; relu folds it along straight creases. Widths beyond three are shown as a PCA shadow — the true untangling happens in more dimensions than a screen has."
-		>
-			<SpaceLab variant="free" />
-		</Plate>
+			caption="Spirals are the classic stress test. Watch the hidden view: tanh bends space in soft waves; relu folds it along straight creases; gelu and silu fold with the crease sanded smooth. Widths beyond three are shown as a PCA shadow — the true untangling happens in more dimensions than a screen has."
+		/>
 	</Wide>
 
 	<Prose>

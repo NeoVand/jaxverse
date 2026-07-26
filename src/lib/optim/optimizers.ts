@@ -24,16 +24,20 @@ export const RACER_TOKENS: Record<OptimizerId, string> = {
  * Per-optimizer stride scaling: one γ slider drives all five. Adaptive
  * methods (Adam/AdamW) and Lion take steps of roughly γ per axis whatever
  * the terrain, while SGD and momentum move as γ·|∇ℒ| — invisible on flat
- * floors at a γ the adaptive pair likes. Multipliers are tuned so nobody
- * stalls or diverges at the default γ ≈ 0.05 on any preset (SGD's stability
- * cliff on the basins sits near effective γ ≈ 0.2).
+ * floors at a γ the adaptive pair likes.
+ *
+ * At the default γ ≈ 0.05 these land on Gradient Lab's curated race rates
+ * (Adam/AdamW 0.1, Lion 0.05), and the SGD/momentum pair is capped where a
+ * simulated audit (default start + 120 random drops × 3 presets) shows zero
+ * divergence — every racer reaches its basin instead of stalling or blowing
+ * up. Momentum's steady-state push is γ·|∇ℒ|/(1−μ) ≈ 10γ, hence ×1.
  */
 export const LR_MULT: Record<OptimizerId, number> = {
-	gd: 3,
-	momentum: 1.5,
-	adam: 1,
-	adamw: 1,
-	lion: 0.75
+	gd: 2,
+	momentum: 1,
+	adam: 2,
+	adamw: 2,
+	lion: 1
 };
 
 /** Resolved CSS colors for every racer, read from the element's theme. */

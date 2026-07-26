@@ -9,10 +9,12 @@
 		caption?: string;
 		/** Right side of the header — status text, live indicators. */
 		status?: Snippet;
+		/** Far right of the header — the demo's transport (Train/Pause/Reset…). */
+		actions?: Snippet;
 		children: Snippet;
 	}
 
-	let { n, title, caption, status, children }: Props = $props();
+	let { n, title, caption, status, actions, children }: Props = $props();
 
 	function roman(x: number): string {
 		const table: Array<[number, string]> = [
@@ -45,8 +47,15 @@
 				{title}
 			</span>
 		</span>
-		{#if status}
-			<span class="num flex items-center gap-2 text-[11px] text-ink-3">{@render status()}</span>
+		{#if status || actions}
+			<span class="flex flex-wrap items-center gap-x-3 gap-y-1">
+				{#if status}
+					<span class="num flex items-center gap-2 text-[11px] text-ink-3">{@render status()}</span>
+				{/if}
+				{#if actions}
+					<span class="flex items-center gap-1.5">{@render actions()}</span>
+				{/if}
+			</span>
 		{/if}
 	</figcaption>
 

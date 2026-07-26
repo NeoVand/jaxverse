@@ -32,7 +32,7 @@
 	const WD = 0.1; // decoupled weight decay — only AdamW feels it
 	const DIVERGE_AT = 1e6; // past this a racer is frozen and flagged
 	const TRAIL_MAX = 220;
-	const MESH = 128; // 3-D surface resolution (quads per side)
+	const MESH = 160; // 3-D surface resolution (quads per side)
 	const H_SCALE = 0.55; // 3-D terrain relief, world units
 	// Static world-space light for the 3-D surface — high and from the left,
 	// nearly unit length, so flats stay airy and walls collect ink.
@@ -161,12 +161,9 @@
 		return s;
 	}
 
-	// projection + painter's-sort scratch, reused every 3-D frame
+	// projected-lattice scratch, reused every 3-D frame
 	const sx3 = new Float32Array((MESH + 1) * (MESH + 1));
 	const sy3 = new Float32Array((MESH + 1) * (MESH + 1));
-	const sd3 = new Float32Array((MESH + 1) * (MESH + 1));
-	const quadOrder = new Uint32Array(MESH * MESH);
-	const quadDepth = new Float32Array(MESH * MESH);
 
 	function fmtGamma(g: number): string {
 		return g.toPrecision(2);
@@ -182,18 +179,16 @@
 		onraced?.();
 	}
 
+	// Fixed RUNNERS order — re-sorting by loss made entries swap places every
+	// few frames, which read as flicker rather than a ranking.
 	function syncLegend() {
-		const key = (e: LegendEntry) =>
-			e.diverged || !Number.isFinite(e.loss) ? Number.MAX_VALUE : e.loss;
-		legend = RUNNERS.filter((r) => enabled[r.id])
-			.map((r) => ({
-				id: r.id,
-				label: r.label,
-				token: r.token,
-				loss: racers[r.id].loss,
-				diverged: racers[r.id].diverged
-			}))
-			.sort((a, b) => key(a) - key(b));
+		legend = RUNNERS.filter((r) => enabled[r.id]).map((r) => ({
+			id: r.id,
+			label: r.label,
+			token: r.token,
+			loss: racers[r.id].loss,
+			diverged: racers[r.id].diverged
+		}));
 	}
 
 	function freshRacer(p: Pt): Racer {
@@ -527,55 +522,51 @@
 				for (let i = 0; i < n1; i++) {
 					const x = pr.xMin + (i / MESH) * spanX;
 					const k = j * n1 + i;
-					const [X, Y, D] = toScreen(x, y, mesh[k]);
+					const [X, Y] = toScreen(x, y, mesh[k]);
 					sx3[k] = X;
 					sy3[k] = Y;
-					sd3[k] = D;
 				}
 			}
 
 			// …then paint quads far to near, each filled from the shade LUT.
-			// Each quad is inflated half a pixel from its centroid so adjacent
-			// fills overlap and antialiasing never opens paper-colored seams.
+			// A heightfield never overhangs, so a per-axis back-to-front sweep
+			// (loop directions from the yaw's quadrant: depth toward the viewer
+			// grows with −sin(yaw)·x and cos(yaw)·y) is an exact painter's
+			// order — no per-frame depth sort needed. Each quad is inflated
+			// half a pixel from its centroid so adjacent fills overlap and
+			// antialiasing never opens paper-colored seams.
 			const shade = shadeFor(presetId);
-			const nq = MESH * MESH;
-			for (let q = 0; q < nq; q++) {
-				quadOrder[q] = q;
-				const i = q % MESH;
-				const j = (q / MESH) | 0;
-				const k00 = j * n1 + i;
-				quadDepth[q] = sd3[k00] + sd3[k00 + 1] + sd3[k00 + n1] + sd3[k00 + n1 + 1];
-			}
-			quadOrder.sort((a, b) => quadDepth[a] - quadDepth[b]);
-
+			const iAsc = -sy >= 0;
+			const jAsc = cy >= 0;
 			const GROW = 0.5; // px pushed outward from the quad centroid
 			let lastShade = -1;
-			for (let s = 0; s < nq; s++) {
-				const q = quadOrder[s];
-				const i = q % MESH;
-				const j = (q / MESH) | 0;
-				const k00 = j * n1 + i;
-				const k10 = k00 + 1;
-				const k01 = k00 + n1;
-				const k11 = k01 + 1;
-				const ci = shade[q];
-				if (ci !== lastShade) {
-					lastShade = ci;
-					ctx.fillStyle = lut[ci];
+			for (let jj = 0; jj < MESH; jj++) {
+				const j = jAsc ? jj : MESH - 1 - jj;
+				for (let ii = 0; ii < MESH; ii++) {
+					const i = iAsc ? ii : MESH - 1 - ii;
+					const k00 = j * n1 + i;
+					const k10 = k00 + 1;
+					const k01 = k00 + n1;
+					const k11 = k01 + 1;
+					const ci = shade[j * MESH + i];
+					if (ci !== lastShade) {
+						lastShade = ci;
+						ctx.fillStyle = lut[ci];
+					}
+					const mx = (sx3[k00] + sx3[k10] + sx3[k01] + sx3[k11]) / 4;
+					const my = (sy3[k00] + sy3[k10] + sy3[k01] + sy3[k11]) / 4;
+					ctx.beginPath();
+					for (let c = 0; c < 4; c++) {
+						const k = c === 0 ? k00 : c === 1 ? k10 : c === 2 ? k11 : k01;
+						const dx = sx3[k] - mx;
+						const dy = sy3[k] - my;
+						const g = 1 + GROW / (Math.hypot(dx, dy) || 1);
+						if (c === 0) ctx.moveTo(mx + dx * g, my + dy * g);
+						else ctx.lineTo(mx + dx * g, my + dy * g);
+					}
+					ctx.closePath();
+					ctx.fill();
 				}
-				const mx = (sx3[k00] + sx3[k10] + sx3[k01] + sx3[k11]) / 4;
-				const my = (sy3[k00] + sy3[k10] + sy3[k01] + sy3[k11]) / 4;
-				ctx.beginPath();
-				for (let c = 0; c < 4; c++) {
-					const k = c === 0 ? k00 : c === 1 ? k10 : c === 2 ? k11 : k01;
-					const dx = sx3[k] - mx;
-					const dy = sy3[k] - my;
-					const g = 1 + GROW / (Math.hypot(dx, dy) || 1);
-					if (c === 0) ctx.moveTo(mx + dx * g, my + dy * g);
-					else ctx.lineTo(mx + dx * g, my + dy * g);
-				}
-				ctx.closePath();
-				ctx.fill();
 			}
 
 			// trails ride the surface…
@@ -696,61 +687,19 @@
 		<span>t = {t} · γ = {fmtGamma(gamma)}</span>
 	{/snippet}
 
-	<div class="p-4 sm:p-5" use:inview={boot}>
-		<div class="mb-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-			<div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-				<div class="flex items-center gap-1.5" role="group" aria-label="View">
-					<button
-						class="chip"
-						class:chip-on={view === '2d'}
-						aria-pressed={view === '2d'}
-						onclick={() => selectView('2d')}
-					>
-						2-D
-					</button>
-					<button
-						class="chip"
-						class:chip-on={view === '3d'}
-						aria-pressed={view === '3d'}
-						onclick={() => selectView('3d')}
-					>
-						3-D
-					</button>
-				</div>
-				<div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="Landscape preset">
-					{#each PRESETS as p (p.id)}
-						<button
-							class="chip"
-							class:chip-on={presetId === p.id}
-							aria-pressed={presetId === p.id}
-							onclick={() => selectPreset(p.id)}
-						>
-							{p.label}
-						</button>
-					{/each}
-				</div>
-			</div>
-			<div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="Optimizers">
-				{#each RUNNERS as r (r.id)}
-					<button
-						class="chip"
-						class:chip-on={enabled[r.id]}
-						aria-pressed={enabled[r.id]}
-						title="{r.blurb} — stride ×{LR_MULT[r.id]}"
-						onclick={() => toggleRacer(r.id)}
-					>
-						<span
-							class="dot"
-							style="border-color: var({r.token}); background: {enabled[r.id]
-								? `var(${r.token})`
-								: 'transparent'};"
-						></span>
-						{r.label}
-					</button>
-				{/each}
-			</div>
-		</div>
+	{#snippet actions()}
+		<Btn kind="primary" onclick={togglePlay}>
+			{#if running}
+				<Pause size={13} aria-hidden="true" /> Pause
+			{:else}
+				<Play size={13} aria-hidden="true" /> Play
+			{/if}
+		</Btn>
+		<Btn onclick={stepOnce}><StepForward size={13} aria-hidden="true" /> Step</Btn>
+		<Btn onclick={resetRace}><RotateCcw size={13} aria-hidden="true" /> Reset</Btn>
+	{/snippet}
 
+	<div class="p-4 sm:p-5" use:inview={boot}>
 		<canvas
 			bind:this={canvas}
 			class="block w-full rounded-md border border-line-soft"
@@ -788,22 +737,58 @@
 					{/if}
 				</span>
 			{/each}
-			{#if view === '3d'}
-				<span class="ml-auto">drag to turn · wheel to zoom · click-to-drop lives in 2-D</span>
-			{/if}
 		</div>
 
-		<div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
-			<div class="flex items-center gap-2">
-				<Btn kind="primary" onclick={togglePlay}>
-					{#if running}
-						<Pause size={13} aria-hidden="true" /> Pause
-					{:else}
-						<Play size={13} aria-hidden="true" /> Play
-					{/if}
-				</Btn>
-				<Btn onclick={stepOnce}><StepForward size={13} aria-hidden="true" /> Step</Btn>
-				<Btn onclick={resetRace}><RotateCcw size={13} aria-hidden="true" /> Reset</Btn>
+		<!-- the bench: view, terrain, racers, stride — the smaller choices, below the stage -->
+		<div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+			<div class="flex items-center gap-1.5" role="group" aria-label="View">
+				<button
+					class="chip"
+					class:chip-on={view === '2d'}
+					aria-pressed={view === '2d'}
+					onclick={() => selectView('2d')}
+				>
+					2-D
+				</button>
+				<button
+					class="chip"
+					class:chip-on={view === '3d'}
+					aria-pressed={view === '3d'}
+					onclick={() => selectView('3d')}
+				>
+					3-D
+				</button>
+			</div>
+			<div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="Landscape preset">
+				{#each PRESETS as p (p.id)}
+					<button
+						class="chip"
+						class:chip-on={presetId === p.id}
+						aria-pressed={presetId === p.id}
+						onclick={() => selectPreset(p.id)}
+					>
+						{p.label}
+					</button>
+				{/each}
+			</div>
+			<div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="Optimizers">
+				{#each RUNNERS as r (r.id)}
+					<button
+						class="chip"
+						class:chip-on={enabled[r.id]}
+						aria-pressed={enabled[r.id]}
+						title="{r.blurb} — stride ×{LR_MULT[r.id]}"
+						onclick={() => toggleRacer(r.id)}
+					>
+						<span
+							class="dot"
+							style="border-color: var({r.token}); background: {enabled[r.id]
+								? `var(${r.token})`
+								: 'transparent'};"
+						></span>
+						{r.label}
+					</button>
+				{/each}
 			</div>
 			<div class="min-w-56 flex-1">
 				<Slider

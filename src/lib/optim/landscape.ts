@@ -31,15 +31,17 @@ export interface Preset {
 export const PRESETS: Preset[] = [
 	{
 		// A curved trough (y ≈ 0.45x² − 0.9) carrying a double well along its
-		// floor, tilted so the far basin is worth reaching, with a mild ripple
-		// for texture.
+		// floor, tilted (+0.18x) so the left basin is the deep one, with a
+		// mild ripple for texture. θ₀ sits on the LEFT arm: every racer rolls
+		// into the deep basin from there, and the shallow-well trap is a
+		// lesson readers discover by clicking the right half.
 		id: 'basins',
 		label: 'Two basins',
 		xMin: -4.37,
 		xMax: 4.37,
 		yMin: -2.7,
 		yMax: 2.7,
-		start: { x: 2.7, y: 2.3 },
+		start: { x: -2.7, y: 2.3 },
 		f(x, y) {
 			const bend = y - 0.45 * x * x + 0.9;
 			const well = x * x - 2.4;
@@ -72,12 +74,13 @@ export const PRESETS: Preset[] = [
 		// A saddle at the origin (curves up along x, down along y) with a
 		// quartic to bottom out into two basins at y ≈ ±2.24. Everything
 		// stalls on the ridge; whoever builds y-velocity first escapes.
+		// Window kept generous in y so both basins sit well inside the frame.
 		id: 'saddle',
 		label: 'Saddle',
-		xMin: -4.37,
-		xMax: 4.37,
-		yMin: -2.7,
-		yMax: 2.7,
+		xMin: -5.2,
+		xMax: 5.2,
+		yMin: -3.2,
+		yMax: 3.2,
 		start: { x: -2.6, y: 0.12 },
 		f(x, y) {
 			return 0.28 * x * x - 0.5 * y * y + 0.05 * y * y * y * y + 1.4;

@@ -54,7 +54,9 @@ let rng = mulberry32(1234);
 
 const ACT: Record<Activation, (x: any) => any> = {
 	tanh: (x) => np.tanh(x),
-	relu: (x) => nn.relu(x)
+	relu: (x) => nn.relu(x),
+	gelu: (x) => nn.gelu(x),
+	silu: (x) => nn.silu(x)
 };
 
 function initParams(c: MlpConfig, seed: number): any {
@@ -66,8 +68,8 @@ function initParams(c: MlpConfig, seed: number): any {
 	for (let k = 0; k < L; k++) {
 		const fin = c.layers[k];
 		const fout = c.layers[k + 1];
-		// Glorot for tanh, He for relu; final layer damped so the net starts humble.
-		const limit = c.activation === 'relu' ? Math.sqrt(6 / fin) : Math.sqrt(6 / (fin + fout));
+		// Glorot for tanh, He for the relu family; final layer damped so the net starts humble.
+		const limit = c.activation === 'tanh' ? Math.sqrt(6 / (fin + fout)) : Math.sqrt(6 / fin);
 		const scale = k === L - 1 ? 0.4 : 1;
 		const buf = new Float32Array(fin * fout);
 		for (let i = 0; i < buf.length; i++) buf[i] = (rand() * 2 - 1) * limit * scale;
