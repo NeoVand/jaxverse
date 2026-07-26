@@ -200,7 +200,7 @@
 <Plate
 	n={1}
 	title="Words become vectors"
-	caption="A PCA shadow of a 16-dimensional space, redrawn as skip-gram training runs — each word learns to predict its neighbors, and words used alike drift together: animals with animals, names with names, he beside she. Every vector is trained here, in your tab, on this book's story corpus."
+	caption="A PCA shadow of a 16-dimensional space — the top 220 words of this book's story corpus, redrawn as skip-gram training runs on your CPU. Words used alike drift together: animals with animals, names with names, he beside she. Hover any label or pick from the menu to re-rank the neighbour list, which is computed in the full space by cosine similarity."
 >
 	{#snippet status()}
 		{#if phase === 'idle' || phase === 'loading'}
@@ -215,8 +215,20 @@
 			<span>{fmtK(rate)} pairs/s</span>
 			{#if phase === 'done'}
 				<span aria-hidden="true">·</span>
-				<span>done</span>
+				<span>settled</span>
 			{/if}
+		{/if}
+	{/snippet}
+
+	{#snippet actions()}
+		{#if phase === 'running'}
+			<Btn onclick={pauseTraining}>
+				<Pause size={12} aria-hidden="true" /> Pause
+			</Btn>
+		{:else if phase === 'paused'}
+			<Btn onclick={resumeTraining}>
+				<Play size={12} aria-hidden="true" /> Resume
+			</Btn>
 		{/if}
 	{/snippet}
 
@@ -237,26 +249,6 @@
 				{/if}
 			</div>
 		{:else}
-			<!-- transport -->
-			<div
-				class="flex flex-wrap items-center gap-x-4 gap-y-2.5 border-b border-line-soft px-4 py-3"
-			>
-				{#if phase === 'running'}
-					<Btn kind="primary" onclick={pauseTraining}>
-						<Pause size={13} aria-hidden="true" /> Pause
-					</Btn>
-				{:else if phase === 'paused'}
-					<Btn kind="primary" onclick={resumeTraining}>
-						<Play size={13} aria-hidden="true" /> Resume
-					</Btn>
-				{/if}
-				<span class="num text-[11px] text-ink-3">
-					skip-gram · 16 dims · top 220 words · {phase === 'done'
-						? 'budget reached — the geometry has settled'
-						: 'training on your CPU, right now'}
-				</span>
-			</div>
-
 			<div class="grid grid-cols-1 gap-px bg-line-soft md:grid-cols-[minmax(0,1fr)_15rem]">
 				<!-- the map -->
 				<div class="bg-surface" bind:clientWidth={stageW}>
@@ -329,10 +321,6 @@
 							{/each}
 						{/if}
 					</div>
-					<p class="mt-3 text-[10.5px] leading-snug text-ink-3">
-						hover any label on the map, or pick from the menu — the list re-ranks live as training
-						moves the vectors.
-					</p>
 				</div>
 			</div>
 
@@ -364,10 +352,6 @@
 						>
 					{/each}
 				{/if}
-				<span class="ml-auto text-[10.5px] text-ink-3">
-					a small corpus and 16 dimensions — the arithmetic is approximate; at web scale it becomes
-					uncanny
-				</span>
 			</div>
 		{/if}
 	</div>

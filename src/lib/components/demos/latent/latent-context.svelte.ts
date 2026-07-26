@@ -196,7 +196,10 @@ class LatentLab {
 			// place instead of something that drifts and sprawls as it trains —
 			// and it is why the bottleneck itself carries no non-linearity.
 			// beta = 1/784 is the textbook β = 1 in this engine's mean-mse units.
-			vae: { at: latentLayerFor(this.depth), beta: 1 / DIM },
+			// A wide waist gets a lighter fee: there the cloud is only ever seen
+			// through a projection, so the prior is buying less, and the codes are
+			// worth more to Plate IV when they keep a little more of the digit.
+			vae: { at: latentLayerFor(this.depth), beta: (this.latentDim <= 3 ? 1 : 0.3) / DIM },
 			// the rectified family tolerates a brisker step than tanh ever did,
 			// and this plate is watched rather than left running. The deep ladder
 			// gets a gentler one: three squeezes down to two numbers will happily

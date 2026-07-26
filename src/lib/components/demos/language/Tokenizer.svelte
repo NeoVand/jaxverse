@@ -172,7 +172,7 @@
 <Plate
 	n={2}
 	title="Grow a vocabulary"
-	caption="Byte-pair encoding, running for real: the vocabulary is not designed, it is voted for by the corpus, one most-frequent pair at a time. th, the, ing — watch English assemble itself by frequency."
+	caption="Byte-pair encoding, running for real: the vocabulary is not designed, it is voted for by the corpus, one most-frequent pair at a time. th, the, ing — watch English assemble itself by frequency. Nothing here is prerecorded; every count comes from scanning your own copy of the corpus, and the millisecond figure is how long that scan took on this machine. Compression is the score — each merge shortens the corpus by one token per fusion it makes — and once you pause, the scrubber below replays the whole election."
 >
 	{#snippet status()}
 		{#if phase === 'idle' || phase === 'loading'}
@@ -187,6 +187,22 @@
 				<span aria-hidden="true">·</span>
 				<span>{lastMs.toFixed(1)} ms to count 1.5M pairs</span>
 			{/if}
+		{/if}
+	{/snippet}
+
+	{#snippet actions()}
+		{#if phase === 'running'}
+			<Btn onclick={pauseTraining}>
+				<Pause size={12} aria-hidden="true" /> Pause
+			</Btn>
+		{:else if phase === 'paused'}
+			<Btn onclick={resumeTraining}>
+				<Play size={12} aria-hidden="true" /> Resume
+			</Btn>
+		{:else if phase === 'done'}
+			<Btn onclick={keepMerging}>
+				<Plus size={12} aria-hidden="true" /> Keep merging
+			</Btn>
 		{/if}
 	{/snippet}
 
@@ -209,79 +225,6 @@
 				{/if}
 			</div>
 		{:else}
-			<!-- transport -->
-			<div
-				class="flex flex-wrap items-center gap-x-3 gap-y-2.5 border-b border-line-soft px-4 py-3"
-			>
-				{#if phase === 'running'}
-					<Btn kind="primary" onclick={pauseTraining}>
-						<Pause size={13} aria-hidden="true" /> Pause
-					</Btn>
-					<span class="num text-[11px] text-ink-3">
-						merge {merges.length} of {target} · each one re-counts the whole corpus
-					</span>
-				{:else}
-					{#if phase === 'paused'}
-						<Btn kind="primary" onclick={resumeTraining}>
-							<Play size={13} aria-hidden="true" /> Resume
-						</Btn>
-					{:else}
-						<Btn kind="primary" onclick={keepMerging}>
-							<Plus size={13} aria-hidden="true" /> Keep merging
-						</Btn>
-					{/if}
-					{#if scrubbable}
-						<span class="flex items-center gap-1.5">
-							<button
-								class="ctl"
-								onclick={() => stepK(-merges.length)}
-								disabled={k === 0}
-								aria-label="rewind to zero merges"
-							>
-								<RotateCcw size={13} aria-hidden="true" />
-							</button>
-							<button
-								class="ctl"
-								onclick={() => stepK(-1)}
-								disabled={k === 0}
-								aria-label="back one merge"
-							>
-								<StepBack size={13} aria-hidden="true" />
-							</button>
-							<button
-								class="ctl"
-								onclick={toggleReplay}
-								aria-label={playing ? 'pause the replay' : 'replay the merges'}
-							>
-								{#if playing}
-									<Pause size={13} aria-hidden="true" />
-								{:else}
-									<Play size={13} aria-hidden="true" />
-								{/if}
-							</button>
-							<button
-								class="ctl"
-								onclick={() => stepK(1)}
-								disabled={k >= merges.length}
-								aria-label="forward one merge"
-							>
-								<StepForward size={13} aria-hidden="true" />
-							</button>
-						</span>
-						<span class="max-w-72 min-w-40 flex-1">
-							<Slider
-								label="merges applied"
-								bind:value={k}
-								min={0}
-								max={merges.length}
-								step={1}
-								format={(v) => `${v} / ${merges.length}`}
-							/>
-						</span>
-					{/if}
-				{/if}
-			</div>
-
 			<div class="p-4">
 				<!-- the fusion on the floor -->
 				<div
@@ -374,19 +317,63 @@
 					</div>
 				</div>
 
-				<!-- the whole-corpus score -->
-				<p class="num mt-3 text-[11.5px] text-ink-2">
-					whole corpus: {fmt(originalLen)} chars →
-					<span class="text-ink">{fmt(corpusToks)}</span>
-					tokens ({corpusCpt.toFixed(2)} chars/token) · vocabulary {69 + k}
-				</p>
-				<p class="mt-1 text-[11px] leading-relaxed text-ink-3">
-					compression is the score: each merge shortens the corpus by one token per fusion it makes.
-					nothing here is prerecorded — there is no merge list in this page to replay. every count
-					is measured by scanning your own copy of the corpus, and the millisecond figure above is
-					how long that scan took on this machine. the pause between merges is only for reading; the
-					merge itself takes about a millisecond.
-				</p>
+				<!-- the whole-corpus score, and the history scrubber -->
+				<div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2.5">
+					<p class="num text-[11.5px] text-ink-2">
+						whole corpus: {fmt(originalLen)} chars →
+						<span class="text-ink">{fmt(corpusToks)}</span>
+						tokens ({corpusCpt.toFixed(2)} chars/token) · vocabulary {69 + k}
+					</p>
+					{#if scrubbable}
+						<span class="ml-auto flex items-center gap-1.5">
+							<button
+								class="ctl"
+								onclick={() => stepK(-merges.length)}
+								disabled={k === 0}
+								aria-label="rewind to zero merges"
+							>
+								<RotateCcw size={13} aria-hidden="true" />
+							</button>
+							<button
+								class="ctl"
+								onclick={() => stepK(-1)}
+								disabled={k === 0}
+								aria-label="back one merge"
+							>
+								<StepBack size={13} aria-hidden="true" />
+							</button>
+							<button
+								class="ctl"
+								onclick={toggleReplay}
+								aria-label={playing ? 'pause the replay' : 'replay the merges'}
+							>
+								{#if playing}
+									<Pause size={13} aria-hidden="true" />
+								{:else}
+									<Play size={13} aria-hidden="true" />
+								{/if}
+							</button>
+							<button
+								class="ctl"
+								onclick={() => stepK(1)}
+								disabled={k >= merges.length}
+								aria-label="forward one merge"
+							>
+								<StepForward size={13} aria-hidden="true" />
+							</button>
+						</span>
+						<span class="max-w-72 min-w-40 flex-1">
+							<Slider
+								label="merges applied"
+								bind:value={k}
+								min={0}
+								max={merges.length}
+								step={1}
+								format={(v) => `${v} / ${merges.length}`}
+							/>
+						</span>
+					{/if}
+				</div>
 			</div>
 		{/if}
 	</div>

@@ -299,16 +299,17 @@ export function project3(
 
 /** Grid-occupancy subsample over the frame `center ± span`: one representative
  * per occupied cell (the point nearest the cell centre), so thumbnails never
- * pile up. Cell counts are tuned to land near ~600 visible tiles at 2000
- * points. */
+ * pile up. `cells` is the 2-D resolution — how many digits the reader asked to
+ * see; a third axis spends the same budget over a cube, so it gets fewer. */
 export function binSubsample(
 	z: Float32Array,
 	n: number,
 	d: number,
 	center: number[],
-	span: number
+	span: number,
+	cells: number
 ): Int32Array {
-	const G = d === 2 ? 26 : 10;
+	const G = d === 2 ? cells : Math.max(4, Math.round(cells * 0.38));
 	const best = new Map<number, { i: number; dd: number }>();
 	for (let i = 0; i < n; i++) {
 		let key = 0;

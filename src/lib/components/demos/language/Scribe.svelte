@@ -63,7 +63,7 @@
 <Plate
 	n={3}
 	title="Watch it learn to write"
-	caption="After every burst of steps the desk re-asks the same prompt at the same temperature, so the only thing that changes between samples is the weights. Step 0 is uniform noise; word-shapes arrive around step 200 and sentence-shaped grammar near 1,500 — that timeline, noise to spelling to syntax, is the demo."
+	caption="After every burst of forty steps the desk re-asks the same prompt at the same temperature, so the only thing that changes between samples is the weights. Step 0 is uniform noise; word-shapes arrive around step 200 and sentence-shaped grammar near 1,500 — that timeline, noise to spelling to syntax, is the demo. Ask your own question any time: temperature rescales confidence before each draw, 0.2 playing the favourite and 1.4 gambling, and characters outside the 69-glyph alphabet are dropped from the prompt."
 >
 	{#snippet status()}
 		{#if scribe.phase === 'idle' || scribe.phase === 'loading'}
@@ -83,6 +83,21 @@
 		{/if}
 	{/snippet}
 
+	{#snippet actions()}
+		{#if usable}
+			<Btn kind="primary" onclick={() => scribe.toggle()}>
+				{#if scribe.phase === 'training'}
+					<Pause size={12} aria-hidden="true" /> Pause
+				{:else}
+					<Play size={12} aria-hidden="true" /> Train
+				{/if}
+			</Btn>
+			<Btn onclick={() => void scribe.reset()} title="Back to the step-0 weights">
+				<RotateCcw size={12} aria-hidden="true" /> Reset
+			</Btn>
+		{/if}
+	{/snippet}
+
 	<div use:inview={() => void scribe.boot()}>
 		{#if !usable}
 			<LabGate
@@ -90,28 +105,6 @@
 				note="the scribe boots when you reach it — 1.5 MB of stories and a 243,648-parameter transformer, built on your GPU"
 			/>
 		{:else}
-			<!-- transport -->
-			<div
-				class="flex flex-wrap items-center gap-x-3 gap-y-2.5 border-b border-line-soft px-4 py-3"
-			>
-				<Btn kind="primary" onclick={() => scribe.toggle()}>
-					{#if scribe.phase === 'training'}
-						<Pause size={13} aria-hidden="true" /> Pause
-					{:else}
-						<Play size={13} aria-hidden="true" /> Train
-					{/if}
-				</Btn>
-				<Btn onclick={() => void scribe.reset()} title="Back to the step-0 weights">
-					<RotateCcw size={13} aria-hidden="true" /> Reset
-				</Btn>
-				<span class="num text-[11px] text-ink-3">{TRAIN_CHUNK} steps per burst, then a sample</span>
-				{#if scribe.spoke}
-					<span class="ml-auto font-serif text-[13px] italic" style="color: var(--good);">
-						it speaks — keep going and listen to the grammar arrive
-					</span>
-				{/if}
-			</div>
-
 			<div class="grid grid-cols-1 gap-px bg-line-soft lg:grid-cols-2">
 				<!-- left: the descent, and the questions you can ask -->
 				<div class="flex flex-col bg-surface p-4">
@@ -209,11 +202,6 @@
 							{/each}
 						</svg>
 					</div>
-					<p class="mt-2 text-[11px] leading-relaxed text-ink-3">
-						reading the gauge: at loss ℓ the model hesitates among about e<sup>ℓ</sup> characters — 4.23
-						means all 69 of them, 1.2 means about three. the dashed line is where knowing nothing lives;
-						the model starts exactly there.
-					</p>
 
 					<!-- ask it something -->
 					<div class="mt-auto border-t border-line-soft pt-3.5">
@@ -244,10 +232,6 @@
 								<Feather size={13} aria-hidden="true" /> Sample now
 							</Btn>
 						</div>
-						<p class="mt-1.5 text-[11px] leading-snug text-ink-3">
-							temperature rescales confidence before each draw — 0.2 plays the favorite, 1.4
-							gambles. characters outside the model's 69-glyph alphabet are dropped from the prompt.
-						</p>
 					</div>
 				</div>
 
@@ -255,7 +239,15 @@
 				<div class="flex flex-col bg-surface p-4">
 					<div class="flex flex-wrap items-baseline justify-between gap-2">
 						<span class="eyebrow">the scribe's desk</span>
-						<span class="num text-[10px] text-ink-3">auto: “{AUTO_PROMPT}” · temp 0.80</span>
+						{#if scribe.spoke}
+							<span class="font-serif text-[12.5px] italic" style="color: var(--good);">
+								it speaks — keep going and listen to the grammar arrive
+							</span>
+						{:else}
+							<span class="num text-[10px] text-ink-3">
+								auto: “{AUTO_PROMPT}” · temp 0.80 · every {TRAIN_CHUNK} steps
+							</span>
+						{/if}
 					</div>
 
 					{#if latest}

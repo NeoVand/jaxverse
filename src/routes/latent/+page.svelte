@@ -7,6 +7,7 @@
 	import LatentMap from '$lib/components/demos/latent/LatentMap.svelte';
 	import ManifoldGrid from '$lib/components/demos/latent/ManifoldGrid.svelte';
 	import AutoencoderDiagram from '$lib/components/demos/latent/AutoencoderDiagram.svelte';
+	import Neighbors from '$lib/components/demos/latent/Neighbors.svelte';
 	import { resolve } from '$app/paths';
 </script>
 
@@ -119,9 +120,10 @@
 			The plate below does exactly that, with one twist held in reserve. In ink you see the map as
 			the model knows it: anonymous points, arranged purely by reconstruction convenience. In
 			images, each digit is printed at its own latent address, so the map reads like an atlas of
-			handwriting. And the twist — colorize tints every digit by its true label, information the
-			network has never seen, not in any gradient, not once. If the bottleneck's two numbers carry
-			nothing about digit-kind, the tints will fall like confetti.
+			handwriting — and the slider decides how many get printed. And the twist, which works over
+			either view: colorize tints everything by its true label, information the network has never
+			seen, not in any gradient, not once. If the bottleneck's two numbers carry nothing about
+			digit-kind, the tints will fall like confetti.
 		</p>
 	</Prose>
 
@@ -129,7 +131,7 @@
 		<LatentMap
 			n={2}
 			title="The map — where the encoder put everything"
-			caption="Left: two thousand held-out digits placed by the encoder alone — in image view roughly 600 of them are shown, one per occupied cell, so the tiles stay legible. Flip to colorize and every 3 has found the other 3s, though labels were used only for the tints, after the fact. Right: the decoder repaints whatever point your cursor visits, and the walk crosses the country between two digits on foot."
+			caption="Left: two thousand held-out digits placed by the encoder alone, drawn as points or as printed thumbnails — one per occupied cell of a sheet whose fineness you choose. Colorize works over either, and with it on, every 3 has found the other 3s though labels were used only for the tints, after the fact. Right: the decoder repaints whatever point your cursor visits, and the walk crosses the country between two digits on foot."
 		/>
 	</Wide>
 
@@ -180,6 +182,92 @@
 			never existed. You are also looking at their oldest defect. A confident answer from a place the
 			data never touched is, in the larger systems this book is walking toward, called a hallucination.
 			Same machinery, same geometry.
+		</p>
+		<p>
+			So far we have read the map as a picture. It has a second life as a tool, and this is the one
+			the industry actually runs on. Stop thinking of <Math tex="z" /> as a location on a sheet and start
+			thinking of it as a short list of numbers attached to a thing — an <em>embedding</em>. The
+			encoder is now a machine that turns anything of its type into a vector, and once your things
+			are vectors, “which of these is most like that one?” stops being a philosophical question and
+			becomes arithmetic: embed everything once, keep the vectors, and answer a query by finding the
+			nearest ones. That is <em>similarity search</em>, and it is how a photo library finds the
+			other pictures of your dog, how a store recommends the next item, how duplicate documents get
+			caught, and how a language model is handed the right three paragraphs before it answers you.
+		</p>
+		<p>
+			The plate below hands you the query end of that machine. Draw a digit — your handwriting, not
+			the dataset's — and it is centred, pushed through the encoder, and turned into the same short
+			list of numbers every held-out digit already carries. Then the two thousand of them are sorted
+			by how near they landed and the closest eight are printed. Nothing about the encoder was ever
+			told what a 3 is, so when the row comes back full of 3s, that is the geometry answering, not a
+			lookup.
+		</p>
+		<p>
+			The second row is a control, and a fair one: the same stroke, the same candidates, the same
+			metric, but distances measured between raw images instead of embeddings. Watch where the two
+			rows disagree. Pixel distance rewards ink that lands in the same places, so it will happily
+			return a fat 1 for a thin 7 and rank a slanted 3 far from an upright one; the map is looking
+			for the same shape drawn any way at all. Draw badly on purpose — a wobbly 8, a 4 with an open
+			top — and the rows separate fastest.
+		</p>
+		<p>
+			It also introduces the measuring stick that the next chapters use by default. Instead of the
+			straight-line distance between two vectors, compare their directions:
+		</p>
+		<Math
+			display
+			tex={'\\cos(u, v) \\;=\\; \\frac{u \\cdot v}{\\lVert u \\rVert\\, \\lVert v \\rVert} \\;\\in\\; [-1, 1].'}
+		/>
+		<p>
+			<em>Cosine similarity</em> is 1 when two vectors point the same way, 0 when they are at right angles,
+			−1 when they oppose — and it ignores length entirely. That is usually what you want of an embedding,
+			because in a wide space the direction tends to carry the meaning while the length carries something
+			duller, like how common or how confident the thing is. It is not a law, though, and this chapter
+			is a good place to see the exception: at a two-number waist, throwing away the radius throws away
+			half the map, so plain distance often wins. Try both.
+		</p>
+	</Prose>
+
+	<Wide>
+		<Neighbors
+			n={4}
+			title="Search by drawing — your stroke, and the digits nearest it"
+			caption="Draw on the pad and the same two thousand held-out digits are sorted twice: by distance between embeddings, and by distance between raw images, under whichever metric you pick. Both searches read the same centred ink, and the small square shows your stroke after its round trip through the waist — what the map actually kept of it. Borrow a real digit to start from, click any neighbour to draw on it, and the meters at the bottom keep score over forty-eight held-out queries, where chance is one in ten."
+		/>
+	</Wide>
+
+	<Prose>
+		<p>
+			The meters keep score over held-out digits rather than your handwriting, and at a two-number
+			waist they say something you might not expect: the pixel row wins, and not narrowly. That is
+			worth sitting with rather than explaining away. Part of it is arithmetic — you gave the map
+			two numbers and the pixels 784 and then asked for a fair fight. The rest is that MNIST is the
+			kindest dataset raw pixel distance will ever meet. Every digit here, and every stroke you
+			draw, is centred by its ink and scaled into the same box, in white on black with no
+			background, no lighting and no camera. Under those conditions overlap really is a decent
+			stand-in for shape, which is why nearest-neighbour on raw MNIST pixels has been a respectable
+			baseline since the 1990s. Photograph the same digits on a desk instead and that baseline is
+			gone by lunchtime, while an encoder trained on desks would barely notice. Pixel distance is
+			not wrong here. It is being flattered.
+		</p>
+		<p>
+			So run it the other way. Go back to the first plate, widen the waist to sixteen, and train for
+			a few minutes: the map's meter climbs out of the fifties and settles level with the pixel row,
+			which has nothing to learn and never moves. Level — not past it. That is the result, and it is
+			the more useful one, because the tie is being won with sixteen numbers against 784. A stored
+			embedding is fifty times smaller, and every search is fifty times less arithmetic; at a
+			billion items that is the difference between an index and an impossibility.
+		</p>
+		<p>
+			It is also worth being clear about why the map only ties. Nothing in the loss ever asked for
+			digits of a kind to sit together. The encoder was paid to rebuild pixels, so it kept what
+			rebuilding needs — shape, but also slant, weight, size — and two 7s in different hands can
+			still land apart because they genuinely differ in what the decoder must draw. Kind-ness came
+			out as a side effect, and side effects tie. If you want a space where <em>same kind</em> is near
+			by construction, you have to say so in the loss: show the model two views of the same thing and
+			require it to pull them together while pushing everything else away. That is contrastive learning,
+			it is how modern image and text encoders are actually trained, and it is what turns this chapter's
+			happy accident into a design.
 		</p>
 		<p>
 			Carry the trick forward, because the rest of the book stands on it. No one labeled anything

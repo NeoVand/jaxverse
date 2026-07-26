@@ -37,14 +37,19 @@
 	const PAD = 1.2;
 	const PAD3 = 1.55;
 	const EYE_MS = 60; // cursor-decode throttle
-	const THUMB = 16; // 2-D thumbnail edge, px
 	const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-	type Mode = 'images' | 'ink' | 'colorize';
-	const MODES: Mode[] = ['images', 'ink', 'colorize'];
+	type Mode = 'images' | 'ink';
+	const MODES: Mode[] = ['images', 'ink'];
 	/** Points glide to their new coordinates instead of teleporting there. */
 	const MORPH_MS = 420;
 	let mode = $state<Mode>('ink');
+	/** Tints by true label — orthogonal to how the map is drawn, so you can put
+	 * colour on the points as well as on the thumbnails. */
+	let colorize = $state(false);
+	/** Cells per axis for the thumbnail subsample: how many digits get printed,
+	 * and how big each one can be before they collide. */
+	let detail = $state(26);
 	let userPicked = false;
 	let t = $state(0);
 	let pair = $state<[number, number] | null>(null);
@@ -147,7 +152,7 @@
 		projected = !!lab.basis;
 		full = lab.testZ;
 		fullDim = lab.testZd;
-		visible = binSubsample(v, n, vd, lab.zCenter, lab.zSpan);
+		visible = binSubsample(v, n, vd, lab.zCenter, lab.zSpan, detail);
 		visibleCount = visible.length;
 		const c = new Array(vd).fill(0);
 		for (let i = 0; i < n; i++) for (let k = 0; k < vd; k++) c[k] += v[i * vd + k];
@@ -289,11 +294,11 @@
 		if (!scatterCanvas) return null;
 		const r = scatterCanvas.getBoundingClientRect();
 		if (r.width < 4) return null;
-		const e = lab.zSpan * PAD;
+		const s = Math.min(r.width, r.height) / (2 * lab.zSpan * PAD);
 		const [cx, cy] = lab.zCenter;
 		return [
-			cx + ((ev.clientX - r.left) / r.width) * 2 * e - e,
-			cy + e - ((ev.clientY - r.top) / r.height) * 2 * e
+			cx + (ev.clientX - r.left - r.width / 2) / s,
+			cy - (ev.clientY - r.top - r.height / 2) / s
 		];
 	}
 
@@ -413,13 +418,19 @@
 		if (morphAt >= 1) morphFrom = null;
 	}
 
+	/** Tiles just big enough to cover their cell of the subsample grid: ask for
+	 * more digits and each one gets smaller, so the sheet stays readable. */
+	function thumbSize(W: number): number {
+		return Math.max(7, Math.min(26, (W / detail) * 1.25));
+	}
+
 	function atlasFor(
 		tk: ReturnType<typeof readTokens>
 	): { sheet: HTMLCanvasElement; cols: number } | null {
 		const m = lab.mnist;
 		if (!m) return null;
 		const n = m.testY.length;
-		if (mode === 'colorize') {
+		if (colorize) {
 			const sheet = catAtlas.ensure(m.testX, n, m.testY, tk.surface, tk.cats);
 			return { sheet, cols: catAtlas.cols };
 		}
@@ -459,21 +470,29 @@
 		else drawScatter2(ctx, W, H, tk);
 	}
 
+	/** Screen mapping for the cloud's frame. One scale for both axes, so the map
+	 * keeps its geometry whatever shape the cell is; a taller cell simply shows
+	 * more empty space above and below rather than stretching the country. */
+	function frameMap(W: number, H: number, pad: number) {
+		const s = Math.min(W, H) / (2 * lab.zSpan * pad);
+		const [cx, cy] = lab.zCenter;
+		return {
+			s,
+			px: (x: number) => W / 2 + (x - cx) * s,
+			py: (y: number) => H / 2 - (y - cy) * s
+		};
+	}
+
 	function drawScatter2(
 		ctx: CanvasRenderingContext2D,
 		W: number,
 		H: number,
 		tk: ReturnType<typeof readTokens>
 	): void {
-		const span = lab.zSpan;
-		const e = span * PAD;
-		const [cx, cy] = lab.zCenter;
-		const px = (x: number) => ((x - cx + e) / (2 * e)) * W;
-		const py = (y: number) => H - ((y - cy + e) / (2 * e)) * H;
+		const { px, py } = frameMap(W, H, PAD);
 
-		// the origin's cross where it falls, and a cage at the reach of the
-		// cloud — quiet reference geometry that also says how big a latent unit
-		// currently is, since only tanh keeps that fixed
+		// the origin's cross where it falls — the one piece of reference
+		// geometry the map keeps
 		ctx.lineWidth = 1;
 		ctx.strokeStyle = tk.lineSoft;
 		ctx.beginPath();
@@ -482,22 +501,20 @@
 		ctx.moveTo(px(0), 0);
 		ctx.lineTo(px(0), H);
 		ctx.stroke();
-		ctx.strokeStyle = tk.line;
-		ctx.strokeRect(
-			px(cx - span),
-			py(cy + span),
-			px(cx + span) - px(cx - span),
-			py(cy - span) - py(cy + span)
-		);
 
 		const z = shown;
 		const m = lab.mnist;
 		if (z && m) {
 			const n = m.testY.length;
 			if (mode === 'ink') {
-				ctx.globalAlpha = 0.9;
-				ctx.fillStyle = tk.ink3;
+				ctx.globalAlpha = colorize ? 0.85 : 0.9;
+				let fill = '';
 				for (let i = 0; i < n; i++) {
+					const want = colorize ? tk.cats[m.testY[i]] : tk.ink3;
+					if (want !== fill) {
+						fill = want;
+						ctx.fillStyle = want;
+					}
 					ctx.beginPath();
 					ctx.arc(px(z[2 * i]), py(z[2 * i + 1]), 2.5, 0, Math.PI * 2);
 					ctx.fill();
@@ -507,9 +524,10 @@
 				const at = atlasFor(tk);
 				if (at) {
 					ctx.imageSmoothingEnabled = false; // digit pixels stay crisp
+					const size = thumbSize(W);
 					for (let k = 0; k < visible.length; k++) {
 						const i = visible[k];
-						thumb(ctx, at.sheet, at.cols, i, px(z[2 * i]), py(z[2 * i + 1]), THUMB);
+						thumb(ctx, at.sheet, at.cols, i, px(z[2 * i]), py(z[2 * i + 1]), size);
 					}
 				}
 			}
@@ -554,8 +572,8 @@
 		tk: ReturnType<typeof readTokens>
 	): void {
 		const span = lab.zSpan;
-		const e = span * PAD3;
 		const c = lab.zCenter;
+		const s = Math.min(W, H) / (2 * span * PAD3);
 		// centred on the cloud, so an unbounded waist that drifts off the origin
 		// still lands in frame
 		const toXY = (x: number, y: number, zc: number): [number, number, number] => {
@@ -566,7 +584,7 @@
 				yaw,
 				pitch
 			);
-			return [((vx + e) / (2 * e)) * W, H - ((vy + e) / (2 * e)) * H, vz];
+			return [W / 2 + vx * s, H / 2 - vy * s, vz];
 		};
 
 		// a cage at the reach of the cloud, as a wireframe — without it a
@@ -614,9 +632,14 @@
 
 		if (mode === 'ink') {
 			const order = Array.from({ length: n }, (_, i) => i).sort((a, b) => depthOf(a) - depthOf(b));
-			ctx.fillStyle = tk.ink3;
+			let fill = '';
 			for (const i of order) {
 				const d = dn(i);
+				const want = colorize ? tk.cats[m.testY[i]] : tk.ink3;
+				if (want !== fill) {
+					fill = want;
+					ctx.fillStyle = want;
+				}
 				ctx.globalAlpha = 0.35 + 0.6 * d;
 				ctx.beginPath();
 				ctx.arc(pr[3 * i], pr[3 * i + 1], 1.8 + 1.6 * d, 0, Math.PI * 2);
@@ -627,11 +650,12 @@
 			const at = atlasFor(tk);
 			if (at) {
 				const order = Array.from(visible).sort((a, b) => depthOf(a) - depthOf(b));
+				const size = thumbSize(W) * 0.82;
 				ctx.imageSmoothingEnabled = false;
 				for (const i of order) {
 					const d = dn(i);
 					ctx.globalAlpha = 0.45 + 0.55 * d;
-					thumb(ctx, at.sheet, at.cols, i, pr[3 * i], pr[3 * i + 1], 11 + 9 * d);
+					thumb(ctx, at.sheet, at.cols, i, pr[3 * i], pr[3 * i + 1], size * (0.7 + 0.6 * d));
 				}
 				ctx.globalAlpha = 1;
 			}
@@ -809,7 +833,7 @@
 			<div
 				class="grid grid-cols-1 gap-px bg-line-soft lg:grid-cols-[minmax(0,520px)_minmax(0,1fr)]"
 			>
-				<div class="relative bg-surface">
+				<div class="relative min-h-[440px] bg-surface">
 					<span class="eyebrow absolute top-3 left-3 z-10">
 						{projected ? 'latent space · shadow of z = E(x)' : 'latent space · z = E(x)'}
 						{#if viewDim === 3}
@@ -818,14 +842,23 @@
 							>
 						{/if}
 					</span>
-					{#if mode !== 'ink'}
-						<span class="num absolute bottom-2 left-3 z-10 text-[10.5px] text-ink-3">
-							{visibleCount} of 2000 shown
-						</span>
+					{#if mode === 'images'}
+						<div class="absolute right-3 bottom-2.5 left-3 z-10 flex items-center gap-2.5">
+							<input
+								class="dens"
+								type="range"
+								min="12"
+								max="64"
+								step="1"
+								bind:value={detail}
+								aria-label="How many digits to print"
+							/>
+							<span class="num text-[10.5px] text-ink-3">{visibleCount} of 2000 shown</span>
+						</div>
 					{/if}
 					<canvas
 						bind:this={scatterCanvas}
-						class="block aspect-square w-full touch-none"
+						class="absolute inset-0 block h-full w-full touch-none"
 						class:cursor-crosshair={viewDim === 2}
 						class:cursor-grab={viewDim === 3 && !dragging}
 						class:cursor-grabbing={dragging}
@@ -842,33 +875,41 @@
 					<!-- what the map is made of -->
 					<div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
 						<span class="eyebrow">the view</span>
-						<span class="flex items-center gap-1.5" role="group" aria-label="Map view">
-							{#each MODES as m (m)}
-								<button
-									class="chip"
-									class:chip-on={mode === m}
-									aria-pressed={mode === m}
-									onclick={() => pickMode(m)}
-								>
-									{m}
-								</button>
-							{/each}
+						<span class="flex items-center gap-1.5">
+							<span class="flex items-center gap-1.5" role="group" aria-label="Map view">
+								{#each MODES as m (m)}
+									<button
+										class="chip"
+										class:chip-on={mode === m}
+										aria-pressed={mode === m}
+										onclick={() => pickMode(m)}
+									>
+										{m}
+									</button>
+								{/each}
+							</span>
+							<button
+								class="chip ml-1"
+								class:chip-on={colorize}
+								aria-pressed={colorize}
+								onclick={() => (colorize = !colorize)}
+							>
+								colorize
+							</button>
 						</span>
 					</div>
 					<div class="flex min-h-[19px] flex-wrap items-center gap-x-3 gap-y-1">
-						{#if mode === 'colorize'}
+						{#if colorize}
 							{#each DIGITS as d (d)}
 								<span class="num flex items-center gap-1.5 text-[11px] text-ink-2">
 									<i class="dot" style="background: var(--cat-{d});" aria-hidden="true"></i>{d}
 								</span>
 							{/each}
-						{:else if mode === 'images'}
-							<span class="text-[11px] text-ink-3">
-								one digit printed per occupied cell, so the tiles stay legible
-							</span>
 						{:else}
 							<span class="text-[11px] text-ink-3">
-								anonymous points — the map as the model knows it
+								{mode === 'ink'
+									? 'anonymous points — the map as the model knows it'
+									: 'one digit printed per occupied cell of the sheet'}
 							</span>
 						{/if}
 					</div>
@@ -950,6 +991,46 @@
 		width: 7px;
 		height: 7px;
 		border-radius: 50%;
+	}
+
+	/* how many digits to print — a hairline control that sits on the map
+	   without competing with it */
+	.dens {
+		appearance: none;
+		width: 104px;
+		height: 12px;
+		background: transparent;
+		cursor: pointer;
+	}
+	.dens::-webkit-slider-runnable-track {
+		height: 2px;
+		border-radius: 1px;
+		background: var(--line);
+	}
+	.dens::-webkit-slider-thumb {
+		appearance: none;
+		width: 9px;
+		height: 9px;
+		margin-top: -3.5px;
+		border: none;
+		border-radius: 50%;
+		background: var(--ink-3);
+		transition: background 100ms ease;
+	}
+	.dens:hover::-webkit-slider-thumb {
+		background: var(--ink-2);
+	}
+	.dens::-moz-range-track {
+		height: 2px;
+		border-radius: 1px;
+		background: var(--line);
+	}
+	.dens::-moz-range-thumb {
+		width: 9px;
+		height: 9px;
+		border: none;
+		border-radius: 50%;
+		background: var(--ink-3);
 	}
 
 	.chip {

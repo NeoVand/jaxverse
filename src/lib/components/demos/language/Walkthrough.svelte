@@ -5,7 +5,7 @@
 	// (softmax(QKᵀ/√d + mask)) and the real next-token distribution. The
 	// temperature control re-softmaxes the stored logit row client-side — the
 	// model is never asked again, which is exactly what temperature is.
-	import { ChevronDown, Dices, Repeat, ScanEye } from 'lucide-svelte';
+	import { ChevronDown, Dices, ScanEye } from 'lucide-svelte';
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Slider from '$lib/components/ui/Slider.svelte';
@@ -151,7 +151,7 @@
 <Plate
 	n={5}
 	title="One forward pass, opened up"
-	caption="The five stages a character travels through on its way to a prediction. The shapes are this model's real architecture; the attention rows and the final distribution are real numbers, read from the weights you trained above — not an illustration of a transformer, but a reading of one."
+	caption="The five stages a character travels through on its way to a prediction. The shapes are this model's real architecture; the attention rows and the final distribution are real numbers, read from the weights you trained above — not an illustration of a transformer, but a reading of one. Stages two through four form one block, and this model stacks two of them; frontier models stack the same block roughly a hundred deep, with vectors thousands of numbers wide, and nothing else about the picture changes."
 >
 	{#snippet status()}
 		{#if att}
@@ -165,6 +165,15 @@
 		{/if}
 	{/snippet}
 
+	{#snippet actions()}
+		{#if usable}
+			<Btn kind="primary" onclick={() => void runPass(prompt)} disabled={busy}>
+				<ScanEye size={12} aria-hidden="true" />
+				{stale ? 'Re-run' : 'Run the pass'}
+			</Btn>
+		{/if}
+	{/snippet}
+
 	<div use:inview={() => void scribe.boot()}>
 		{#if !usable}
 			<LabGate
@@ -172,8 +181,8 @@
 			/>
 		{:else}
 			<!-- the prompt this pass runs on -->
-			<div class="flex items-end gap-2 border-b border-line-soft px-4 pt-3.5 pb-3">
-				<label class="min-w-0 flex-1">
+			<div class="border-b border-line-soft px-4 pt-3.5 pb-3">
+				<label class="block">
 					<span class="eyebrow mb-1 block">the context · up to {MAX_CHARS} characters</span>
 					<input
 						class="input"
@@ -184,10 +193,6 @@
 						}}
 					/>
 				</label>
-				<Btn kind="primary" onclick={() => void runPass(prompt)} disabled={busy}>
-					<ScanEye size={13} aria-hidden="true" />
-					{stale ? 'Re-run' : 'Run the pass'}
-				</Btn>
 			</div>
 
 			{#if !att}
@@ -258,10 +263,9 @@
 								seed={13}
 							/>
 							<p class="stage-note min-w-48 flex-1">
-								Every vector projects into a <em>query</em> (what am I looking for?), a
-								<em>key</em>
-								(what do I offer?) and a <em>value</em> (what I'd pass along). Split across
-								{nHead} heads, each gets {headDim} dimensions to work in.
+								One projection each for <em>query</em>, <em>key</em> and <em>value</em>, split
+								across
+								{nHead} heads of {headDim} dimensions apiece.
 								<MathTex tex={'\\mathrm{Attn} = \\sigma\\!\\left(QK^{\\top}/\\sqrt{d}\\right)V'} />
 							</p>
 						</div>
@@ -369,10 +373,9 @@
 							{/if}
 						</p>
 						<p class="stage-note">
-							Rows are the position being predicted; columns are where its attention lands, and each
-							row is a budget of exactly one spent over the past. Only the lower triangle exists:
-							the causal mask hides the future, because a model that could peek at the answer would
-							learn nothing by guessing it.
+							Rows are the position being predicted, columns where its attention lands — and only
+							the lower triangle exists, because a model that could peek at the answer would learn
+							nothing by guessing it.
 						</p>
 					</div>
 
@@ -402,27 +405,13 @@
 								seed={22}
 							/>
 							<p class="stage-note min-w-48 flex-1">
-								Attention is where tokens talk; this is where each one thinks alone. The vector is
-								widened fourfold, rectified — negatives clipped to zero, the only nonlinearity in
-								the block — and squeezed back to size.
+								Attention is where tokens talk; this is where each one thinks alone. Widened
+								fourfold, rectified, squeezed back — and most of the parameters live here.
 							</p>
 						</div>
 					</div>
 
-					{@render flow(`the block above repeats ×${nLayer}`)}
-
-					<div
-						class="mb-3 flex items-start gap-2 rounded-md border border-line-soft bg-surface-2 px-3 py-2"
-					>
-						<Repeat size={13} style="color: var(--warm);" aria-hidden="true" />
-						<p class="text-[11.5px] leading-relaxed text-ink-2">
-							Stages 2 through 4 are one <em>block</em>, and this model stacks {nLayer} of them — which
-							is why the layer chips above offer two choices. Frontier models stack the same block roughly
-							a hundred deep, with vectors thousands of numbers wide. Nothing else about the picture changes.
-						</p>
-					</div>
-
-					{@render flow()}
+					{@render flow(`stages 2–4 are one block · this model stacks ${nLayer}`)}
 
 					<!-- ── stage 5: logits → the next character ── -->
 					<div class="stage stage-live">
@@ -469,12 +458,11 @@
 							{/each}
 						</div>
 						<p class="stage-note">
-							The final vector meets one more matrix — {nEmbd} numbers in, 69 scores out, one per character
-							— and a softmax turns those scores into probabilities.
+							{nEmbd} numbers in, 69 scores out — one per character — and a softmax turns those scores
+							into probabilities.
 							<MathTex tex={'P(x_{t+1}) = \\sigma(z / T)'} />
-							Dragging the temperature never asks the model again; it reshapes the same stored scores,
-							flattening them as it rises. Draw one, and the drawn character joins the context: that is
-							the whole loop the scribe runs, 160 times per sample.
+							Dragging the temperature never asks the model again; it reshapes the same stored scores.
+							Draw one and it joins the context: that is the whole loop, 160 times per sample.
 						</p>
 					</div>
 				</div>

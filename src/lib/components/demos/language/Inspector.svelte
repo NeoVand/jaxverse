@@ -84,7 +84,7 @@
 <Plate
 	n={4}
 	title="The surprise meter"
-	caption="Each character's background is what the model paid to see it — hotter is more surprising. Word-openings run hot and word-endings cool; type a q somewhere and watch its u come almost free. Surprise is where the information lives."
+	caption="Each character's background is what the model paid to see it — hotter is more surprising. Word-openings run hot and word-endings cool; type a q somewhere and watch its u come almost free. Hover or tap any character for the five candidates the model was weighing there, with the one that actually came in vermilion; the first character carries a dotted underline because nothing precedes it, so it is never predicted. Surprise is where the information lives."
 >
 	{#snippet status()}
 		{#if infos}
@@ -98,15 +98,31 @@
 		{/if}
 	{/snippet}
 
+	{#snippet actions()}
+		{#if usable}
+			<Btn kind="primary" onclick={() => void read()} disabled={busy}>
+				<ScanText size={12} aria-hidden="true" />
+				{infos ? 'Read again' : 'Read'}
+			</Btn>
+		{/if}
+	{/snippet}
+
 	<div use:inview={() => void scribe.boot()}>
 		{#if !usable}
 			<LabGate
 				note="this plate reads the scribe from the plate above — it boots when you reach it, and starts out surprised by everything"
 			/>
 		{:else}
-			<div class="flex items-end gap-2 px-4 pt-3.5 pb-3">
-				<label class="min-w-0 flex-1">
-					<span class="eyebrow mb-1 block">sentence</span>
+			<div class="px-4 pt-3.5 pb-3">
+				<label class="block">
+					<span class="mb-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+						<span class="eyebrow">sentence</span>
+						<span class="num flex items-center gap-1.5 text-[10px] text-ink-3">
+							free
+							<span class="ramp"></span>
+							{UNIFORM_NATS.toFixed(2)} nats
+						</span>
+					</span>
 					<input
 						class="input"
 						maxlength="96"
@@ -116,9 +132,6 @@
 						}}
 					/>
 				</label>
-				<Btn kind="primary" onclick={() => void read()} disabled={busy}>
-					<ScanText size={13} aria-hidden="true" /> Read
-				</Btn>
 			</div>
 
 			<div class="px-4 pb-4">
@@ -204,14 +217,12 @@
 					{/if}
 				</div>
 
-				<p class="mt-2 text-[11px] leading-relaxed text-ink-3">
-					the vermilion candidate is the character that actually came; a dotted underline marks the
-					free first character. characters outside the 69-glyph alphabet are dropped.
-					{#if infos && readStep < 200}
+				{#if infos && readStep < 200}
+					<p class="mt-2 text-[11px] leading-relaxed text-ink-3">
 						this scribe has barely trained ({readStep} steps), so expect everything to glow — train it
 						above and read again.
-					{/if}
-				</p>
+					</p>
+				{/if}
 			</div>
 		{/if}
 	</div>
@@ -233,6 +244,19 @@
 		outline: none;
 		border-color: var(--accent);
 		box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+	}
+	/* the heat scale the characters are painted with, as a legend */
+	.ramp {
+		display: inline-block;
+		width: 60px;
+		height: 8px;
+		border-radius: 2px;
+		border: 1px solid var(--line-soft);
+		background: linear-gradient(
+			to right,
+			transparent,
+			color-mix(in srgb, var(--warm) 62%, transparent)
+		);
 	}
 	.ch {
 		white-space: pre;

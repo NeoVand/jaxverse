@@ -8,6 +8,7 @@
 	import { onDestroy } from 'svelte';
 	import { Eraser } from 'lucide-svelte';
 	import { lab, themePulse, watchTheme } from './digits-context.svelte';
+	import { SIGMA_MAX, SIGMA_MIN } from '$lib/data/brush';
 	import {
 		DEFAULT_SIGMA,
 		DIM,
@@ -406,13 +407,13 @@
 					<input
 						class="vrange"
 						type="range"
-						min="0.5"
-						max="2.5"
+						min={SIGMA_MIN}
+						max={SIGMA_MAX}
 						step="0.05"
 						bind:value={sigma}
 						aria-label="brush size"
 						title="Brush size"
-						style="--p: {((sigma - 0.5) / 2) * 100}%;"
+						style="--p: {((sigma - SIGMA_MIN) / (SIGMA_MAX - SIGMA_MIN)) * 100}%;"
 					/>
 				</div>
 			</div>
