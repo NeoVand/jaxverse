@@ -10,7 +10,7 @@
 	import { inview } from '$lib/components/ui/inview';
 	import LabGate from './LabGate.svelte';
 	import type { PerTokenInfo } from '$lib/llm/engine';
-	import { scribe, UNIFORM_NATS } from './lab.svelte';
+	import { scribe } from './lab.svelte';
 
 	const DEFAULT_TEXT = 'The little dog was so happy that he wagged his tail.';
 	let text = $state(DEFAULT_TEXT);
@@ -63,20 +63,24 @@
 		return n ? s / n : NaN;
 	});
 
-	// paper → warm, eased so mid-surprise characters stay readable
+	// paper → warm, eased so mid-surprise tokens stay readable
 	function heat(loss: number | undefined): string {
 		if (loss === undefined) return 'transparent';
-		const t = Math.min(loss / UNIFORM_NATS, 1);
+		const t = Math.min(loss / scribe.uniformNats, 1);
 		return `color-mix(in srgb, var(--warm) ${Math.round(Math.pow(t, 0.75) * 62)}%, transparent)`;
 	}
 
+	/** Word pieces carry their leading space; show it, or the reader cannot tell
+	 * " the" from "the" — and the model treats them as different tokens. */
 	function glyph(c: string): string {
-		return c === ' ' ? '␣' : c === '\n' ? '↵' : c;
+		return c.replaceAll(' ', '␣').replaceAll('\n', '↵');
 	}
+
+	const unit = $derived(scribe.kind === 'chars' ? 'character' : 'token');
 
 	function charLabel(t: PerTokenInfo): string {
 		return t.loss === undefined
-			? `“${glyph(t.text)}” — first character, nothing precedes it`
+			? `“${glyph(t.text)}” — first ${unit}, nothing precedes it`
 			: `“${glyph(t.text)}” — ${t.loss.toFixed(2)} nats of surprise`;
 	}
 </script>
@@ -84,13 +88,15 @@
 <Plate
 	n={4}
 	title="The surprise meter"
-	caption="Each character's background is what the model paid to see it — hotter is more surprising. Word-openings run hot and word-endings cool; type a q somewhere and watch its u come almost free. Hover or tap any character for the five candidates the model was weighing there, with the one that actually came in vermilion; the first character carries a dotted underline because nothing precedes it, so it is never predicted. Surprise is where the information lives."
+	caption="Each token's background is what the model paid to see it — hotter is more surprising. Function words in expected places run cool; the nouns and names carrying the sentence's actual news run hot, and a word the vocabulary never learned costs most of all, because the model must spell it out of fragments. Hover or tap any token for the five candidates it was weighing there, with the one that actually came in vermilion; a leading space is drawn ␣, since “the” and “ the” are different tokens. The first token carries a dotted underline because nothing precedes it, so it is never predicted."
 >
 	{#snippet status()}
 		{#if infos}
 			<span>read at step {readStep}</span>
 			<span aria-hidden="true">·</span>
-			<span>mean {mean.toFixed(2)} nats/char</span>
+			<span>mean {mean.toFixed(2)} nats/{scribe.kind === 'chars' ? 'char' : 'token'}</span>
+			<span aria-hidden="true">·</span>
+			<span>{scribe.bitsPerChar(mean).toFixed(2)} bits/char</span>
 		{:else if usable}
 			<span>scribe at step {scribe.step}</span>
 		{:else}
@@ -120,7 +126,7 @@
 						<span class="num flex items-center gap-1.5 text-[10px] text-ink-3">
 							free
 							<span class="ramp"></span>
-							{UNIFORM_NATS.toFixed(2)} nats
+							{scribe.uniformNats.toFixed(2)} nats
 						</span>
 					</span>
 					<input
@@ -138,11 +144,14 @@
 				<div
 					class="rounded-md border border-line-soft bg-paper px-3 py-3"
 					role="group"
-					aria-label="the sentence, one button per character, heated by surprise"
+					aria-label="the sentence, one button per token, heated by surprise"
 					onpointerleave={() => (active = null)}
 				>
 					{#if infos}
-						<div class="flex flex-wrap font-mono text-[14px] leading-[1.9]" style="row-gap: 3px;">
+						<div
+							class="flex flex-wrap font-mono text-[14px] leading-[1.9]"
+							style="row-gap: 3px; column-gap: {scribe.kind === 'chars' ? 0 : 2}px;"
+						>
 							{#each infos as t, i (i)}
 								<button
 									type="button"
@@ -162,7 +171,7 @@
 						</div>
 					{:else}
 						<p class="num py-3 text-center text-[11px] text-ink-3">
-							{busy ? 'reading…' : 'press read — every character gets a price'}
+							{busy ? 'reading…' : `press read — every ${unit} gets a price`}
 						</p>
 					{/if}
 				</div>
@@ -171,13 +180,13 @@
 				<div class="mt-2 min-h-24 rounded-md border border-line-soft bg-surface-2 px-3 py-2.5">
 					{#if !focus}
 						<span class="num text-[11px] text-ink-3">
-							hover or tap any character to see the five candidates the model was weighing there
+							hover or tap any {unit} to see the five candidates the model was weighing there
 						</span>
 					{:else}
 						{@const t = focus.t}
 						<div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
 							<span class="eyebrow" style="color: {focus.pinned ? 'var(--warm)' : 'var(--ink-3)'};">
-								{focus.pinned ? 'at the cursor' : 'the most expensive character'}
+								{focus.pinned ? 'at the cursor' : `the most expensive ${unit}`}
 							</span>
 							<span class="num text-[14px] text-ink">“{glyph(t.text)}”</span>
 							{#if t.loss !== undefined}
@@ -188,16 +197,16 @@
 						</div>
 						{#if t.loss === undefined}
 							<p class="mt-1 text-[11px] text-ink-3">
-								no context yet — the first character is never predicted
+								no context yet — the first {unit} is never predicted
 							</p>
 						{:else}
 							<div class="mt-1.5 grid grid-cols-1 gap-x-5 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
 								{#each t.topk ?? [] as cand (cand[0])}
 									<div class="flex items-center gap-2">
 										<span
-											class="num w-4 text-[11.5px]"
+											class="num max-w-16 min-w-4 truncate text-[11.5px]"
 											style="color: {cand[0] === t.id ? 'var(--warm)' : 'var(--ink)'};"
-											>{glyph(scribe.charOf(cand[0]))}</span
+											>{glyph(scribe.textOf(cand[0]))}</span
 										>
 										<span class="h-[3px] flex-1 overflow-hidden rounded-full bg-line">
 											<span

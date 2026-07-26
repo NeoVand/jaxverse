@@ -4,23 +4,33 @@
 // model you trained" is literal. Module-level so the model survives scrolling;
 // the chapter page calls disposeAll() on unmount — GPU memory is no souvenir.
 
-import { loadCorpus, type Corpus } from '$lib/data/corpus';
 import { detectWebGPU } from '$lib/nn/engine';
 import { WorkerEngine } from '$lib/llm/worker-engine';
 import type { ModelConfig, PerTokenInfo } from '$lib/llm/engine';
 import { progress } from '$lib/data/progress.svelte';
+import {
+	adoptedTokenizer,
+	charTokenizer,
+	pieceTokenizer,
+	type TokenizedCorpus,
+	type TokenizerKind
+} from '$lib/data/tokenizer';
+import type { MergePair } from '$lib/data/bpe';
 
-export const SCRIBE_CONFIG: ModelConfig = {
+/** Everything but the vocabulary is fixed; the vocabulary is whatever the
+ * tokenizer hands over, which is the point of the chapter. */
+export const SCRIBE_SHAPE = {
 	name: 'scribe',
 	nLayer: 2,
 	nEmbd: 96,
 	nHead: 4,
-	blockSize: 96,
-	vocab: 69
-};
+	blockSize: 96
+} as const;
 
-/** Loss of knowing nothing: −log(1/69). The chart's dashed reference line. */
-export const UNIFORM_NATS = Math.log(SCRIBE_CONFIG.vocab);
+export function configFor(vocabSize: number): ModelConfig {
+	return { ...SCRIBE_SHAPE, vocab: vocabSize };
+}
+
 export const AUTO_PROMPT = 'Once upon a time';
 /** Steps per training burst — held-out eval and a fresh desk sample after each.
  * (The LM worker syncs the loss every step by design — pipelining measured
@@ -28,7 +38,7 @@ export const AUTO_PROMPT = 'Once upon a time';
 export const TRAIN_CHUNK = 40;
 const SAMPLE_CHARS = 160;
 /** The worker keeps only the last blockSize/2 prompt tokens; mirror that cap. */
-const MAX_PROMPT = SCRIBE_CONFIG.blockSize / 2;
+const MAX_PROMPT = SCRIBE_SHAPE.blockSize / 2;
 const MILESTONE_STEP = 800;
 
 export type ScribePhase = 'idle' | 'loading' | 'ready' | 'training' | 'error' | 'no-webgpu';
@@ -47,6 +57,18 @@ export interface AttentionSnap {
 	nHead: number;
 	blockSize: number;
 	layers: Float32Array[];
+}
+
+/** A stalled fetch or a GPU device that never arrives would otherwise leave the
+ * plate saying "loading…" forever. Give every boot step a deadline so the
+ * reader gets an error and a Retry instead of a spinner with no end. */
+function guard<T>(what: string, p: Promise<T>, ms = 25_000): Promise<T> {
+	return Promise.race([
+		p,
+		new Promise<never>((_, reject) =>
+			setTimeout(() => reject(new Error(`${what} timed out — try again`)), ms)
+		)
+	]);
 }
 
 function countParams(c: ModelConfig): number {
@@ -71,17 +93,96 @@ class ScribeLab {
 	sampling = $state(false);
 	spoke = $state(false);
 
-	readonly paramCount = countParams(SCRIBE_CONFIG);
+	/** Which vocabulary the model reads, and how big it turned out. */
+	kind = $state<TokenizerKind>('pieces');
+	vocabSize = $state(0);
+	mergeCount = $state(0);
+	/** Characters per token on this corpus: 1 for characters, ~2.4 for pieces.
+	 * Losses in nats/token divide by it to become nats/character, the only way
+	 * to compare two tokenizers honestly. */
+	charsPerToken = $state(1);
+	corpusTokens = $state(0);
+	paramCount = $state(0);
 	readonly device = 'webgpu';
 
-	corpus: Corpus | null = null;
+	/** The vocabulary in force: encode/decode for every plate in the chapter. */
+	private tokenizer: TokenizedCorpus | null = null;
+	/** Set by Plate II when the reader hands over a vocabulary of their own. */
+	private pending: TokenizedCorpus | null = null;
 	private engine: WorkerEngine | null = null;
+	private bootPromise: Promise<void> | null = null;
 	private initCkpt: ArrayBuffer | null = null;
 	private webgpu: boolean | null = null;
 	private playing = false;
 	private trainPromise: Promise<void> | null = null;
 	private gen = 0;
 	private sampleSeq = 0;
+
+	/** Which vocabulary the next boot should use: one the reader handed over,
+	 * else the shipped snapshot, else characters. */
+	private async resolveTokenizer(): Promise<TokenizedCorpus> {
+		if (this.pending) {
+			const t = this.pending;
+			this.pending = null;
+			return t;
+		}
+		if (this.kind === 'chars') return charTokenizer();
+		return pieceTokenizer((done, total) => {
+			if (done < total) this.loadNote = `applying ${total} merges to the corpus (${done})…`;
+		});
+	}
+
+	private adopt(tok: TokenizedCorpus): void {
+		this.tokenizer = tok;
+		this.kind = tok.kind;
+		this.vocabSize = tok.vocab.size;
+		this.mergeCount = tok.mergeCount;
+		this.charsPerToken = tok.vocab.charsPerToken;
+		this.corpusTokens = tok.tokens.length;
+		this.paramCount = countParams(configFor(tok.vocab.size));
+	}
+
+	/** Loss of knowing nothing, in nats per token: every door held equally open. */
+	get uniformNats(): number {
+		return Math.log(Math.max(2, this.vocabSize));
+	}
+
+	/** Nats per token → bits per character, the unit that survives a change of
+	 * tokenizer: a token carries charsPerToken characters, and a nat is 1/ln2 bits. */
+	bitsPerChar(natsPerToken: number): number {
+		return natsPerToken / Math.LN2 / this.charsPerToken;
+	}
+
+	/** Switch vocabulary: a new embedding table means a new model, so this
+	 * rebuilds from scratch. */
+	async setKind(kind: TokenizerKind): Promise<void> {
+		if (kind === this.kind && this.tokenizer?.kind === kind && !this.pending) return;
+		this.kind = kind;
+		this.pending = null;
+		await this.rebuild();
+	}
+
+	/** Plate II handing its vocabulary to the model, merges and corpus and all. */
+	async useVocabulary(
+		chars: readonly string[],
+		pairs: readonly MergePair[],
+		tokens: Uint16Array,
+		originalLen: number
+	): Promise<void> {
+		this.pending = adoptedTokenizer(chars, pairs, tokens, originalLen);
+		this.kind = 'pieces';
+		await this.rebuild();
+	}
+
+	/** A vocabulary change means a new model. Let any boot already in flight
+	 * finish first — two boots racing would leave one worker holding the GPU
+	 * device that the other is waiting for. */
+	private async rebuild(): Promise<void> {
+		await this.pause();
+		if (this.bootPromise) await this.bootPromise.catch(() => {});
+		this.phase = 'idle';
+		await this.boot();
+	}
 
 	/** Cheap adapter probe on mount, so no-WebGPU readers get prose, not a dead button. */
 	async probe(): Promise<void> {
@@ -92,6 +193,11 @@ class ScribeLab {
 
 	async boot(): Promise<void> {
 		if (this.phase === 'loading' || this.phase === 'ready' || this.phase === 'training') return;
+		this.bootPromise = this.bootOnce();
+		await this.bootPromise;
+	}
+
+	private async bootOnce(): Promise<void> {
 		const myGen = ++this.gen;
 		this.errorMsg = '';
 		this.phase = 'loading';
@@ -104,28 +210,40 @@ class ScribeLab {
 			}
 			const stale = this.engine;
 			this.engine = null;
-			if (stale) void stale.dispose();
-			this.loadNote = 'fetching the story corpus (about 1.5 MB)…';
-			const corpus = await loadCorpus();
+			// awaited, not fired and forgotten: the old worker must let go of the
+			// GPU device before the new one asks for it (dispose has its own deadline)
+			if (stale) await stale.dispose();
 			if (myGen !== this.gen) return;
-			this.corpus = corpus;
+			this.loadNote = 'fetching the story corpus (about 1.5 MB)…';
+			const tok = await guard('the corpus', this.resolveTokenizer());
+			if (myGen !== this.gen) return;
+			this.adopt(tok);
 			this.loadNote = 'building a fresh transformer on your GPU…';
+			const config = configFor(tok.vocab.size);
 			const engine = new WorkerEngine({
-				tokenData: corpus.tokens,
-				decode: (ids) => corpus.decode(ids),
-				decodeOne: (id) => corpus.vocab[id] ?? '',
+				tokenData: tok.tokens,
+				decode: (ids) => tok.vocab.decode(ids),
+				decodeOne: (id) => tok.vocab.table[id] ?? '',
 				seed: 42,
 				lr: 1.5e-3
 			});
 			this.engine = engine;
-			await engine.init(SCRIBE_CONFIG);
-			if (myGen !== this.gen) return;
+			// Superseded from here on means: hand the device back. A worker dropped
+			// without dispose() keeps its GPU device, and the next boot waits forever.
+			const superseded = () => {
+				if (myGen === this.gen) return false;
+				if (this.engine === engine) this.engine = null;
+				void engine.dispose();
+				return true;
+			};
+			await guard('the GPU', engine.init(config));
+			if (superseded()) return;
 			// Kept so Reset can restore step-0 weights without a re-init.
-			this.initCkpt = await engine.exportCheckpoint();
-			if (myGen !== this.gen) return;
+			this.initCkpt = await guard('the first weights', engine.exportCheckpoint());
+			if (superseded()) return;
 			this.loadNote = 'asking the untrained model to write…';
 			const v0 = await engine.valLoss();
-			if (myGen !== this.gen) return;
+			if (superseded()) return;
 			this.step = 0;
 			this.lossNow = NaN;
 			this.tokPerSec = 0;
@@ -235,7 +353,7 @@ class ScribeLab {
 			const r = await e.sample(ids, {
 				temperature,
 				topK: 40,
-				maxTokens: Math.min(SCRIBE_CONFIG.blockSize - 1, SAMPLE_CHARS - out.length)
+				maxTokens: Math.min(SCRIBE_SHAPE.blockSize - 1, SAMPLE_CHARS - out.length)
 			});
 			if (myGen !== this.gen) return null;
 			if (r.tokens.length === 0) break;
@@ -248,7 +366,7 @@ class ScribeLab {
 	/** The desk's fixed question: same prompt, same temperature, every burst —
 	 * so the only thing that changes between samples is the weights. */
 	private async autoSample(): Promise<void> {
-		const c = this.corpus;
+		const c = this.tokenizer?.vocab;
 		if (!c || this.sampling) return;
 		this.sampling = true;
 		const myGen = this.gen;
@@ -265,7 +383,7 @@ class ScribeLab {
 	}
 
 	async sampleNow(promptText: string, temperature: number): Promise<void> {
-		const c = this.corpus;
+		const c = this.tokenizer?.vocab;
 		if (!c || this.sampling || !this.engine) return;
 		this.sampling = true;
 		const myGen = this.gen;
@@ -327,11 +445,12 @@ class ScribeLab {
 	}
 
 	encode(s: string): number[] {
-		return this.corpus?.encode(s) ?? [];
+		return this.tokenizer?.vocab.encode(s) ?? [];
 	}
 
-	charOf(id: number): string {
-		return this.corpus?.vocab[id] ?? '';
+	/** The text one token stands for: a character, or a word piece. */
+	textOf(id: number): string {
+		return this.tokenizer?.vocab.table[id] ?? '';
 	}
 
 	/** Page unmount: terminate the worker, return to the powered-off state.
@@ -344,7 +463,8 @@ class ScribeLab {
 		if (e) void e.dispose();
 		this.trainPromise = null;
 		this.initCkpt = null;
-		this.corpus = null; // loadCorpus caches the fetch; this is just our handle
+		this.tokenizer = null; // the loaders cache; this is just our handle
+		this.pending = null;
 		this.phase = this.webgpu === false ? 'no-webgpu' : 'idle';
 		this.loadNote = '';
 		this.errorMsg = '';

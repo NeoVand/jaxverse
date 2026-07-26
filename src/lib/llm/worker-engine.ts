@@ -233,9 +233,12 @@ export class WorkerEngine implements LlmEngine {
 		await this.call('load', { checkpoint }, [checkpoint]);
 	}
 
+	/** A worker mid-jit answers no RPC promptly, and a worker that never releases
+	 * its GPU device blocks the next one from getting it — so the graceful
+	 * request gets a deadline, and termination happens either way. */
 	async dispose(): Promise<void> {
 		try {
-			await this.call('dispose');
+			await Promise.race([this.call('dispose'), new Promise((r) => setTimeout(r, 400))]);
 		} finally {
 			this.worker.terminate();
 			this.pending.clear();

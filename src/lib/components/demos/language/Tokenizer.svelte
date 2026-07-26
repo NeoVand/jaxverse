@@ -5,13 +5,23 @@
 	// honest answer to "is this prerecorded?". Runs of 300, extendable
 	// indefinitely; the history stays scrubbable. Pure CPU, no engine.
 	import { onDestroy } from 'svelte';
-	import { GitMerge, Pause, Play, Plus, RotateCcw, StepBack, StepForward } from 'lucide-svelte';
+	import {
+		ArrowRight,
+		GitMerge,
+		Pause,
+		Play,
+		Plus,
+		RotateCcw,
+		StepBack,
+		StepForward
+	} from 'lucide-svelte';
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Slider from '$lib/components/ui/Slider.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import { loadCorpus } from '$lib/data/corpus';
 	import { BpeTrainer, trainBpe, RUN_MERGES, type MergeRecord } from './bpe-live';
+	import { scribe } from './lab.svelte';
 
 	const SENTENCE = 'Once upon a time, the little dragon looked at the moon.';
 	const RECENT = 12;
@@ -134,6 +144,27 @@
 		stopReplay();
 	});
 
+	/** Hand this vocabulary to the scribe. A different embedding table is a
+	 * different model, so the scribe rebuilds and starts from step 0 — which is
+	 * the honest thing to show: a tokenizer is a decision made before training. */
+	let handing = $state(false);
+	const scribeMerges = $derived(scribe.kind === 'pieces' ? scribe.mergeCount : -1);
+	// every term here must be reactive: `trainer` deliberately is not, and testing
+	// it first would short-circuit this derived into having no dependencies at all
+	const handable = $derived(
+		merges.length > 0 && phase !== 'running' && merges.length !== scribeMerges
+	);
+	async function handOver() {
+		const t = trainer;
+		if (!t || handing) return;
+		handing = true;
+		try {
+			await scribe.useVocabulary(t.chars, t.pairs(), t.tokenizedCorpus(), t.originalLen);
+		} finally {
+			handing = false;
+		}
+	}
+
 	// ── views at scrub position k ──
 	const newest = $derived(k > 0 && k <= merges.length ? merges[k - 1] : null);
 	const recent = $derived.by(() => {
@@ -164,15 +195,21 @@
 </script>
 
 {#snippet glyphs(text: string)}
-	{@const body = text.replaceAll('\n', '')}
-	{@const nl = text.length - body.length}
-	{#if body}{body}{/if}{#if nl > 0}<span class="nl" aria-hidden="true">↵</span>{/if}
+	{@const lead = text.startsWith(' ')}
+	{@const body = (lead ? text.slice(1) : text).replaceAll('\n', '')}
+	{@const nl = text.length - (lead ? 1 : 0) - body.length}
+	<!-- a leading space is what marks a word's start, so show it rather than
+	     leaving the reader to infer it from the chip's padding -->
+	{#if lead}<span class="sp" aria-hidden="true">␣</span>{/if}{#if body}{body}{/if}{#if nl > 0}<span
+			class="nl"
+			aria-hidden="true">↵</span
+		>{/if}
 {/snippet}
 
 <Plate
 	n={2}
 	title="Grow a vocabulary"
-	caption="Byte-pair encoding, running for real: the vocabulary is not designed, it is voted for by the corpus, one most-frequent pair at a time. th, the, ing — watch English assemble itself by frequency. Nothing here is prerecorded; every count comes from scanning your own copy of the corpus, and the millisecond figure is how long that scan took on this machine. Compression is the score — each merge shortens the corpus by one token per fusion it makes — and once you pause, the scrubber below replays the whole election."
+	caption="Byte-pair encoding, running for real: the vocabulary is not designed, it is voted for by the corpus, one most-frequent pair at a time. th, ␣the, ing — watch English assemble itself by frequency, and note that a token never spans two words. Nothing here is prerecorded; every count comes from scanning your own copy of the corpus, and the millisecond figure is how long that scan took on this machine. Compression is the score — each merge shortens the corpus by one token per fusion it makes — and the first three hundred merges are exactly the vocabulary the scribe below reads, so keep merging and send it a longer one if you want to see what changes."
 >
 	{#snippet status()}
 		{#if phase === 'idle' || phase === 'loading'}
@@ -191,6 +228,16 @@
 	{/snippet}
 
 	{#snippet actions()}
+		{#if handable}
+			<Btn
+				onclick={() => void handOver()}
+				disabled={handing}
+				title="Rebuild the scribe on this vocabulary"
+			>
+				<ArrowRight size={12} aria-hidden="true" />
+				{handing ? 'Handing over…' : 'Send to the scribe'}
+			</Btn>
+		{/if}
 		{#if phase === 'running'}
 			<Btn onclick={pauseTraining}>
 				<Pause size={12} aria-hidden="true" /> Pause
@@ -323,6 +370,15 @@
 						whole corpus: {fmt(originalLen)} chars →
 						<span class="text-ink">{fmt(corpusToks)}</span>
 						tokens ({corpusCpt.toFixed(2)} chars/token) · vocabulary {69 + k}
+						{#if scribeMerges >= 0}
+							<span class="text-ink-3">
+								· the scribe below reads {scribeMerges === merges.length
+									? 'exactly this vocabulary'
+									: `${scribe.vocabSize} of them (${scribeMerges} merges)`}
+							</span>
+						{:else}
+							<span class="text-ink-3">· the scribe below still reads single characters</span>
+						{/if}
 					</p>
 					{#if scrubbable}
 						<span class="ml-auto flex items-center gap-1.5">
@@ -401,6 +457,10 @@
 	.nl {
 		opacity: 0.5;
 		font-size: 0.85em;
+		user-select: none;
+	}
+	.sp {
+		opacity: 0.4;
 		user-select: none;
 	}
 	.fused {

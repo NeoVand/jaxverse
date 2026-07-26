@@ -4,11 +4,25 @@
 // merge k+1 needs no extra scan (a full separate pass measured ~8 ms; fusing
 // keeps a merge comfortably under one frame of work).
 //
+// Merges never straddle two words (see $lib/data/bpe): a parallel flag array
+// marks where each word piece begins, and a pair whose right half opens a word
+// is never counted. Without it this elects "ce upon a tim" — tokens no reader
+// or attention row can make sense of.
+//
 // Pair counts live in a flat Int32Array indexed by a·S+b, where S is a power
 // of two grown as the vocabulary grows (S=256 → 256 KB of counts; S=2048 →
 // 16 MB, the hard ceiling at 1,979 merges). No Map, no hashing; the argmax is
 // a linear scan of the table. Dependency-free on purpose: this exact file runs
 // under node for the timing bench.
+
+import {
+	fuseIds,
+	makeVocabulary,
+	wordStarts,
+	wordStartsOfTokens,
+	type MergePair,
+	type Vocabulary
+} from '$lib/data/bpe';
 
 /** Merges per run: the default first run, and each "keep merging" increment. */
 export const RUN_MERGES = 300;
@@ -38,8 +52,11 @@ export class BpeTrainer {
 	/** id → decoded text, extended as merges land. */
 	readonly table: string[];
 	readonly merges: MergeRecord[] = [];
+	readonly chars: readonly string[];
 
 	private seq: Uint16Array;
+	/** 1 where the token at this position opens a word piece. */
+	private bow: Uint8Array;
 	private len: number;
 	private S = 256; // current key stride; counts is S×S
 	private counts = new Int32Array(256 * 256);
@@ -48,11 +65,28 @@ export class BpeTrainer {
 
 	constructor(tokens: Uint16Array, vocab: string[]) {
 		this.seq = tokens.slice();
+		this.bow = wordStartsOfTokens(tokens, vocab);
 		this.len = tokens.length;
 		this.originalLen = tokens.length;
 		this.baseVocab = vocab.length;
+		this.chars = vocab;
 		this.table = [...vocab];
 		vocab.forEach((c, i) => this.idOf.set(c, i));
+	}
+
+	/** The corpus as tokenized right now — what the scribe trains on when the
+	 * reader hands its vocabulary over. */
+	tokenizedCorpus(): Uint16Array {
+		return this.seq.slice(0, this.len);
+	}
+
+	/** The merge list as plain pairs, for encoders and for the snapshot. */
+	pairs(): MergePair[] {
+		return this.merges.map((m) => ({ a: m.a, b: m.b, newId: m.newId }));
+	}
+
+	vocabulary(): Vocabulary {
+		return makeVocabulary(this.chars, this.pairs(), this.originalLen / this.len);
 	}
 
 	/** Corpus length in tokens once the first k merges are applied. */
@@ -78,11 +112,12 @@ export class BpeTrainer {
 			this.counts = new Int32Array(this.S * this.S);
 			this.countsReady = false;
 		}
-		const { seq, counts, S } = this;
+		const { seq, bow, counts, S } = this;
 
 		if (!this.countsReady) {
 			counts.fill(0);
-			for (let i = 0; i < this.len - 1; i++) counts[seq[i] * S + seq[i + 1]]++;
+			// a pair whose right half opens a word would fuse across a boundary
+			for (let i = 0; i < this.len - 1; i++) if (!bow[i + 1]) counts[seq[i] * S + seq[i + 1]]++;
 			this.countsReady = true;
 		}
 
@@ -99,21 +134,20 @@ export class BpeTrainer {
 		const a = Math.floor(bestKey / S);
 		const b = bestKey % S;
 
-		// greedy left-to-right collapse; count the output's pairs as it is emitted
+		// greedy left-to-right collapse; count the output's pairs as it is emitted.
+		// w never overtakes i, so writing the flags in place is safe.
 		counts.fill(0);
 		let w = 0;
 		let prev = -1;
 		for (let i = 0; i < this.len;) {
-			let t: number;
-			if (i + 1 < this.len && seq[i] === a && seq[i + 1] === b) {
-				t = newId;
-				i += 2;
-			} else {
-				t = seq[i];
-				i += 1;
-			}
-			seq[w++] = t;
-			if (prev >= 0) counts[prev * S + t]++;
+			const fuse = i + 1 < this.len && seq[i] === a && seq[i + 1] === b && !bow[i + 1];
+			const t = fuse ? newId : seq[i];
+			const opens = bow[i];
+			i += fuse ? 2 : 1;
+			seq[w] = t;
+			bow[w] = opens;
+			w++;
+			if (prev >= 0 && !opens) counts[prev * S + t]++;
 			prev = t;
 		}
 		this.len = w;
@@ -138,27 +172,11 @@ export class BpeTrainer {
 	/** Tokenize a short string using only the first k merges — replaying the
 	 * merge list over ~60 characters is trivial, so scrubbing back is instant. */
 	encodeAt(text: string, k: number): number[] {
-		let ids: number[] = [];
-		for (const c of text) {
-			const id = this.idOf.get(c);
-			if (id !== undefined) ids.push(id); // out-of-alphabet characters drop
-		}
+		const kept: string[] = [];
+		for (const c of text) if (this.idOf.has(c)) kept.push(c); // strays drop
+		const ids = kept.map((c) => this.idOf.get(c)!);
 		const upto = Math.min(k, this.merges.length);
-		for (let j = 0; j < upto; j++) {
-			const { a, b, newId } = this.merges[j];
-			const out: number[] = [];
-			for (let i = 0; i < ids.length;) {
-				if (i + 1 < ids.length && ids[i] === a && ids[i + 1] === b) {
-					out.push(newId);
-					i += 2;
-				} else {
-					out.push(ids[i]);
-					i += 1;
-				}
-			}
-			ids = out;
-		}
-		return ids;
+		return fuseIds(ids, wordStarts(kept), this.pairs().slice(0, upto));
 	}
 }
 

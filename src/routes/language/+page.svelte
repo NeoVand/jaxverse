@@ -77,8 +77,12 @@
 		</p>
 		<p>
 			The plate below runs that exact loop — not a replay of a stored merge list, the algorithm
-			itself — on the 1.5 million characters this chapter's model reads. It needs no GPU and trains
-			no network; it only counts. Watch which fusions this corpus elects first.
+			itself — on the same 1.5 million characters the model further down is trained on. It needs no
+			GPU and trains no network; it only counts. One rule keeps the result readable, and every real
+			tokenizer has it: a merge may never cross from one word into the next. A word carries its
+			leading space, drawn ␣ here, which is why <em>“the”</em> and <em>“ the”</em> are two different tokens
+			— and why nothing in the vocabulary is ever half of one word glued to half of another. Watch which
+			fusions this corpus elects first.
 		</p>
 	</Prose>
 
@@ -124,12 +128,20 @@
 		<p>
 			measured in <em>nats</em>, the natural-log unit of surprise. Learn to read that number like a
 			gauge: at loss 1.2 the model is, on average, as uncertain as someone choosing among
-			<Math tex={'e^{1.2} \\approx 3.3'} /> plausible next characters. One deliberate choice below — this
-			model's tokens are single <em>characters</em>, not the word-pieces you just grew, because
-			character models are slow enough to watch: you will see spelling get invented. With 69
-			characters, a model that knows nothing sits at <Math tex="\ln 69 \approx 4.23" />, all 69
-			doors held equally open. The ultramarine curve starts exactly there, and every hundredth of a
-			nat it sheds is a regularity of English found and kept.
+			<Math tex={'e^{1.2} \\approx 3.3'} /> plausible next tokens. A model that knows nothing sits at
+			<Math tex="\ln V" /> for a vocabulary of <Math tex="V" />, every door held equally open; the
+			ultramarine curve starts exactly there, and every hundredth of a nat it sheds is a regularity
+			of English found and kept.
+		</p>
+		<p>
+			And the vocabulary is the one you just grew. The scribe below reads the 369 word-pieces that
+			three hundred merges elect on this corpus — the same three hundred the plate above runs by
+			default — so its attention rows, two plates from now, are words reading words rather than
+			letters reading letters. If you kept merging up there, hand your longer vocabulary over with
+			<em>send to the scribe</em>; a different vocabulary means a different embedding table, so the
+			model restarts, which is the honest cost of the decision. You can also switch it back to
+			single characters, and should at least once: it is the slow, legible version, where you can
+			watch spelling itself get invented.
 		</p>
 	</Prose>
 
@@ -145,27 +157,33 @@
 			From noise to grammar
 		</h2>
 		<p>
-			If you let the scribe run, you watched an order of acquisition that nobody programmed. First
-			the noise picked up English's letter frequencies — too many e's and spaces to be random. Then
-			pairs: q found u, h learned to trail t and s. Then word-shapes, then real words with spaces in
-			the right places, and eventually clauses whose subject and verb mostly agree. Spelling arrived
-			before syntax for a plain reason: gradient descent spends its budget where the loss falls
-			fastest, and short, local regularities pay off first. The curriculum fell out of prediction
-			pressure alone.
+			If you let the scribe run, you watched an order of acquisition that nobody programmed. Word
+			shapes first, then real words in plausible company, then clauses whose subject and verb mostly
+			agree, and somewhere past a thousand steps a sentence you could believe a child wrote. Grammar
+			arrived in that order for a plain reason: gradient descent spends its budget where the loss
+			falls fastest, and short, local regularities pay off first. The curriculum fell out of
+			prediction pressure alone.
 		</p>
 		<p>
-			Notice what that implies about the tokenizer two plates up. This scribe spent its first
-			hundred steps learning where the spaces go — a regularity byte-pair encoding would have handed
-			it for free, cashed into the vocabulary before training even began. Same corpus, coarser
-			atoms, longer reach: a context window of the same length holds twice the story. Characters
-			were the pedagogical choice here, not the efficient one.
+			Switch the vocabulary to characters and you can watch the layer underneath. A character model
+			starts by learning English's letter frequencies — too many e's and spaces to be random — then
+			pairs: q finds u, h learns to trail t and s. Only then do word shapes appear, and the whole
+			schedule runs slower. The word-piece scribe skipped all of it, because that layer of
+			regularity was already cashed into the vocabulary by three hundred merges: <em>the</em>,
+			<em>said</em> and <em>little</em> arrive as single indivisible tokens, and spelling them is not
+			a problem the model ever has. Same corpus, coarser atoms, longer reach — the same ninety-six-slot
+			window now holds about two hundred and thirty characters instead of ninety-six.
 		</p>
 		<p>
 			There is a colder way to say what happened: the model compressed the corpus. Cross-entropy is
-			literally a size — a nat is <Math tex="1/\ln 2 \approx 1.44" /> bits, so a scribe reading at 1.4
-			nats per character has squeezed these stories to about 2 bits each, against the 6.1 bits of uniform
-			guessing. You cannot do that without knowing things: that q buys u, that "the" outnumbers "teh",
-			that dogs wag tails and not the reverse. Prediction and compression are one skill in two vocabularies,
+			literally a size — a nat is <Math tex="1/\ln 2 \approx 1.44" /> bits — and the plate reports
+			<em>bits per character</em> beside its loss so that the two vocabularies can be compared at
+			all. Guessing uniformly among 69 characters costs 6.10 bits per character. The tokenizer alone
+			drops that to 3.52, before a single gradient step, purely by making the guesses coarser.
+			Training then takes it under 1.6, which is better than <code>gzip -9</code> manages on the
+			same text (2.42) and close to <code>brotli</code> (1.87). The honest asterisk: those two ship a
+			self-contained file, while the scribe's bits assume you already have its weights — and a complete
+			description would have to count those too. Prediction and compression are one skill in two vocabularies,
 			and the loss chart doubles as a receipt for how much structure the model has taken in.
 		</p>
 		<p>
@@ -178,9 +196,11 @@
 		</p>
 		<p>
 			The loss you watched was an average over thousands of positions, and averages hide texture.
-			Some characters are nearly free; some cost dearly. The meter below un-averages the number: it
-			bills a sentence character by character and, for each one, shows the <em>entropy</em> of the model's
-			guess — how widely it was hedging — along with the five candidates it liked best.
+			Some tokens are nearly free; some cost dearly. The meter below un-averages the number: it
+			bills a sentence one token at a time and, for each one, shows the <em>entropy</em> of the model's
+			guess — how widely it was hedging — along with the five candidates it liked best. Watch where the
+			heat lands. A common word arriving where it is expected costs almost nothing; the expensive tokens
+			are the ones carrying the actual news of the sentence, which is a fair working definition of information.
 		</p>
 	</Prose>
 
@@ -202,11 +222,12 @@
 			the last plate of this chapter.
 		</p>
 		<p>
-			<strong>One:</strong> every character becomes a vector, exactly as words did in the first
-			plate, plus a second vector encoding <em>where</em> it sits — attention has no inherent sense
-			of order, so position must be added by hand. <strong>Two:</strong> each vector is projected
-			three ways, into a <em>query</em> (what am I looking for?), a <em>key</em> (what do I offer?)
-			and a <em>value</em> (what I would pass along), split across four
+			<strong>One:</strong> every token becomes a vector, exactly as words did in the first plate,
+			plus a second vector encoding <em>where</em> it sits — attention has no inherent sense of
+			order, so position must be added by hand. <strong>Two:</strong> each vector is projected three
+			ways, into a <em>query</em> (what am I looking for?), a <em>key</em> (what do I offer?) and a
+			<em>value</em>
+			(what I would pass along), split across four
 			<em>heads</em> that each work in their own 24 dimensions.
 		</p>
 		<p>
@@ -222,9 +243,9 @@
 			negatives clipped to zero, the block's only nonlinearity — and squeezed back to size; most of
 			the parameters live here. Stages two through four form one <em>block</em>, and blocks stack:
 			this model has two, frontier models roughly a hundred. <strong>Five:</strong> the final vector meets
-			one last matrix that turns 96 numbers into 69 scores, one per character, and a softmax turns scores
-			into probabilities. Draw one, append it, run the pass again. That loop is all "generating text"
-			has ever meant.
+			one last matrix that turns 96 numbers into one score per token in the vocabulary, and a softmax
+			turns scores into probabilities. Draw one, append it, run the pass again. That loop is all "generating
+			text" has ever meant.
 		</p>
 	</Prose>
 

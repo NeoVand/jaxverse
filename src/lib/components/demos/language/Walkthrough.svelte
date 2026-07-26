@@ -15,11 +15,14 @@
 	import { inview } from '$lib/components/ui/inview';
 	import LabGate from './LabGate.svelte';
 	import MatrixGlyph from './MatrixGlyph.svelte';
-	import { scribe, SCRIBE_CONFIG, type AttentionSnap } from './lab.svelte';
+	import { scribe, SCRIBE_SHAPE, type AttentionSnap } from './lab.svelte';
 
-	const DEFAULT_PROMPT = 'Once upon a time there was a tiny cat';
-	const MAX_CHARS = 40;
-	const { nLayer, nEmbd, nHead } = SCRIBE_CONFIG;
+	const DEFAULT_PROMPT = 'Once upon a time there was a little girl who wanted a cat';
+	const MAX_CHARS = 60;
+	/** The attention grid is square and labelled on both edges; past this many
+	 * tokens the labels stop being readable, so the context is trimmed. */
+	const MAX_TOKENS = 26;
+	const { nLayer, nEmbd, nHead } = SCRIBE_SHAPE;
 	const headDim = nEmbd / nHead;
 	const layerIdx = Array.from({ length: nLayer }, (_, k) => k);
 	const headIdx = Array.from({ length: nHead }, (_, k) => k);
@@ -42,7 +45,7 @@
 	/** One pass: attention rows and the next-token row for the same context. */
 	async function runPass(text: string) {
 		if (busy || !usable) return;
-		const ids = scribe.encode(text).slice(0, MAX_CHARS);
+		const ids = scribe.encode(text).slice(-MAX_TOKENS);
 		if (ids.length < 2) return;
 		busy = true;
 		hov = null;
@@ -52,7 +55,7 @@
 		if (a && row) {
 			att = a;
 			logits = row;
-			toks = ids.map((id) => scribe.charOf(id));
+			toks = ids.map((id) => scribe.textOf(id));
 			ranStep = atStep;
 			ranPrompt = text;
 		}
@@ -77,11 +80,19 @@
 		return att.layers[layer][(head * S + i) * S + j];
 	}
 
-	const CELL = 16;
-	const GUT = 20;
+	// Word-piece labels need room: the gutter grows with the longest token, and
+	// column labels stand upright rather than crowding each other.
+	const CELL = 18;
 	const PAD = 4;
+	const GUT = $derived.by(() => {
+		let longest = 1;
+		for (const t of toks.slice(0, N)) longest = Math.max(longest, t.trim().length);
+		return Math.min(64, 14 + longest * 5.6);
+	});
 	const gw = $derived(GUT + N * CELL + PAD);
-	const axis = (c: string) => (c === ' ' ? '·' : c);
+	const gh = $derived(GUT + N * CELL + PAD);
+	/** Leading spaces are what distinguish " the" from "the"; show them. */
+	const axis = (c: string) => c.replaceAll(' ', '␣').replaceAll('\n', '↵');
 	// perceptual lift: small-but-real weights stay visible
 	const alpha = (v: number) => Math.min(1, Math.pow(Math.max(v, 0), 0.55)) * 0.95;
 
@@ -117,12 +128,12 @@
 				break;
 			}
 		}
-		const next = prompt + scribe.charOf(pick);
+		const next = prompt + scribe.textOf(pick);
 		prompt = next.slice(-MAX_CHARS);
 		await runPass(prompt);
 	}
 
-	const glyphOf = (c: string) => (c === ' ' ? '␣' : c === '\n' ? '↵' : c);
+	const glyphOf = (c: string) => c.replaceAll(' ', '␣').replaceAll('\n', '↵');
 </script>
 
 {#snippet flow(label?: string)}
@@ -151,7 +162,7 @@
 <Plate
 	n={5}
 	title="One forward pass, opened up"
-	caption="The five stages a character travels through on its way to a prediction. The shapes are this model's real architecture; the attention rows and the final distribution are real numbers, read from the weights you trained above — not an illustration of a transformer, but a reading of one. Stages two through four form one block, and this model stacks two of them; frontier models stack the same block roughly a hundred deep, with vectors thousands of numbers wide, and nothing else about the picture changes."
+	caption="The five stages a token travels through on its way to a prediction. The shapes are this model's real architecture; the attention rows and the final distribution are real numbers, read from the weights you trained above — not an illustration of a transformer, but a reading of one. Because the vocabulary is word-pieces, the attention grid is words reading words: look for a verb attending to its subject, or a name being carried forward. Stages two through four form one block, and this model stacks two of them; frontier models stack the same block roughly a hundred deep, with vectors thousands of numbers wide, and nothing else about the picture changes."
 >
 	{#snippet status()}
 		{#if att}
@@ -183,7 +194,9 @@
 			<!-- the prompt this pass runs on -->
 			<div class="border-b border-line-soft px-4 pt-3.5 pb-3">
 				<label class="block">
-					<span class="eyebrow mb-1 block">the context · up to {MAX_CHARS} characters</span>
+					<span class="eyebrow mb-1 block">
+						the context · the last {MAX_TOKENS} tokens of it
+					</span>
 					<input
 						class="input"
 						maxlength={MAX_CHARS}
@@ -205,7 +218,7 @@
 				<div class="px-4 py-4">
 					<!-- ── stage 1: tokens → vectors ── -->
 					<div class="stage">
-						{@render stageHead(1, 'Characters become vectors', 'lookup + position')}
+						{@render stageHead(1, 'Tokens become vectors', 'lookup + position')}
 						<div class="flex flex-wrap items-center gap-x-4 gap-y-3">
 							<div class="flex min-w-0 flex-1 flex-wrap gap-1">
 								{#each idx.slice(0, 24) as i (i)}
@@ -226,8 +239,8 @@
 							/>
 						</div>
 						<p class="stage-note">
-							Each character is one row of a lookup table, plus a vector for <em>where</em> it sits
-							— the model has no other way to know order.
+							Each token is one row of a lookup table, plus a vector for <em>where</em> it sits —
+							the model has no other way to know order.
 							<MathTex tex="x_i = E[t_i] + P[i]" />
 						</p>
 					</div>
@@ -303,8 +316,8 @@
 						<div class="overflow-x-auto">
 							<svg
 								width={gw}
-								height={gw}
-								viewBox="0 0 {gw} {gw}"
+								height={gh}
+								viewBox="0 0 {gw} {gh}"
 								class="mx-auto block"
 								role="img"
 								aria-label="Causal attention matrix: rows are the position being predicted, columns the earlier positions it attends to; darker ultramarine is more attention."
@@ -312,15 +325,14 @@
 							>
 								{#each idx as j (j)}
 									<text
-										x={GUT + j * CELL + CELL / 2}
-										y={GUT - 7}
-										text-anchor="middle"
+										transform="translate({GUT + j * CELL + CELL / 2} {GUT - 6}) rotate(-90)"
+										text-anchor="start"
 										class="num"
 										font-size="9"
 										fill={hov?.j === j ? 'var(--ink)' : 'var(--ink-3)'}>{axis(toks[j])}</text
 									>
 									<text
-										x={GUT - 7}
+										x={GUT - 6}
 										y={GUT + j * CELL + CELL / 2 + 3}
 										text-anchor="end"
 										class="num"
@@ -369,7 +381,7 @@
 									w(hov.i, hov.j) * 100
 								).toFixed(1)}% of its budget on “{axis(toks[hov.j])}” (position {hov.j})
 							{:else}
-								each row sums to 1 · spaces drawn as · · hover any cell
+								each row sums to 1 · a leading space is drawn ␣ · hover any cell
 							{/if}
 						</p>
 						<p class="stage-note">
@@ -439,9 +451,9 @@
 							{#each dist as row, i (row.id)}
 								<div class="flex items-center gap-2">
 									<span
-										class="num w-5 text-[12px]"
+										class="num w-16 truncate text-[12px]"
 										style="color: {i === 0 ? 'var(--accent)' : 'var(--ink)'};"
-										>{glyphOf(scribe.charOf(row.id))}</span
+										>{glyphOf(scribe.textOf(row.id))}</span
 									>
 									<span class="h-2 flex-1 overflow-hidden rounded-sm bg-line-soft">
 										<span
@@ -458,8 +470,8 @@
 							{/each}
 						</div>
 						<p class="stage-note">
-							{nEmbd} numbers in, 69 scores out — one per character — and a softmax turns those scores
-							into probabilities.
+							{nEmbd} numbers in, {scribe.vocabSize} scores out — one per token in the vocabulary — and
+							a softmax turns those scores into probabilities.
 							<MathTex tex={'P(x_{t+1}) = \\sigma(z / T)'} />
 							Dragging the temperature never asks the model again; it reshapes the same stored scores.
 							Draw one and it joins the context: that is the whole loop, 160 times per sample.

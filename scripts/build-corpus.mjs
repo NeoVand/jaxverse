@@ -8,7 +8,13 @@
 //   text-tokens.bin  Uint8, one token per character (id = index into chars)
 //   text-vocab.json  {chars: string[], vocabSize}
 //
-// Usage: node scripts/build-corpus.mjs [source.txt]
+// Growing the corpus: pass a bigger source and a character budget, then rebuild
+// the tokenizer snapshot, which is elected from whatever text ends up here.
+//
+//   node scripts/build-corpus.mjs path/to/stories.txt 6000000
+//   node scripts/build-tokenizer.mjs
+//
+// Usage: node scripts/build-corpus.mjs [source.txt] [chars|all]
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -16,7 +22,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = process.argv[2] ?? join(ROOT, '..', 'llmvibes', 'static', 'data', 'quill-corpus.txt');
-const TARGET = 1_500_000;
+const BUDGET = process.argv[3] ?? '1500000';
+const TARGET = BUDGET === 'all' ? Number.POSITIVE_INFINITY : Number(BUDGET);
 
 // Mojibake first (longest sequences before their prefixes), then real
 // typographic characters, all down to straight ASCII. Escapes, not literals:
@@ -39,7 +46,8 @@ const FIXES = [
 ];
 
 const raw = readFileSync(SRC, 'utf8').replaceAll('\r\n', '\n').replaceAll('\r', '\n');
-const cut = raw.lastIndexOf('\n\n', TARGET);
+// cut at a story boundary (stories are separated by blank lines), or take it all
+const cut = TARGET >= raw.length ? raw.length : raw.lastIndexOf('\n\n', TARGET);
 if (cut < 0) throw new Error('no story boundary found');
 let text = raw.slice(0, cut);
 

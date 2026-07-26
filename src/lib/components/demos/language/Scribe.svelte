@@ -11,7 +11,7 @@
 	import Slider from '$lib/components/ui/Slider.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import LabGate from './LabGate.svelte';
-	import { scribe, AUTO_PROMPT, TRAIN_CHUNK, UNIFORM_NATS } from './lab.svelte';
+	import { scribe, AUTO_PROMPT, TRAIN_CHUNK } from './lab.svelte';
 
 	let promptText = $state(AUTO_PROMPT);
 	let temperature = $state(0.8);
@@ -26,7 +26,12 @@
 	const PADR = 10;
 	const PADT = 18;
 	const PADB = 20;
-	const YMAX = 4.6;
+	/** The ceiling follows the vocabulary: knowing nothing costs ln V nats, and
+	 * that line must sit inside the frame for characters (4.23) and for word
+	 * pieces (5.91) alike. */
+	const uniform = $derived(scribe.uniformNats);
+	const YMAX = $derived(uniform + 0.42);
+	const yTicks = $derived(Array.from({ length: Math.floor(YMAX) + 1 }, (_, i) => i));
 	let chartW = $state(0);
 	const cw = $derived(chartW || 420);
 	const xMax = $derived.by(() => {
@@ -54,16 +59,23 @@
 	const fmtLoss = (v: number) => (Number.isFinite(v) ? v.toFixed(2) : '—');
 	const fmtTok = (v: number) =>
 		v >= 1000 ? `${(v / 1000).toFixed(1)}k tok/s` : `${Math.round(v)} tok/s`;
+	const fmtBits = (v: number) =>
+		Number.isFinite(v) ? `${scribe.bitsPerChar(v).toFixed(2)} bits/char` : '—';
 
 	function sampleNow() {
 		void scribe.sampleNow(promptText, temperature);
 	}
+
+	const KINDS = [
+		{ id: 'pieces' as const, label: 'word pieces' },
+		{ id: 'chars' as const, label: 'characters' }
+	];
 </script>
 
 <Plate
 	n={3}
 	title="Watch it learn to write"
-	caption="After every burst of forty steps the desk re-asks the same prompt at the same temperature, so the only thing that changes between samples is the weights. Step 0 is uniform noise; word-shapes arrive around step 200 and sentence-shaped grammar near 1,500 — that timeline, noise to spelling to syntax, is the demo. Ask your own question any time: temperature rescales confidence before each draw, 0.2 playing the favourite and 1.4 gambling, and characters outside the 69-glyph alphabet are dropped from the prompt."
+	caption="After every burst of forty steps the desk re-asks the same prompt at the same temperature, so the only thing that changes between samples is the weights. One token is a word-piece from the vocabulary grown two plates up, which is why sentence-shaped grammar arrives within a couple of thousand steps; switch to single characters and the same schedule runs slower, with spelling visibly invented along the way. Bits per character sits beside the loss because it is the only unit in which the two vocabularies can be compared. Ask your own question any time: temperature rescales confidence before each draw, 0.2 playing the favourite and 1.4 gambling."
 >
 	{#snippet status()}
 		{#if scribe.phase === 'idle' || scribe.phase === 'loading'}
@@ -73,11 +85,13 @@
 		{:else if scribe.phase === 'no-webgpu'}
 			<span>needs webgpu</span>
 		{:else}
-			<span>{scribe.device} · {scribe.paramCount.toLocaleString('en-US')} params</span>
+			<span>{scribe.paramCount.toLocaleString('en-US')} params</span>
 			<span aria-hidden="true">·</span>
 			<span>step {scribe.step}</span>
 			<span aria-hidden="true">·</span>
 			<span>loss {fmtLoss(scribe.lossNow)}</span>
+			<span aria-hidden="true">·</span>
+			<span>{fmtBits(scribe.lossNow)}</span>
 			<span aria-hidden="true">·</span>
 			<span>{fmtTok(scribe.tokPerSec)}</span>
 		{/if}
@@ -102,14 +116,16 @@
 		{#if !usable}
 			<LabGate
 				tall
-				note="the scribe boots when you reach it — 1.5 MB of stories and a 243,648-parameter transformer, built on your GPU"
+				note="the scribe boots when you reach it — 1.5 MB of stories, a vocabulary of word-pieces, and a small transformer built on your GPU"
 			/>
 		{:else}
 			<div class="grid grid-cols-1 gap-px bg-line-soft lg:grid-cols-2">
 				<!-- left: the descent, and the questions you can ask -->
 				<div class="flex flex-col bg-surface p-4">
 					<div class="flex flex-wrap items-baseline justify-between gap-2">
-						<span class="eyebrow">loss · nats per character</span>
+						<span class="eyebrow">
+							loss · nats per {scribe.kind === 'chars' ? 'character' : 'token'}
+						</span>
 						<span class="num flex items-center gap-3 text-[10px] text-ink-3">
 							<span class="flex items-center gap-1.5">
 								<span class="inline-block h-0.5 w-4" style="background: var(--accent);"></span>
@@ -131,9 +147,9 @@
 							viewBox="0 0 {cw} {CH}"
 							class="block"
 							role="img"
-							aria-label="Training loss per step in ultramarine with held-out loss dots in vermilion. A dashed line marks the uniform-guess loss, natural log of 69, about 4.23 nats — the model starts there."
+							aria-label="Training loss per step in ultramarine with held-out loss dots in vermilion. A dashed line marks the uniform-guess loss, the natural log of the vocabulary size — the model starts there."
 						>
-							{#each [1, 2, 3, 4] as gy (gy)}
+							{#each yTicks.slice(1) as gy (gy)}
 								<line
 									x1={PADL}
 									x2={cw - PADR}
@@ -143,7 +159,7 @@
 									stroke-width="1"
 								/>
 							{/each}
-							{#each [0, 1, 2, 3, 4] as gy (gy)}
+							{#each yTicks as gy (gy)}
 								<text
 									x={PADL - 6}
 									y={yPix(gy) + 3.5}
@@ -164,19 +180,20 @@
 							<line
 								x1={PADL}
 								x2={cw - PADR}
-								y1={yPix(UNIFORM_NATS)}
-								y2={yPix(UNIFORM_NATS)}
+								y1={yPix(uniform)}
+								y2={yPix(uniform)}
 								stroke="var(--ink-3)"
 								stroke-width="1"
 								stroke-dasharray="4 3"
 							/>
 							<text
 								x={cw - PADR}
-								y={yPix(UNIFORM_NATS) - 5}
+								y={yPix(uniform) - 5}
 								text-anchor="end"
 								class="num"
 								font-size="10"
-								fill="var(--ink-3)">uniform guess · ln 69 ≈ 4.23</text
+								fill="var(--ink-3)"
+								>uniform guess · ln {scribe.vocabSize} ≈ {uniform.toFixed(2)}</text
 							>
 							{#if trainPath}
 								<path
@@ -201,6 +218,23 @@
 								>
 							{/each}
 						</svg>
+					</div>
+
+					<!-- what one token is -->
+					<div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+						<span class="eyebrow">one token is</span>
+						{#each KINDS as k (k.id)}
+							<button
+								class="chip"
+								class:chip-on={scribe.kind === k.id}
+								aria-pressed={scribe.kind === k.id}
+								onclick={() => void scribe.setKind(k.id)}>{k.label}</button
+							>
+						{/each}
+						<span class="num text-[10.5px] text-ink-3">
+							{scribe.vocabSize} tokens{#if scribe.kind === 'pieces'}
+								· {scribe.mergeCount} merges · {scribe.charsPerToken.toFixed(2)} chars each{/if}
+						</span>
 					</div>
 
 					<!-- ask it something -->
@@ -322,6 +356,31 @@
 		outline: none;
 		border-color: var(--accent);
 		box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+	}
+	.chip {
+		font-family: var(--font-sans);
+		font-size: 10.5px;
+		font-weight: 520;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--ink-2);
+		background: var(--surface);
+		border: 1px solid var(--line);
+		border-radius: 999px;
+		padding: 3px 10px;
+		transition:
+			color 100ms ease,
+			border-color 100ms ease,
+			background 100ms ease;
+	}
+	.chip:hover {
+		border-color: var(--ink-3);
+		color: var(--ink);
+	}
+	.chip-on {
+		color: var(--accent);
+		background: var(--accent-soft);
+		border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
 	}
 	/* newest sample settles onto the desk; reduced-motion zeroes this globally */
 	.sample-card {

@@ -8,6 +8,7 @@ Every file here is generated; regenerate with the named script, never edit by ha
 - `mnist-meta.json` — `{side, cols, train, test}` spritesheet geometry; `scripts/build-mnist.mjs`.
 - `text-tokens.bin` — Uint8 char-level token stream, ~1.5M chars of TinyStories-style text cut at a story boundary; `scripts/build-corpus.mjs`.
 - `text-vocab.json` — `{chars, vocabSize}` sorted char vocabulary (69 chars) for `text-tokens.bin`; `scripts/build-corpus.mjs`.
+- `text-merges.json` — the word-piece vocabulary the scribe reads by default: `{baseVocab, merges, pieces, vocabSize, corpusTokens, charsPerToken}` for 300 byte-pair merges over `text-tokens.bin` (369 tokens, 2.42 chars/token). Must match what Plate II's live trainer elects — `src/lib/data/bpe.test.ts` guards that, and this must be rebuilt whenever the corpus changes; `scripts/build-tokenizer.mjs`.
 - `rook-tokens.bin` — Uint16 random-legal chess pretraining stream (`<game>`=0, then UCI move ids), copied verbatim from llmvibes; `scripts/copy-rook-data.mjs`.
 - `rook-vocab.json` — `{moves, vocabSize}` UCI move vocabulary (1931 ids incl. `<game>`), copied verbatim; `scripts/copy-rook-data.mjs`.
 - `rook-probe.json` — linear-probe results (board state from residual stream, per layer/square), copied verbatim; `scripts/copy-rook-data.mjs`.

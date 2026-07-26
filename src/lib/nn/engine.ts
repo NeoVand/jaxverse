@@ -71,7 +71,13 @@ export type DeviceKind = 'webgpu' | 'cpu';
 export async function detectWebGPU(): Promise<boolean> {
 	if (typeof navigator === 'undefined' || !navigator.gpu) return false;
 	try {
-		return (await navigator.gpu.requestAdapter()) !== null;
+		// A wedged GPU process answers requestAdapter() never rather than null,
+		// which would leave every plate on this page spinning. Treat silence as no.
+		const adapter = await Promise.race([
+			navigator.gpu.requestAdapter(),
+			new Promise<null>((r) => setTimeout(() => r(null), 8000))
+		]);
+		return adapter !== null;
 	} catch {
 		return false;
 	}
