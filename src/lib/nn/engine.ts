@@ -24,6 +24,17 @@ export interface MlpConfig {
 	batchSize?: number;
 	/** Fraction of rows held out for validation (taken from the tail). */
 	valFraction?: number;
+	/**
+	 * Turn one layer into a variational bottleneck. Layer `at` then emits
+	 * 2 · `layers[at + 1]` numbers — a mean and a log-variance — and the tail
+	 * receives a sample of that Gaussian while training, or the mean on every
+	 * read-out path (predict, eval, activations). `beta` weights
+	 * KL(q ‖ N(0, I)) against the reconstruction term, and because this engine
+	 * averages mse over elements, the textbook β = 1 is `1 / outDim`.
+	 *
+	 * The waist is always linear: a non-linearity there would fight the prior.
+	 */
+	vae?: { at: number; beta: number };
 }
 
 export interface DataSpec {

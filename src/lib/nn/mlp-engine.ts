@@ -175,7 +175,9 @@ export class MlpEngine {
 
 	async dispose(): Promise<void> {
 		try {
-			await this.call('dispose');
+			// a wedged worker never answers, and waiting for one would leak the
+			// worker (and its GPU device) for the life of the page
+			await Promise.race([this.call('dispose'), new Promise((done) => setTimeout(done, 400))]);
 		} finally {
 			this.worker.terminate();
 			this.pending.clear();

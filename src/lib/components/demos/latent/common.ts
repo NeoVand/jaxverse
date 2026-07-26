@@ -188,6 +188,95 @@ export class TileAtlas {
 	}
 }
 
+/** An orthonormal frame fitted to a cloud: the mean it is centred on, and `k`
+ * unit directions stored row-major. Enough to project a latent point down for
+ * display and — because the directions are orthonormal — to lift a display
+ * coordinate back up to a real latent address. */
+export interface Basis {
+	d: number;
+	k: number;
+	mean: Float32Array;
+	comps: Float32Array; // k × d
+}
+
+/** Top-k principal directions of an n×d cloud by power iteration with
+ * deflation. The seeds are deterministic on purpose: this is refitted after
+ * every trained chunk, and a basis that flipped sign between fits would make
+ * the whole map jump rather than drift. */
+export function pcaBasis(data: Float32Array, n: number, d: number, k: number): Basis {
+	const mean = new Float64Array(d);
+	for (let i = 0; i < n; i++) for (let q = 0; q < d; q++) mean[q] += data[i * d + q];
+	for (let q = 0; q < d; q++) mean[q] /= Math.max(1, n);
+
+	const matVec = (v: Float64Array, out: Float64Array) => {
+		out.fill(0);
+		for (let i = 0; i < n; i++) {
+			let dot = 0;
+			for (let q = 0; q < d; q++) dot += (data[i * d + q] - mean[q]) * v[q];
+			for (let q = 0; q < d; q++) out[q] += dot * (data[i * d + q] - mean[q]);
+		}
+	};
+	const normalize = (v: Float64Array) => {
+		let s = 0;
+		for (let q = 0; q < d; q++) s += v[q] * v[q];
+		s = Math.sqrt(s) || 1;
+		for (let q = 0; q < d; q++) v[q] /= s;
+	};
+
+	const comps = Math.min(k, d);
+	const basis: Float64Array[] = [];
+	for (let c = 0; c < comps; c++) {
+		let v = new Float64Array(d);
+		for (let q = 0; q < d; q++) v[q] = Math.sin(q * 2.3 + c * 1.7) + 0.5;
+		const tmp = new Float64Array(d);
+		for (let it = 0; it < 24; it++) {
+			matVec(v, tmp);
+			for (const b of basis) {
+				let dot = 0;
+				for (let q = 0; q < d; q++) dot += tmp[q] * b[q];
+				for (let q = 0; q < d; q++) tmp[q] -= dot * b[q];
+			}
+			normalize(tmp);
+			v = tmp.slice();
+		}
+		basis.push(v.slice());
+	}
+
+	const out: Basis = {
+		d,
+		k: comps,
+		mean: Float32Array.from(mean),
+		comps: new Float32Array(comps * d)
+	};
+	for (let c = 0; c < comps; c++) for (let q = 0; q < d; q++) out.comps[c * d + q] = basis[c][q];
+	return out;
+}
+
+/** Project every row of an n×d cloud onto the basis — n×k out. */
+export function projectAll(data: Float32Array, n: number, b: Basis): Float32Array {
+	const out = new Float32Array(n * b.k);
+	for (let i = 0; i < n; i++)
+		for (let c = 0; c < b.k; c++) {
+			let dot = 0;
+			for (let q = 0; q < b.d; q++) dot += (data[i * b.d + q] - b.mean[q]) * b.comps[c * b.d + q];
+			out[i * b.k + c] = dot;
+		}
+	return out;
+}
+
+/** Lift display coordinates back to a full latent address: mean + Σ uₖ compₖ.
+ * The lifted point is the one nearest the origin among all latents that
+ * project to `u`, which is the honest answer to "what lives at this spot". */
+export function liftFrom(u: ArrayLike<number>, b: Basis): Float32Array {
+	const z = b.mean.slice();
+	for (let c = 0; c < b.k; c++) {
+		const s = u[c] ?? 0;
+		if (s === 0) continue;
+		for (let q = 0; q < b.d; q++) z[q] += s * b.comps[c * b.d + q];
+	}
+	return z;
+}
+
 /** Rotate-project a 3-D latent point to view coordinates (y up);
  * the returned z is depth, used for sorting and shading. */
 export function project3(
@@ -208,17 +297,24 @@ export function project3(
 	return [x1, y2, z2];
 }
 
-/** Grid-occupancy subsample: one representative per occupied cell (the point
- * nearest the cell centre), so thumbnails never pile up. Cell counts are tuned
- * to land near ~600 visible tiles at 2000 points. */
-export function binSubsample(z: Float32Array, n: number, d: number): Int32Array {
+/** Grid-occupancy subsample over the frame `center ± span`: one representative
+ * per occupied cell (the point nearest the cell centre), so thumbnails never
+ * pile up. Cell counts are tuned to land near ~600 visible tiles at 2000
+ * points. */
+export function binSubsample(
+	z: Float32Array,
+	n: number,
+	d: number,
+	center: number[],
+	span: number
+): Int32Array {
 	const G = d === 2 ? 26 : 10;
 	const best = new Map<number, { i: number; dd: number }>();
 	for (let i = 0; i < n; i++) {
 		let key = 0;
 		let dd = 0;
 		for (let k = 0; k < d; k++) {
-			const v = z[i * d + k];
+			const v = (z[i * d + k] - (center[k] ?? 0)) / span;
 			let c = Math.floor(((v + 1) / 2) * G);
 			c = c < 0 ? 0 : c >= G ? G - 1 : c;
 			const centre = ((c + 0.5) / G) * 2 - 1;

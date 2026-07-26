@@ -52,7 +52,7 @@
 			variant="guided"
 			n={1}
 			title="The experiment — rings, and a network two numbers wide"
-			caption="Left: the data as it is, with the network's current verdict washed behind it. Middle: the same points — the same grid — after the network's deformation, and the one straight cut the final layer makes. Right: the network itself, live — every edge is one weight, read by the legend. Train, and watch it strain: a ring inside a ring cannot be pulled apart without leaving the plane. Then flip hidden from 2-D to 3-D and watch the same cut succeed."
+			caption="Left: the data as it is, with the network's current verdict washed behind it. Middle: the same points — the same grid — after the network's deformation, and the one straight cut the final layer makes. Right: the network itself, live — every edge is one weight. Train, and watch it strain: a ring inside a ring cannot be pulled apart without leaving the plane. Then flip hidden from 2-D to 3-D and watch the same cut succeed. Hover the middle view and press unfold to replay the deformation."
 		/>
 	</Wide>
 
@@ -94,7 +94,7 @@
 			variant="free"
 			n={2}
 			title="The playground — pick your tangle"
-			caption="Spirals are the classic stress test. Watch the hidden view: tanh bends space in soft waves; relu folds it along straight creases; gelu and silu fold with the crease sanded smooth. Widths beyond three are shown as a PCA shadow — the true untangling happens in more dimensions than a screen has."
+			caption="Seven tangles, easiest to hardest, under the plot — spirals are the classic stress test. Watch the hidden view: tanh bends space in soft waves; relu folds it along straight creases; gelu and silu fold with the crease sanded smooth. Hover the hidden view and press unfold to replay the deformation. Widths beyond three are shown as a PCA shadow — the true untangling happens in more dimensions than a screen has."
 		/>
 	</Wide>
 

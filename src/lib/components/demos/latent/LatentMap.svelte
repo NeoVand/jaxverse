@@ -2,12 +2,13 @@
 	// Plate II — the map. Reads the shared engine from Plate I: every trained
 	// chunk re-encodes the 2000 held-out digits into the bottleneck and
 	// scatters them — as ink, as the digit images themselves, or tinted by
-	// their never-seen labels. With a width-3 bottleneck the sheet becomes a
-	// turnable, zoomable cloud. The right pane decodes one latent point live:
-	// in 2-D the cursor itself; in 3-D the nearest digit to the cursor
-	// (a screen ray has no single latent preimage, so we snap to data).
+	// their never-seen labels. A two-number waist is the flat sheet; three, or a
+	// projection of a wider one, is a turnable cloud. The right pane decodes one
+	// point live: on the flat sheet the cursor itself, and in a turnable view the
+	// digit nearest the cursor, since a screen ray has no single preimage there.
 	import { onDestroy } from 'svelte';
-	import { Play, Pause, Shuffle } from 'lucide-svelte';
+	import { Play, Pause, RotateCcw, Shuffle } from 'lucide-svelte';
+	import Plate from '$lib/components/ui/Plate.svelte';
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Slider from '$lib/components/ui/Slider.svelte';
 	import { inview } from '$lib/components/ui/inview';
@@ -23,21 +24,37 @@
 		setupCanvas
 	} from './common';
 
-	const EXTENT = 1.12; // 2-D view half-width in latent units — tanh lives in (−1,1)
-	const EXTENT3 = 1.5; // 3-D view half-width (rotated cube corners reach √3)
+	interface Props {
+		n: number;
+		title: string;
+		caption: string;
+	}
+	let { n, title, caption }: Props = $props();
+
+	// The waist is only bounded under tanh, so the frame is a multiple of the
+	// measured cloud instead of a constant. The margin is generous because the
+	// frame is eased: a cloud still drifting should not touch the edges.
+	const PAD = 1.2;
+	const PAD3 = 1.55;
 	const EYE_MS = 60; // cursor-decode throttle
 	const THUMB = 16; // 2-D thumbnail edge, px
 	const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-	type Mode = 'images' | 'ink' | 'reveal';
-	const MODES: Mode[] = ['images', 'ink', 'reveal'];
+	type Mode = 'images' | 'ink' | 'colorize';
+	const MODES: Mode[] = ['images', 'ink', 'colorize'];
+	/** Points glide to their new coordinates instead of teleporting there. */
+	const MORPH_MS = 420;
 	let mode = $state<Mode>('ink');
 	let userPicked = false;
 	let t = $state(0);
 	let pair = $state<[number, number] | null>(null);
-	let eyeLabel = $state('z = —');
+	let eyeZ = $state('—');
+	let eyeSrc = $state('cloud centre');
 	let visibleCount = $state(0);
 	let dragging = $state(false);
+	/** Reactive mirrors of the view's shape, for the template. */
+	let viewDim = $state(2);
+	let projected = $state(false);
 
 	let scatterCanvas: HTMLCanvasElement | undefined = $state();
 	let eyeCanvas: HTMLCanvasElement | undefined = $state();
@@ -45,8 +62,16 @@
 	let miniB: HTMLCanvasElement | undefined = $state();
 
 	// ── non-reactive machinery (the rAF painter reads these directly) ──
-	let latents: Float32Array | null = null; // 2000 × latDim
-	let latDim = 2; // true width of `latents` (a rebuild can lag latentDim)
+	let latents: Float32Array | null = null; // 2000 × latDim, display coordinates
+	let latDim = 2; // true width of `latents` (a rebuild can lag the lab)
+	let full: Float32Array | null = null; // 2000 × the real waist, for decoding
+	let fullDim = 2;
+	// Every trained chunk re-encodes all two thousand digits, which moves every
+	// point at once. Painting the previous positions gliding into the new ones
+	// turns that jump into drift — the same information, far easier to follow.
+	let shown: Float32Array | null = null; // what is on screen right now
+	let morphFrom: Float32Array | null = null;
+	let morphAt = 1; // 0 → 1 across MORPH_MS
 	let visible: Int32Array | null = null; // subsampled indices for thumbnails
 	let centroidV: number[] = [0, 0];
 	let hoverZ: [number, number] | null = null; // 2-D free cursor
@@ -65,8 +90,6 @@
 	let eyePixels: Float32Array | null = null;
 	let eyeVersion = 0;
 	let raf = 0;
-	let encBusy = false;
-	let encWant = false;
 	let eyeBusy = false;
 	let eyeWanted = false;
 	let lastEyeAt = 0;
@@ -79,11 +102,11 @@
 	const reduced =
 		typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-	// ── re-encode on every trained chunk ──
+	// ── re-encode on every trained chunk, then adopt the shared result ──
 	$effect(() => {
 		void lab.tick;
 		if (lab.phase !== 'ready') return;
-		void refreshLatents();
+		void lab.refreshTestLatents();
 	});
 
 	// once reconstructions clear the quality bar, the map earns its images
@@ -96,41 +119,42 @@
 		mode = m;
 	}
 
-	async function refreshLatents(): Promise<void> {
-		if (encBusy) {
-			encWant = true;
-			return;
-		}
+	$effect(() => {
+		void lab.zVersion;
+		const v = lab.viewZ;
+		const vd = lab.viewDim;
 		const m = lab.mnist;
-		if (!m || !lab.engine) return;
-		encBusy = true;
-		try {
-			const n = m.testY.length;
-			const { z, d } = await lab.encode(m.testX, n);
-			if (d !== latDim) {
-				// the bottleneck was rebuilt — screen-space state is stale
-				hoverZ = null;
-				hoverIdx = -1;
-				proj = null;
-			}
-			latents = z;
-			latDim = d;
-			visible = binSubsample(z, n, d);
-			visibleCount = visible.length;
-			const c = new Array(d).fill(0);
-			for (let i = 0; i < n; i++) for (let k = 0; k < d; k++) c[k] += z[i * d + k];
-			centroidV = c.map((v) => v / n);
-			if (!pair) defaultPair();
-			requestEye(); // the weights moved — whatever the eye shows is stale
-		} catch {
-			// engine disposed or rebuilding mid-flight
+		if (!v || !vd || !m) return;
+		if (vd !== latDim) {
+			// the view changed shape — screen-space state is stale
+			hoverZ = null;
+			hoverIdx = -1;
+			proj = null;
 		}
-		encBusy = false;
-		if (encWant) {
-			encWant = false;
-			void refreshLatents();
+		const n = m.testY.length;
+		// hand the painter a start point before adopting the new coordinates
+		if (shown && shown.length === v.length && !reduced) {
+			morphFrom = shown;
+			morphAt = 0;
+		} else {
+			morphFrom = null;
+			morphAt = 1;
+			shown = v;
 		}
-	}
+		latents = v;
+		latDim = vd;
+		viewDim = vd;
+		projected = !!lab.basis;
+		full = lab.testZ;
+		fullDim = lab.testZd;
+		visible = binSubsample(v, n, vd, lab.zCenter, lab.zSpan);
+		visibleCount = visible.length;
+		const c = new Array(vd).fill(0);
+		for (let i = 0; i < n; i++) for (let k = 0; k < vd; k++) c[k] += v[i * vd + k];
+		centroidV = c.map((x) => x / n);
+		if (!pair) defaultPair();
+		requestEye(); // the weights moved — whatever the eye shows is stale
+	});
 
 	// ── the walk: two held-out digits and the segment between them ──
 	function setPair(a: number, b: number): void {
@@ -168,12 +192,33 @@
 		setPair(a, b);
 	}
 
-	function walkZ(): number[] {
-		const z = latents!;
+	/** The walk, in the coordinates the map is drawn in — the gliding ones, so
+	 * the segment stays pinned to its two endpoint digits while they move. */
+	function walkView(): number[] {
+		const z = shown ?? latents!;
 		const [a, b] = pair!;
 		const out: number[] = [];
 		for (let k = 0; k < latDim; k++)
 			out.push(z[a * latDim + k] + (z[b * latDim + k] - z[a * latDim + k]) * t);
+		return out;
+	}
+
+	/** The same walk in the real waist, which is what the decoder is asked for —
+	 * interpolating there keeps both endpoints exactly on their own digits even
+	 * when the map is only a shadow of a wider space. */
+	function walkFull(): Float32Array | null {
+		if (!full || !pair) return null;
+		const [a, b] = pair;
+		const out = new Float32Array(fullDim);
+		for (let k = 0; k < fullDim; k++)
+			out[k] = full[a * fullDim + k] + (full[b * fullDim + k] - full[a * fullDim + k]) * t;
+		return out;
+	}
+
+	function viewRow(i: number): number[] {
+		const z = latents!;
+		const out: number[] = [];
+		for (let k = 0; k < latDim; k++) out.push(z[i * latDim + k]);
 		return out;
 	}
 
@@ -188,15 +233,19 @@
 	});
 
 	// ── the decoder's eye: throttled single-point decodes ──
-	function currentEye(): { z: number[]; src: string } {
-		if (latDim === 2 && hoverZ) return { z: hoverZ, src: 'cursor' };
-		if (latDim === 3 && hoverIdx >= 0 && latents) {
-			const z = latents;
-			const i = hoverIdx;
-			return { z: [z[3 * i], z[3 * i + 1], z[3 * i + 2]], src: 'nearest digit' };
+	/** What the decoder is asked (`z`, in the real waist) and what the readout
+	 * prints (`view`, the two or three numbers you can actually see). */
+	function currentEye(): { z: Float32Array; view: number[]; src: string } {
+		if (latDim === 2 && hoverZ) return { z: lab.lift(hoverZ), view: hoverZ, src: 'cursor' };
+		if (latDim === 3 && hoverIdx >= 0 && latents && full) {
+			const row = full.slice(hoverIdx * fullDim, (hoverIdx + 1) * fullDim);
+			if (row.length === fullDim) return { z: row, view: viewRow(hoverIdx), src: 'nearest digit' };
 		}
-		if (walkTouched && pair && latents) return { z: walkZ(), src: 'walk' };
-		return { z: centroidV, src: 'cloud centre' };
+		if (walkTouched && pair && latents) {
+			const w = walkFull();
+			if (w) return { z: w, view: walkView(), src: 'walk' };
+		}
+		return { z: lab.lift(centroidV), view: centroidV, src: 'cloud centre' };
 	}
 
 	function requestEye(): void {
@@ -218,11 +267,12 @@
 		eyeWanted = false;
 		lastEyeAt = now;
 		eyeBusy = true;
-		const { z, src } = currentEye();
+		const { z, view, src } = currentEye();
 		try {
-			eyePixels = await lab.decode(Float32Array.from(z), 1);
+			eyePixels = await lab.decode(z, 1);
 			eyeVersion++;
-			eyeLabel = `z = (${z.map(fz).join(', ')}) · ${src}`;
+			eyeZ = `(${view.map(fz).join(', ')})`;
+			eyeSrc = src;
 		} catch {
 			// engine went away — nothing to draw
 		}
@@ -239,9 +289,11 @@
 		if (!scatterCanvas) return null;
 		const r = scatterCanvas.getBoundingClientRect();
 		if (r.width < 4) return null;
+		const e = lab.zSpan * PAD;
+		const [cx, cy] = lab.zCenter;
 		return [
-			((ev.clientX - r.left) / r.width) * 2 * EXTENT - EXTENT,
-			EXTENT - ((ev.clientY - r.top) / r.height) * 2 * EXTENT
+			cx + ((ev.clientX - r.left) / r.width) * 2 * e - e,
+			cy + e - ((ev.clientY - r.top) / r.height) * 2 * e
 		];
 	}
 
@@ -332,6 +384,7 @@
 			lastDraw = now;
 			// the 3-D cloud turns slowly on its own — never under reduced motion
 			if (latDim === 3 && !reduced && !dragging) yaw += dt * 0.00013;
+			advanceMorph(dt);
 			drawScatter();
 			drawTile(eyeCanvas, eyeStrip, eyePixels, eyeVersion);
 			drawTile(miniA, aStrip, origA, pairVersion);
@@ -341,13 +394,32 @@
 		return () => cancelAnimationFrame(raf);
 	});
 
+	/** Walk `shown` from the previous coordinates toward the newest ones. */
+	function advanceMorph(dt: number): void {
+		const to = latents;
+		const from = morphFrom;
+		if (!to) return;
+		if (!from || from.length !== to.length || morphAt >= 1) {
+			shown = to;
+			morphAt = 1;
+			morphFrom = null;
+			return;
+		}
+		morphAt = Math.min(1, morphAt + dt / MORPH_MS);
+		const e = morphAt < 0.5 ? 2 * morphAt * morphAt : 1 - 2 * (1 - morphAt) * (1 - morphAt);
+		const out = shown && shown !== to && shown !== from ? shown : new Float32Array(to.length);
+		for (let i = 0; i < to.length; i++) out[i] = from[i] + (to[i] - from[i]) * e;
+		shown = out;
+		if (morphAt >= 1) morphFrom = null;
+	}
+
 	function atlasFor(
 		tk: ReturnType<typeof readTokens>
 	): { sheet: HTMLCanvasElement; cols: number } | null {
 		const m = lab.mnist;
 		if (!m) return null;
 		const n = m.testY.length;
-		if (mode === 'reveal') {
+		if (mode === 'colorize') {
 			const sheet = catAtlas.ensure(m.testX, n, m.testY, tk.surface, tk.cats);
 			return { sheet, cols: catAtlas.cols };
 		}
@@ -393,10 +465,15 @@
 		H: number,
 		tk: ReturnType<typeof readTokens>
 	): void {
-		const px = (x: number) => ((x + EXTENT) / (2 * EXTENT)) * W;
-		const py = (y: number) => H - ((y + EXTENT) / (2 * EXTENT)) * H;
+		const span = lab.zSpan;
+		const e = span * PAD;
+		const [cx, cy] = lab.zCenter;
+		const px = (x: number) => ((x - cx + e) / (2 * e)) * W;
+		const py = (y: number) => H - ((y - cy + e) / (2 * e)) * H;
 
-		// zero axes and tanh's (−1,1)² cage — quiet reference geometry
+		// the origin's cross where it falls, and a cage at the reach of the
+		// cloud — quiet reference geometry that also says how big a latent unit
+		// currently is, since only tanh keeps that fixed
 		ctx.lineWidth = 1;
 		ctx.strokeStyle = tk.lineSoft;
 		ctx.beginPath();
@@ -406,9 +483,14 @@
 		ctx.lineTo(px(0), H);
 		ctx.stroke();
 		ctx.strokeStyle = tk.line;
-		ctx.strokeRect(px(-1), py(1), px(1) - px(-1), py(-1) - py(1));
+		ctx.strokeRect(
+			px(cx - span),
+			py(cy + span),
+			px(cx + span) - px(cx - span),
+			py(cy - span) - py(cy + span)
+		);
 
-		const z = latents;
+		const z = shown;
 		const m = lab.mnist;
 		if (z && m) {
 			const n = m.testY.length;
@@ -439,7 +521,7 @@
 				const bx = px(z[2 * p[1]]);
 				const by = py(z[2 * p[1] + 1]);
 				drawSegment(ctx, tk, ax, ay, bx, by);
-				const wz = walkZ();
+				const wz = walkView();
 				drawWalker(ctx, tk, px(wz[0]), py(wz[1]));
 			}
 		}
@@ -471,18 +553,38 @@
 		H: number,
 		tk: ReturnType<typeof readTokens>
 	): void {
+		const span = lab.zSpan;
+		const e = span * PAD3;
+		const c = lab.zCenter;
+		// centred on the cloud, so an unbounded waist that drifts off the origin
+		// still lands in frame
 		const toXY = (x: number, y: number, zc: number): [number, number, number] => {
-			const [vx, vy, vz] = project3(x * zoom, y * zoom, zc * zoom, yaw, pitch);
-			return [((vx + EXTENT3) / (2 * EXTENT3)) * W, H - ((vy + EXTENT3) / (2 * EXTENT3)) * H, vz];
+			const [vx, vy, vz] = project3(
+				(x - (c[0] ?? 0)) * zoom,
+				(y - (c[1] ?? 0)) * zoom,
+				(zc - (c[2] ?? 0)) * zoom,
+				yaw,
+				pitch
+			);
+			return [((vx + e) / (2 * e)) * W, H - ((vy + e) / (2 * e)) * H, vz];
 		};
 
-		// the (−1,1)³ cage as a wireframe
+		// a cage at the reach of the cloud, as a wireframe — without it a
+		// rotating cloud has no depth cue at all
 		ctx.strokeStyle = tk.line;
 		ctx.lineWidth = 1;
 		ctx.globalAlpha = 0.55;
 		for (const [a, b] of CUBE_EDGES) {
-			const [x0, y0] = toXY(CUBE[a][0], CUBE[a][1], CUBE[a][2]);
-			const [x1, y1] = toXY(CUBE[b][0], CUBE[b][1], CUBE[b][2]);
+			const [x0, y0] = toXY(
+				(c[0] ?? 0) + CUBE[a][0] * span,
+				(c[1] ?? 0) + CUBE[a][1] * span,
+				(c[2] ?? 0) + CUBE[a][2] * span
+			);
+			const [x1, y1] = toXY(
+				(c[0] ?? 0) + CUBE[b][0] * span,
+				(c[1] ?? 0) + CUBE[b][1] * span,
+				(c[2] ?? 0) + CUBE[b][2] * span
+			);
 			ctx.beginPath();
 			ctx.moveTo(x0, y0);
 			ctx.lineTo(x1, y1);
@@ -490,7 +592,7 @@
 		}
 		ctx.globalAlpha = 1;
 
-		const z = latents;
+		const z = shown;
 		const m = lab.mnist;
 		if (!z || !m || latDim !== 3) {
 			proj = null;
@@ -506,7 +608,9 @@
 			pr[3 * i + 2] = sz;
 		}
 		const depthOf = (i: number) => pr[3 * i + 2];
-		const dn = (i: number) => Math.max(0, Math.min(1, (depthOf(i) + 1.9) / 3.8));
+		// depth → 0..1 for shading, over the diagonal reach of the cage
+		const far = 1.9 * span;
+		const dn = (i: number) => Math.max(0, Math.min(1, (depthOf(i) + far) / (2 * far)));
 
 		if (mode === 'ink') {
 			const order = Array.from({ length: n }, (_, i) => i).sort((a, b) => depthOf(a) - depthOf(b));
@@ -536,7 +640,7 @@
 		const p = pair;
 		if (p) {
 			drawSegment(ctx, tk, pr[3 * p[0]], pr[3 * p[0] + 1], pr[3 * p[1]], pr[3 * p[1] + 1]);
-			const wz = walkZ();
+			const wz = walkView();
 			const [wx, wy] = toXY(wz[0], wz[1], wz[2]);
 			drawWalker(ctx, tk, wx, wy);
 		}
@@ -646,158 +750,215 @@
 	});
 </script>
 
-<div class="flex flex-col" use:inview={() => void lab.boot()}>
-	{#if lab.phase !== 'ready'}
-		<div class="flex min-h-72 flex-col items-center justify-center gap-2 px-6 py-16 text-center">
-			<span class="eyebrow">
-				{lab.phase === 'error' ? 'the engine stalled — retry it at Plate I' : 'warming up…'}
-			</span>
-			<p class="max-w-md font-serif text-[15px] text-ink-3 italic">
-				This map reads the same network as Plate I. Once it is awake, two thousand held-out digits
-				will place themselves here.
-			</p>
-		</div>
-	{:else}
-		<!-- controls -->
-		<div
-			class="flex min-h-12 flex-wrap items-center gap-x-5 gap-y-3 border-b border-line-soft px-4 py-3"
+<Plate {n} {title} {caption}>
+	{#snippet status()}
+		{#if lab.phase === 'ready'}
+			<span>step {lab.step}</span>
+			<span aria-hidden="true">·</span>
+			<span>val {fmt(lab.valLoss)}</span>
+			<span aria-hidden="true">·</span>
+			<span>{lab.latentDim}-number waist</span>
+			{#if projected}
+				<span aria-hidden="true">·</span>
+				<span>shown as its 3 strongest directions</span>
+			{/if}
+		{:else if lab.phase === 'loading'}
+			<span>warming up…</span>
+		{:else if lab.phase === 'error'}
+			<span style="color: var(--bad);">error</span>
+		{/if}
+	{/snippet}
+
+	{#snippet actions()}
+		<Btn
+			disabled={lab.phase !== 'ready' || lab.rebuilding}
+			onclick={() => lab.setTraining(!lab.training)}
 		>
-			<span class="flex items-center gap-1" role="group" aria-label="Map view">
-				{#each MODES as m (m)}
-					<button
-						class="chip"
-						class:chip-on={mode === m}
-						aria-pressed={mode === m}
-						onclick={() => pickMode(m)}
-					>
-						{m}
-					</button>
-				{/each}
-			</span>
-			<span class="num ml-auto text-[11px] text-ink-3">
-				step {lab.step} · val {fmt(lab.valLoss)}
-			</span>
-			<Btn disabled={lab.rebuilding} onclick={() => lab.setTraining(!lab.training)}>
-				{#if lab.training}
-					<Pause size={12} aria-hidden="true" /> Pause
-				{:else}
-					<Play size={12} aria-hidden="true" /> Train
-				{/if}
-			</Btn>
-		</div>
+			{#if lab.training}
+				<Pause size={12} aria-hidden="true" /> Pause
+			{:else}
+				<Play size={12} aria-hidden="true" /> Train
+			{/if}
+		</Btn>
+		<Btn
+			disabled={lab.phase !== 'ready' || lab.rebuilding}
+			onclick={() => void lab.resetWeights()}
+			title="Fresh random weights"
+		>
+			<RotateCcw size={12} aria-hidden="true" /> Reset
+		</Btn>
+	{/snippet}
 
-		<!-- the map and the decoder's eye -->
-		<div class="grid grid-cols-1 gap-px bg-line-soft md:grid-cols-[minmax(0,1fr)_15rem]">
-			<div class="relative bg-surface">
-				<span class="eyebrow absolute top-3 left-3 z-10">
-					latent space · z = E(x)
-					{#if lab.latentDim === 3}
-						<span class="tracking-normal text-ink-3 normal-case"
-							>— drag to turn · wheel to zoom</span
-						>
-					{/if}
+	<div class="flex flex-col" use:inview={() => void lab.boot()}>
+		{#if lab.phase !== 'ready'}
+			<div class="flex h-[280px] flex-col items-center justify-center gap-1">
+				<span class="eyebrow">
+					{lab.phase === 'error' ? 'the engine stalled' : 'warming up the same network as plate I…'}
 				</span>
-				{#if mode !== 'ink'}
-					<span class="num absolute bottom-2 left-3 z-10 text-[10.5px] text-ink-3">
-						{visibleCount} of 2000 shown
+				{#if lab.phase === 'error'}
+					<span class="mb-2 text-[12.5px] text-bad">{lab.errorMsg}</span>
+					<Btn onclick={() => void lab.boot()}>Retry</Btn>
+				{:else}
+					<span class="text-[12.5px] text-ink-3">
+						two thousand held-out digits will place themselves here
 					</span>
 				{/if}
-				<canvas
-					bind:this={scatterCanvas}
-					class="block aspect-square w-full touch-none"
-					class:cursor-crosshair={lab.latentDim === 2}
-					class:cursor-grab={lab.latentDim === 3 && !dragging}
-					class:cursor-grabbing={dragging}
-					aria-label="Two thousand held-out digits scattered by their latent coordinates"
-					onpointermove={ptrMove}
-					onpointerdown={ptrDown}
-					onpointerup={ptrUp}
-					onpointercancel={ptrUp}
-					onpointerleave={ptrLeave}
-				></canvas>
 			</div>
-			<div class="flex flex-col gap-2 bg-surface px-4 py-4">
-				<span class="eyebrow">the decoder's eye</span>
-				<canvas
-					bind:this={eyeCanvas}
-					class="mx-auto block aspect-square w-full max-w-56"
-					aria-label="The decoder's output for the current latent point"
-				></canvas>
-				<span class="num self-center text-[11px] text-ink-3">{eyeLabel}</span>
-				<p class="mt-auto font-serif text-[13px] text-ink-3 italic">
-					{#if lab.latentDim === 2}
-						sweep the map — every point of the plane decodes to something digit-shaped, even where
-						no digit has ever been
-					{:else}
-						hover near a digit to decode its coordinates; the walk slider still crosses the space
-						between two of them
-					{/if}
-				</p>
-			</div>
-		</div>
-
-		<!-- reveal legend -->
-		{#if mode === 'reveal'}
+		{:else}
+			<!-- the map, and beside it the instrument that reads it -->
 			<div
-				class="flex flex-wrap items-center gap-x-3.5 gap-y-1 border-t border-line-soft px-4 py-2"
+				class="grid grid-cols-1 gap-px bg-line-soft lg:grid-cols-[minmax(0,520px)_minmax(0,1fr)]"
 			>
-				<span class="eyebrow">true labels — used for the tints only, never for training</span>
-				{#each DIGITS as d (d)}
-					<span class="num flex items-center gap-1.5 text-[11px]">
-						<span
-							class="inline-block h-2 w-2 rounded-full"
-							style="background: var(--cat-{d})"
-							aria-hidden="true"
-						></span>{d}
+				<div class="relative bg-surface">
+					<span class="eyebrow absolute top-3 left-3 z-10">
+						{projected ? 'latent space · shadow of z = E(x)' : 'latent space · z = E(x)'}
+						{#if viewDim === 3}
+							<span class="tracking-normal text-ink-3 normal-case"
+								>— drag to turn · wheel to zoom</span
+							>
+						{/if}
 					</span>
-				{/each}
+					{#if mode !== 'ink'}
+						<span class="num absolute bottom-2 left-3 z-10 text-[10.5px] text-ink-3">
+							{visibleCount} of 2000 shown
+						</span>
+					{/if}
+					<canvas
+						bind:this={scatterCanvas}
+						class="block aspect-square w-full touch-none"
+						class:cursor-crosshair={viewDim === 2}
+						class:cursor-grab={viewDim === 3 && !dragging}
+						class:cursor-grabbing={dragging}
+						aria-label="Two thousand held-out digits scattered by their latent coordinates"
+						onpointermove={ptrMove}
+						onpointerdown={ptrDown}
+						onpointerup={ptrUp}
+						onpointercancel={ptrUp}
+						onpointerleave={ptrLeave}
+					></canvas>
+				</div>
+
+				<div class="flex flex-col gap-3 bg-surface p-4">
+					<!-- what the map is made of -->
+					<div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+						<span class="eyebrow">the view</span>
+						<span class="flex items-center gap-1.5" role="group" aria-label="Map view">
+							{#each MODES as m (m)}
+								<button
+									class="chip"
+									class:chip-on={mode === m}
+									aria-pressed={mode === m}
+									onclick={() => pickMode(m)}
+								>
+									{m}
+								</button>
+							{/each}
+						</span>
+					</div>
+					<div class="flex min-h-[19px] flex-wrap items-center gap-x-3 gap-y-1">
+						{#if mode === 'colorize'}
+							{#each DIGITS as d (d)}
+								<span class="num flex items-center gap-1.5 text-[11px] text-ink-2">
+									<i class="dot" style="background: var(--cat-{d});" aria-hidden="true"></i>{d}
+								</span>
+							{/each}
+						{:else if mode === 'images'}
+							<span class="text-[11px] text-ink-3">
+								one digit printed per occupied cell, so the tiles stay legible
+							</span>
+						{:else}
+							<span class="text-[11px] text-ink-3">
+								anonymous points — the map as the model knows it
+							</span>
+						{/if}
+					</div>
+
+					<!-- the decoder's eye: the reason to point at the map at all,
+					     so it gets the room -->
+					<div class="flex flex-col gap-1.5">
+						<div class="relative mx-auto w-full max-w-[300px]">
+							<canvas
+								bind:this={eyeCanvas}
+								class="block aspect-square w-full rounded border border-line-soft"
+								aria-label="The decoder's output for the current latent point"
+							></canvas>
+							<span class="eyebrow absolute top-2 left-2.5">the decoder's eye</span>
+						</div>
+						<div
+							class="mx-auto flex w-full max-w-[300px] flex-wrap items-baseline justify-between gap-x-3"
+						>
+							<span class="num text-[12.5px] text-ink">z = {eyeZ}</span>
+							<span class="num text-[10.5px] text-ink-3">from the {eyeSrc}</span>
+						</div>
+						<span class="mx-auto max-w-[300px] text-[11px] leading-snug text-ink-3">
+							{#if viewDim === 2}
+								every point of the plane decodes to something digit-shaped — even where no digit has
+								ever been
+							{:else}
+								a screen ray has no single preimage in the cloud, so the eye snaps to the digit
+								nearest your cursor
+							{/if}
+						</span>
+					</div>
+
+					<!-- the walk -->
+					<div class="mt-auto flex flex-col gap-2 border-t border-line-soft pt-3">
+						<div class="flex items-center justify-between gap-3">
+							<span class="eyebrow">walk the map</span>
+							<Btn onclick={randomPair}>
+								<Shuffle size={12} aria-hidden="true" /> Random pair
+							</Btn>
+						</div>
+						<div class="flex items-center gap-3">
+							<span class="flex shrink-0 items-center gap-1.5">
+								<canvas
+									bind:this={miniA}
+									class="h-10 w-10 rounded border border-line-soft"
+									aria-label="First endpoint digit"
+								></canvas>
+								<span class="num text-[11px] text-ink-2">{pairLabels[0]}</span>
+							</span>
+							<span class="min-w-32 flex-1">
+								<Slider
+									label="interpolation t"
+									bind:value={t}
+									min={0}
+									max={1}
+									step={0.01}
+									format={(v) => v.toFixed(2)}
+								/>
+							</span>
+							<span class="flex shrink-0 items-center gap-1.5">
+								<span class="num text-[11px] text-ink-2">{pairLabels[1]}</span>
+								<canvas
+									bind:this={miniB}
+									class="h-10 w-10 rounded border border-line-soft"
+									aria-label="Second endpoint digit"
+								></canvas>
+							</span>
+						</div>
+					</div>
+				</div>
 			</div>
 		{/if}
-
-		<!-- walk the map -->
-		<div class="flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-line-soft px-4 py-3">
-			<span class="eyebrow">walk the map</span>
-			<span class="flex items-center gap-1.5">
-				<canvas
-					bind:this={miniA}
-					class="h-9 w-9 rounded border border-line-soft"
-					aria-label="First endpoint digit"
-				></canvas>
-				<span class="num text-[11px] text-ink-2">{pairLabels[0]}</span>
-			</span>
-			<span class="min-w-44 flex-1">
-				<Slider
-					label="interpolation t"
-					bind:value={t}
-					min={0}
-					max={1}
-					step={0.01}
-					format={(v) => v.toFixed(2)}
-				/>
-			</span>
-			<span class="flex items-center gap-1.5">
-				<span class="num text-[11px] text-ink-2">{pairLabels[1]}</span>
-				<canvas
-					bind:this={miniB}
-					class="h-9 w-9 rounded border border-line-soft"
-					aria-label="Second endpoint digit"
-				></canvas>
-			</span>
-			<Btn onclick={randomPair}>
-				<Shuffle size={12} aria-hidden="true" /> Random pair
-			</Btn>
-		</div>
-	{/if}
-</div>
+	</div>
+</Plate>
 
 <style>
+	.dot {
+		display: inline-block;
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+	}
+
 	.chip {
 		font-family: var(--font-sans);
 		font-size: 11px;
 		font-weight: 500;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
-		padding: 3px 9px;
+		padding: 4px 11px;
 		border-radius: 5px;
 		border: 1px solid var(--line);
 		color: var(--ink-2);
@@ -812,5 +973,12 @@
 		background: var(--ink);
 		border-color: var(--ink);
 		color: var(--paper);
+	}
+	/* without this the selected chip inherits the hover ink colour and goes
+	   dark-on-dark the moment the pointer touches it */
+	.chip-on:hover {
+		color: var(--paper);
+		background: color-mix(in srgb, var(--ink) 88%, var(--paper));
+		border-color: color-mix(in srgb, var(--ink) 88%, var(--paper));
 	}
 </style>

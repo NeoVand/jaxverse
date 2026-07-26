@@ -6,20 +6,26 @@
 	interface Props {
 		onclick?: () => void;
 		kind?: 'primary' | 'ghost';
+		/** One of a set of choices, currently the active one — a quiet pressed
+		 * state rather than the ink fill of `primary`, since nothing about it is
+		 * the next thing to do. */
+		pressed?: boolean;
 		disabled?: boolean;
 		title?: string;
 		children: Snippet;
 	}
 
-	let { onclick, kind = 'ghost', disabled = false, title, children }: Props = $props();
+	let { onclick, kind = 'ghost', pressed, disabled = false, title, children }: Props = $props();
 </script>
 
 <button
 	{onclick}
 	{disabled}
 	{title}
+	aria-pressed={pressed}
 	class="btn inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-medium tracking-[0.1em] uppercase transition-all duration-100 disabled:cursor-default disabled:opacity-40"
 	class:btn-primary={kind === 'primary'}
+	class:btn-on={pressed}
 >
 	{@render children()}
 </button>
@@ -37,6 +43,11 @@
 	}
 	.btn:active:not(:disabled) {
 		transform: translateY(0.5px);
+	}
+	.btn-on {
+		background: var(--surface-2);
+		border-color: var(--ink-2);
+		color: var(--ink);
 	}
 	.btn-primary {
 		background: var(--ink);

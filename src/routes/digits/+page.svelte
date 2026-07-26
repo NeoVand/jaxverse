@@ -7,9 +7,9 @@
 	import Gallery from '$lib/components/demos/digits/Gallery.svelte';
 	import SoftmaxPlay from '$lib/components/demos/digits/SoftmaxPlay.svelte';
 	import Classifier from '$lib/components/demos/digits/Classifier.svelte';
+	import PipelineDiagram from '$lib/components/demos/digits/PipelineDiagram.svelte';
 	import DrawPad from '$lib/components/demos/digits/DrawPad.svelte';
 	import Inside from '$lib/components/demos/digits/Inside.svelte';
-	import { lab } from '$lib/components/demos/digits/digits-context.svelte';
 	import { resolve } from '$app/paths';
 </script>
 
@@ -56,43 +56,69 @@
 
 	<Prose>
 		<p>
-			Two small pieces of machinery make ten classes workable. The network now ends in ten outputs —
-			one score per digit, a vector called the <em>logits</em>. The <em>softmax</em> squashes those scores
-			into probabilities,
-		</p>
-		<Math display tex={'\\operatorname{softmax}_c(z) \\;=\\; \\frac{e^{z_c}}{\\sum_{j} e^{z_j}}'} />
-		<p>
-			— each score exponentiated, then normalized, so the ten numbers are positive and sum to one.
-			An equation like this is better felt than read, so play with it: six scores under your
-			control, and the belief they become. Watch the biggest score take most — never all — of the
-			probability, and how dividing the logits by a <em>temperature</em> before the softmax sharpens or
-			flattens the verdict.
+			Before the training, the shape of the machine. It is the same stack you built in the last two
+			chapters, with two small pieces of machinery bolted on to make ten classes workable. The 784
+			brightnesses go in one end. The network ends in ten outputs rather than one — a score per
+			digit, a vector called the <em>logits</em> — and those scores are free to be any size, either
+			sign; nothing yet says they are probabilities. So the last step makes them into some: the
+			<em>softmax</em> takes the ten scores and returns ten positive numbers that sum to one. The tallest
+			is the model's answer, and its height is how strongly the model means it.
 		</p>
 	</Prose>
 
 	<Wide>
-		<Plate
+		<PipelineDiagram />
+	</Wide>
+
+	<Prose>
+		<p>The squashing step is one line of arithmetic,</p>
+		<Math display tex={'\\operatorname{softmax}_c(z) \\;=\\; \\frac{e^{z_c}}{\\sum_{j} e^{z_j}}'} />
+		<p>
+			— each score exponentiated, then normalized, so the numbers are positive and sum to one. An
+			equation like this is better felt than read, so play with it: a bank of scores drawn from a
+			bell curve, and the belief they become. Watch the biggest score take most — never all — of the
+			probability; widen the spread <Math tex="\sigma" /> and the winner runs away with it; and see how
+			dividing the logits by a <em>temperature</em> before the softmax sharpens or flattens the verdict.
+		</p>
+	</Prose>
+
+	<Wide>
+		<SoftmaxPlay
 			title="The softmax, by hand"
-			caption="Move a score and every probability shifts — belief is a budget of exactly one, spent by comparison. The temperature T rescales the scores first: below one it exaggerates their differences; above one it shrugs them off."
-		>
-			<SoftmaxPlay />
-		</Plate>
+			caption="Above: the raw scores, positive up and negative down, with the shape of their distribution beside them. Below: what the softmax makes of them. Move any dial and every probability shifts — belief is a budget of exactly one, spent by comparison. The temperature τ rescales the scores first: below one it exaggerates their differences; above one it shrugs them off. With a handful of scores you can also drag a bar to set it by hand."
+		/>
 	</Wide>
 
 	<Prose>
 		<p>
-			And the loss, called <em>cross-entropy</em>, is the negative log of whatever probability the
-			model gave to the correct class:
+			The second piece of machinery is the loss. Ten probabilities came out; one of them belongs to
+			the right answer. That single number is the only one the loss looks at, and the loss is its
+			negative logarithm:
 		</p>
 		<Math
 			display
-			tex={'\\mathcal{L}(\\theta) \\;=\\; -\\log \\operatorname{softmax}_{y}\\!\\big(f(x;\\theta)\\big)'}
+			tex={'\\mathcal{L}(\\theta) \\;=\\; -\\log \\htmlClass{eq-g}{p_{\\htmlClass{eq-w}{y}}}, \\qquad \\htmlClass{eq-g}{p_{\\htmlClass{eq-w}{y}}} \\;=\\; \\operatorname{softmax}_{\\htmlClass{eq-w}{y}}\\!\\big(f(x;\\theta)\\big)'}
 		/>
 		<p>
-			Read it as the model's surprise at the right answer. Sure and correct: probability near one,
-			loss near zero. Sure and wrong: probability near zero, loss enormous. Gradient descent on this
-			loss pushes the correct logit up and the other nine down, hardest exactly when the model is
-			confidently mistaken.
+			Read it term by term. <Math tex={'\\htmlClass{eq-w}{y}'} /> is the true label, the answer written
+			on the form by whoever held the pen; it never changes, and it selects exactly one of the ten bars.
+			<Math tex={'\\htmlClass{eq-g}{p_{\\htmlClass{eq-w}{y}}}'} /> is the height of that one bar — the
+			probability the model was willing to place on the truth. The nine other bars appear nowhere in the
+			formula, and yet they are punished all the same: they share one unit of belief with
+			<Math tex={'\\htmlClass{eq-g}{p_{\\htmlClass{eq-w}{y}}}'} />, so the only way to raise it is
+			to take from them.
+		</p>
+		<p>
+			The minus log is what turns a probability into a complaint. It is zero when
+			<Math tex={'\\htmlClass{eq-g}{p_{\\htmlClass{eq-w}{y}}} = 1'} /> — perfect confidence in the right
+			answer costs nothing — and it climbs slowly at first, then without limit as the probability approaches
+			zero. Nine parts in ten, the blind guess of an untrained model, costs
+			<Math tex="-\log 0.1 \approx 2.30" />; a tepid but correct 0.6 costs 0.51; a confident 0.99
+			costs 0.01; and a confident, <em>wrong</em> 0.01 costs 4.61. That asymmetry is the whole
+			design. Cross-entropy is often called the model's <em>surprise</em> at the truth, and being
+			loudly, specifically wrong is the most surprising thing it can do — so that is where the
+			gradient pushes hardest. Every digit in the plate below carries its own surprise, and the
+			<span class="num">loss</span> in the header is simply their average.
 		</p>
 		<p>
 			One more piece of discipline — the piece that makes this science rather than wishful thinking.
@@ -100,30 +126,20 @@
 			falling, accuracy climbing, and nothing learned about handwriting at all. Memorizing answers
 			is not learning, so we grade on questions the model has never seen. Of the ten thousand digits
 			below, 8,000 form the <em>training set</em> the gradients flow from, and 2,000 form the
-			<em>test set</em>, locked away from training entirely. Every accuracy quoted in this chapter
-			is measured on held-out digits alone. It is the only number that means anything.
+			<em>test set</em>, locked away from training entirely. The plate reports both scores, and the
+			pair is more honest than either alone: accuracy on rows it has studied, accuracy on rows it
+			has never seen, and the shortfall between them — the memorization it got away with. Only the
+			second number is a claim about handwriting.
 		</p>
 	</Prose>
 
 	<Wide>
 		<div id="plate-classifier">
-			<Plate
+			<Classifier
 				n={2}
 				title="The classifier"
-				caption="Twelve digits from the test set — the model never trains on them — with its current reading under each; wrong readings in red. Untrained, it guesses at chance, one in ten. Train, and watch the labels correct themselves."
-			>
-				{#snippet status()}
-					{#if lab.phase === 'ready'}
-						<span>
-							step {lab.step} · loss {Number.isFinite(lab.loss) ? lab.loss.toFixed(3) : '—'} · test
-							{Number.isFinite(lab.testAcc) ? (lab.testAcc * 100).toFixed(1) + '%' : '—'} · {lab.msPerStep.toFixed(
-								0
-							)} ms/step
-						</span>
-					{/if}
-				{/snippet}
-				<Classifier />
-			</Plate>
+				caption="Sixteen digits from the test set — the model never trains on them. Under each, ten bars: its whole belief, one per class. Then the reading, green when right and red when wrong, and beside it the surprise −log p that cross-entropy charges for it. Untrained, the bars are flat and every surprise sits near 2.30; train, and watch the beliefs spike as the readings correct themselves. Random draws a fresh sixteen, but the other two buttons rank the whole test set by the probability it gives the right answer and show you an end of it: Surest for the digits it has no trouble with, Hardest for the ones it gets confidently, expensively wrong. The right column is the machine itself: change its depth, its width, or the bend it uses, and it starts over with the new shape."
+			/>
 		</div>
 	</Wide>
 
@@ -147,7 +163,8 @@
 		<p>
 			While it trains, the two curves in the plate tell different stories. The
 			<span style="color: var(--accent);">training loss</span> nearly cannot help falling — the
-			optimizer is paid to push it down, and with 109,386 parameters there is room to push. The
+			optimizer is paid to push it down, and with a hundred thousand parameters there is room to
+			push. The
 			<span style="color: var(--warm);">test accuracy</span> is the earned number: performance on
 			questions the gradients never touched. How well a model carries over from the examples it
 			studied to examples it has not seen is called <em>generalization</em>, and the shortfall
@@ -168,7 +185,7 @@
 		<Plate
 			n={3}
 			title="Draw your own"
-			caption="Draw a digit with your pointer — the circle is your brush, and the σ slider fattens or thins it. The ten bars are the softmax, the model's belief updating as you draw. The evidence map is the gradient of the winning score with respect to each pixel: warm pixels argued for the verdict, blue pixels argued against it."
+			caption="A 3 is waiting on the pad; wipe it with the eraser and draw your own. The ring is your brush, and the slider on the left fattens or thins it. On the right, the same two charts as the softmax plate above, now fed by your stroke: ten raw scores over a zero rule, and the belief they become. The evidence square is the gradient of the winning score with respect to each pixel — warm pixels argued for the verdict, blue pixels argued against it, so you can see which parts of your stroke the model leaned on."
 		>
 			<DrawPad />
 		</Plate>
@@ -183,11 +200,14 @@
 		</h2>
 		<p>
 			When it misreads your 4 — and sometimes it will — you can do better than shrug. Nothing about
-			this machine is sealed. The first layer maps 784 pixels to 128 units, so each unit owns
-			exactly 784 incoming weights — one per pixel — which means <em>each unit is an image</em>, and
-			you can simply look at it: the pattern of ink it rewards and the pattern it penalizes. And its
-			mistakes on the test set have structure. It does not confuse digits at random; it confuses
-			digits that share a skeleton, the same pairs you would confuse squinting at a bad fax.
+			this machine is sealed. The first layer maps 784 pixels onto a bank of hidden units, so each
+			unit owns exactly 784 incoming weights — one per pixel — which means
+			<em>each unit is an image</em>, and you can simply look at it: the pattern of ink it rewards
+			and the pattern it penalizes. Units deeper in are harder to see that way, so there is a second
+			question to ask of any of them —
+			<em>which digits drive you hardest?</em> — and the answer is a picture too, since you can average
+			the winners. And its mistakes on the test set have structure. It does not confuse digits at random;
+			it confuses digits that share a skeleton, the same pairs you would confuse squinting at a bad fax.
 		</p>
 	</Prose>
 
@@ -195,7 +215,7 @@
 		<Plate
 			n={4}
 			title="Inside the machine"
-			caption="Left: the incoming weights of 24 first-layer units, each reshaped back into a 28 × 28 image — the templates it presses against your digit. Right: the confusion matrix over all 2,000 test digits; the green diagonal is truth, the red smudges are error. The heaviest are 4 read as 9 and 3 read as 5 — mistakes of shared shape."
+			caption="Left: an explorer over every learned layer, with two ways to look at a unit. Weights draws what it is made of — a first-layer unit owns 784 incoming weights, one per pixel, so it simply is an image, and a deeper unit is carried back to pixel space by multiplying out the matrices behind it, its linear shadow. Excites it drops the algebra and asks the test set: the two dozen digits that drive the unit hardest, averaged. Walk out to the readout in that view and the ten class templates come back as ten clean digits — the machine's idea of each name. Right: the confusion matrix over all 2,000 test digits, rows truth and columns its reading. Hover any cell to open the digits it actually got that way; the heaviest are usually 4 read as 9 and 3 read as 5, mistakes of shared shape."
 		>
 			<Inside />
 		</Plate>

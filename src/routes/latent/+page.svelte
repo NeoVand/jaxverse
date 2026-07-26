@@ -3,10 +3,10 @@
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import Wide from '$lib/components/ui/Wide.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
-	import Plate from '$lib/components/ui/Plate.svelte';
 	import Squeeze from '$lib/components/demos/latent/Squeeze.svelte';
 	import LatentMap from '$lib/components/demos/latent/LatentMap.svelte';
 	import ManifoldGrid from '$lib/components/demos/latent/ManifoldGrid.svelte';
+	import AutoencoderDiagram from '$lib/components/demos/latent/AutoencoderDiagram.svelte';
 	import { resolve } from '$app/paths';
 </script>
 
@@ -28,8 +28,17 @@
 			The <em>decoder</em>
 			<Math tex={'D : \\mathbb{R}^{2} \\to \\mathbb{R}^{784}'} /> takes those two numbers and tries to
 			repaint the digit they came from. Between the halves sits the <em>bottleneck</em> — the width-2
-			waist of an hourglass — and every digit must pass through it.
+			waist of an hourglass — and every digit must pass through it. The waist is the only place in this
+			book where a layer carries no non-linearity at all: nothing is bent there, because the whole point
+			of the place is to be a plain coordinate system.
 		</p>
+	</Prose>
+
+	<Wide>
+		<AutoencoderDiagram />
+	</Wide>
+
+	<Prose>
 		<p>
 			Training needs nothing this book has not already built. The loss is the distance between each
 			digit and its own <em>reconstruction</em>,
@@ -43,16 +52,42 @@
 			Allowed two, copying is impossible. The only way to reconstruct well is to keep what matters about
 			a digit and discard the rest — and “what matters” is precisely the thing nobody told it.
 		</p>
+		<p>
+			One clause is still missing, and it is the clause that makes the map worth drawing. As
+			written, the loss has no opinion whatever about <em>where</em> the encoder puts things. It is
+			equally happy with a tidy disc around the origin and with a sprawl that reaches out to a
+			coordinate of forty, continents of dead space in between, growing for as long as you train. So
+			we ask for one more thing. Instead of a point, the encoder proposes a small Gaussian cloud per
+			digit — a centre <Math tex="\mu(x)" /> and a spread <Math tex="\sigma(x)" /> — the decoder is handed
+			a sample of it,
+		</p>
+		<Math
+			display
+			tex={'z \\;=\\; \\mu(x) + \\sigma(x)\\,\\varepsilon, \\qquad \\varepsilon \\sim \\mathcal{N}(0, I),'}
+		/>
+		<p>and the loss charges rent on how far that proposal drifts from the plain unit Gaussian:</p>
+		<Math
+			display
+			tex={'\\mathcal{L} \\;=\\; \\underbrace{\\bigl\\lVert\\, x - D(z) \\,\\bigr\\rVert^{2}}_{\\text{rebuild it}} \\;+\\; \\beta \\underbrace{\\mathrm{KL}\\bigl(\\, \\mathcal{N}(\\mu, \\sigma^{2}) \\,\\|\\, \\mathcal{N}(0, 1) \\,\\bigr)}_{\\text{and stay put}}.'}
+		/>
+		<p>
+			That is a <em>variational</em> autoencoder, and the two changes buy two different things. The
+			noise means the decoder is never taught a single address, only a neighbourhood, so nearby
+			addresses are forced to decode to similar digits: the map comes out smooth instead of a lookup
+			table full of gaps. The rent means the map stays where you left it — centred on the origin, a
+			couple of units across, no drift and no sprawl — which is why every plate below can frame the
+			whole thing at once and keep it framed while it trains. Each digit is drawn at the centre <Math
+				tex="\mu(x)"
+			/> of its own proposal; the noise is a training-time device.
+		</p>
 	</Prose>
 
 	<Wide>
-		<Plate
+		<Squeeze
 			n={1}
-			title="The squeeze — ten thousand digits through a two-number waist"
-			caption="Eight held-out digits, and beneath them the network's current rebuild of each from the bottleneck alone. The gap between the rows is the loss — reconstruction is the entire training signal, and no label appears anywhere in it. The bottleneck chips widen the waist from two numbers to three (fresh weights each time)."
-		>
-			<Squeeze />
-		</Plate>
+			title="The squeeze — ten thousand digits through a narrow waist"
+			caption="Eight held-out digits, and beneath them the network's current rebuild of each from the bottleneck alone. The gap between the rows is the loss — reconstruction is the entire training signal, and no label appears anywhere in it. Below the rows sits the shape of the hourglass: how many numbers the waist holds, how many layers squeeze down to it, and which non-linearity bends them. Any change re-rolls the weights and re-forms every map on this page."
+		/>
 	</Wide>
 
 	<Prose>
@@ -66,23 +101,36 @@
 			the waist to three numbers and the sheet becomes a small globe you can turn.)
 		</p>
 		<p>
+			Notice also what the rebuilt row looks like when it stops improving: soft. Train it for an
+			hour and it stays soft, and that is not a defect to be tuned away — it is the arithmetic
+			showing its work. Squared error is minimized by an <em>average</em>, so the decoder's best
+			possible answer at a given address is the mean of every digit that lands there, and two
+			numbers cannot keep the difference between one person's 3 and another's. The jitter we just
+			added pushes the same way — an address is trained together with its neighbours, so it answers
+			for all of them. The blur is a receipt: it is exactly what the waist had to throw away. Add a
+			layer to each side, or widen the waist, and the rebuild sharpens — those are the knobs a
+			practitioner reaches for, and they come with the trade this chapter is built to make visible.
+			At eight or sixteen numbers the digits come back nearly intact, and the map stops being
+			something you can look at directly: the plate below falls back to plotting the three
+			directions the cloud varies along most, a shadow of a space too wide to see. Two numbers is a
+			deliberately cruel waist, chosen so the whole map fits on one page.
+		</p>
+		<p>
 			The plate below does exactly that, with one twist held in reserve. In ink you see the map as
 			the model knows it: anonymous points, arranged purely by reconstruction convenience. In
 			images, each digit is printed at its own latent address, so the map reads like an atlas of
-			handwriting. And the twist — reveal tints every digit by its true label, information the
+			handwriting. And the twist — colorize tints every digit by its true label, information the
 			network has never seen, not in any gradient, not once. If the bottleneck's two numbers carry
 			nothing about digit-kind, the tints will fall like confetti.
 		</p>
 	</Prose>
 
 	<Wide>
-		<Plate
+		<LatentMap
 			n={2}
 			title="The map — where the encoder put everything"
-			caption="Left: two thousand held-out digits placed by the encoder alone — in image view roughly 600 of the 2000 are shown, one per occupied cell, so the tiles stay legible. Flip to reveal and every 3 has found the other 3s, though labels were used only for the tints, after the fact; on the right, the decoder repaints whatever point your cursor visits."
-		>
-			<LatentMap />
-		</Plate>
+			caption="Left: two thousand held-out digits placed by the encoder alone — in image view roughly 600 of them are shown, one per occupied cell, so the tiles stay legible. Flip to colorize and every 3 has found the other 3s, though labels were used only for the tints, after the fact. Right: the decoder repaints whatever point your cursor visits, and the walk crosses the country between two digits on foot."
+		/>
 	</Wide>
 
 	<Prose>
@@ -111,20 +159,21 @@
 	</Prose>
 
 	<Wide>
-		<Plate
+		<ManifoldGrid
 			n={3}
 			title="The manifold — the decoder's answer everywhere"
-			caption="Every tile is the decoder's reply to “what lives at this address?” for a uniform 14 × 14 grid over the latent square — data or no data — and it re-decodes as training moves. With a three-number bottleneck, the slider chooses which slice of the cube the sheet cuts through."
-		>
-			<ManifoldGrid />
-		</Plate>
+			caption="A 21 × 21 grid of addresses laid over the latent square and decoded, tile by tile, live as training moves. The cursor's cell is repeated at right, and under it the nearest real held-out digit to that address, with the distance between them. Past a two-number waist the sheet is one slice through the space and the slider chooses which."
+		/>
 	</Wide>
 
 	<Prose>
 		<p>
-			Watch a 3 shade into an 8 and the 8 into a 5, one tile at a time. Now the empty streets are
-			not an inference; they are printed. Between the islands lie coordinates where no real digit
-			ever landed, and the decoder answers there anyway, sharp-edged and committed, because
+			Watch a 3 shade into an 8 and the 8 into a 5, one tile at a time. Where the data actually
+			lives you need not take anything on faith: pointing at a tile measures its address against
+			every one of the two thousand held-out digits and reports the closest, in the waist's own
+			units. Work outward and that distance grows — the prior keeps the digits packed near the
+			origin, so the edges and corners of this square are addresses no real digit ever came near.
+			The decoder answers there anyway, sharp-edged and committed, because
 			<Math tex="D" /> is a smooth function that must produce 784 pixels for every point of the plane,
 			though it was trained only where the data lives. You are looking at the seed of
 			<em>generative</em> models: pick a latent point, decode it, and you have manufactured a thing that

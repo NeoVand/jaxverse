@@ -59,6 +59,15 @@ const ACT: Record<Activation, (x: any) => any> = {
 	silu: (x) => nn.silu(x)
 };
 
+/** Outputs of layer k. A variational waist emits two numbers per latent one:
+ * a mean and a log-variance, of which only the mean's width shows up in
+ * `layers` (the tail is fed a single sample). */
+const foutOf = (c: MlpConfig, k: number) =>
+	c.vae && c.vae.at === k ? 2 * c.layers[k + 1] : c.layers[k + 1];
+
+/** The read-out layer is linear, and so is a variational waist. */
+const isLinear = (c: MlpConfig, k: number, L: number) => k === L - 1 || c.vae?.at === k;
+
 function initParams(c: MlpConfig, seed: number): any {
 	const L = c.layers.length - 1;
 	const w: any[] = [];
@@ -67,7 +76,7 @@ function initParams(c: MlpConfig, seed: number): any {
 	const rand = mulberry32(s * 2654435761);
 	for (let k = 0; k < L; k++) {
 		const fin = c.layers[k];
-		const fout = c.layers[k + 1];
+		const fout = foutOf(c, k);
 		// Glorot for tanh, He for the relu family; final layer damped so the net starts humble.
 		const limit = c.activation === 'tanh' ? Math.sqrt(6 / (fin + fout)) : Math.sqrt(6 / fin);
 		const scale = k === L - 1 ? 0.4 : 1;
@@ -80,51 +89,83 @@ function initParams(c: MlpConfig, seed: number): any {
 	return { w, b };
 }
 
+/** The variational waist: read the layer's output as a mean and a
+ * log-variance. With noise it passes a sample of that Gaussian and reports how
+ * far the Gaussian sits from the standard normal; without noise it passes the
+ * mean, which is what every read-out path wants. Consumes h. */
+function waist(h: any, eps: any | null): { z: any; kl: any | null } {
+	const [mu, lv] = np.split(h, 2, 1);
+	if (!eps) {
+		lv.dispose();
+		return { z: mu, kl: null };
+	}
+	// KL(N(μ, σ²) ‖ N(0, 1)) = ½ Σ (μ² + σ² − 1 − log σ²), averaged over the batch
+	const kl = np.mean(np.sum(np.square(mu.ref).add(np.exp(lv.ref)).sub(1).sub(lv.ref), 1)).mul(0.5);
+	return { z: mu.add(np.exp(lv.mul(0.5)).mul(eps)), kl };
+}
+
+/** The chain from layer `from` to the output. `eps` (a [B, d] standard normal)
+ * makes a variational waist stochastic; pass null for the deterministic pass.
+ * When `acts` is given every layer's output lands in it and the last entry IS
+ * the returned output — consume one or the other, never both. Consumes h0;
+ * every params leaf is consumed exactly once. */
+function chain(
+	p: any,
+	c: MlpConfig,
+	from: number,
+	h0: any,
+	eps: any | null,
+	acts: any[] | null
+): { out: any; kl: any | null } {
+	const L = p.w.length;
+	let h = h0;
+	let kl: any = null;
+	for (let k = from; k < L; k++) {
+		h = np.dot(h, p.w[k]).add(p.b[k]);
+		if (c.vae?.at === k) {
+			const s = waist(h, eps);
+			h = s.z;
+			kl = s.kl;
+		} else if (!isLinear(c, k, L)) {
+			h = ACT[c.activation](h);
+		}
+		if (acts) acts.push(k === L - 1 ? h : h.ref);
+	}
+	return { out: h, kl };
+}
+
 /** Forward pass. Consumes x; every params leaf consumed exactly once. */
 function forward(p: any, c: MlpConfig, x: any): any {
-	const L = p.w.length;
-	let h = x;
-	for (let k = 0; k < L; k++) {
-		h = np.dot(h, p.w[k]).add(p.b[k]);
-		if (k < L - 1) h = ACT[c.activation](h);
-	}
-	return h;
+	return chain(p, c, 0, x, null, null).out;
 }
 
 /** Forward that also returns every post-activation hidden layer (+ output).
  * Intermediate layers are pushed as .ref (the working value flows onward);
  * the last layer is pushed directly — nothing is disposed inside the trace. */
 function forwardActs(p: any, c: MlpConfig, x: any): any[] {
-	const L = p.w.length;
 	const outs: any[] = [];
-	let h = x;
-	for (let k = 0; k < L; k++) {
-		h = np.dot(h, p.w[k]).add(p.b[k]);
-		if (k < L - 1) h = ACT[c.activation](h);
-		outs.push(k === L - 1 ? h : h.ref);
-	}
+	chain(p, c, 0, x, null, outs);
 	return outs;
 }
 
 /** Run the network from layer `from` onward, given that layer's activations. */
 function forwardFrom(p: any, c: MlpConfig, from: number, h0: any): any {
-	const L = p.w.length;
-	let h = h0;
-	for (let k = from; k < L; k++) {
-		h = np.dot(h, p.w[k]).add(p.b[k]);
-		if (k < L - 1) h = ACT[c.activation](h);
-	}
-	return h;
+	return chain(p, c, from, h0, null, null).out;
 }
 
-/** Training loss. Consumes x and y (y is targets [B,out] or one-hot [B,C]). */
-function lossFn(p: any, c: MlpConfig, x: any, y: any): any {
-	const pred = forward(p, c, x);
+/** Training loss. Consumes x and y (y is targets [B,out] or one-hot [B,C]),
+ * plus `eps` when the model has a variational waist. */
+function lossFn(p: any, c: MlpConfig, x: any, y: any, eps: any | null): any {
+	const { out, kl } = chain(p, c, 0, x, eps, null);
+	let loss: any;
 	if (c.loss === 'mse') {
-		return np.mean(np.square(pred.sub(y)));
+		loss = np.mean(np.square(out.sub(y)));
+	} else {
+		const logp = nn.logSoftmax(out, -1);
+		loss = np.mean(np.sum(logp.mul(y), -1).neg());
 	}
-	const logp = nn.logSoftmax(pred, -1);
-	return np.mean(np.sum(logp.mul(y), -1).neg());
+	// the fee for straying from the prior — what keeps the map compact
+	return kl ? loss.add(kl.mul(c.vae!.beta)) : loss;
 }
 
 function disposeTree(t: any): void {
@@ -185,13 +226,34 @@ function makeBatch(B: number, lo: number, hi: number, rand: () => number) {
 	return { x, y: np.array(yBuf).reshape([B, dout]) };
 }
 
+/** Standard normals for the reparameterization, drawn on the CPU and passed in
+ * as an argument: the trace stays pure, so jit compiles once. */
+function gaussInto(buf: Float32Array, rand: () => number): void {
+	for (let i = 0; i < buf.length; i += 2) {
+		const r = Math.sqrt(-2 * Math.log(Math.max(1e-7, rand())));
+		const th = 2 * Math.PI * rand();
+		buf[i] = r * Math.cos(th);
+		if (i + 1 < buf.length) buf[i + 1] = r * Math.sin(th);
+	}
+}
+
 /** One optimizer step. `sync` reads the loss (a GPU roundtrip); skipping it
  * on most steps lets tiny models train dispatch-bound instead of sync-bound —
  * the lazy graph resolves at the next synced step. */
 function trainStep(sync: boolean): number {
-	const B = cfg!.batchSize ?? 32;
+	const c = cfg!;
+	const B = c.batchSize ?? 32;
 	const { x, y } = makeBatch(B, 0, valStart, rng);
-	const [lossVal, grads] = jitStep(tree.ref(params), x.ref, y.ref);
+	let eps: any = null;
+	if (c.vae) {
+		const d = c.layers[c.vae.at + 1];
+		const buf = new Float32Array(B * d);
+		gaussInto(buf, rng);
+		eps = np.array(buf).reshape([B, d]);
+	}
+	const [lossVal, grads] = eps
+		? jitStep(tree.ref(params), x.ref, y.ref, eps)
+		: jitStep(tree.ref(params), x.ref, y.ref);
 	const [updates, newOptState] = solver!.update(grads, optState, tree.ref(params));
 	params = applyUpdates(params, updates);
 	optState = newOptState;
@@ -299,8 +361,12 @@ async function handleInit(req: RpcRequest) {
 	optState = solver.init(tree.ref(params));
 
 	const c = cfg;
-	jitStep = jit((p: any, x: any, y: any) => valueAndGrad((pp: any) => lossFn(pp, c, x, y))(p));
-	jitLossOnly = jit((p: any, x: any, y: any) => lossFn(p, c, x, y));
+	jitStep = c.vae
+		? jit((p: any, x: any, y: any, e: any) => valueAndGrad((pp: any) => lossFn(pp, c, x, y, e))(p))
+		: jit((p: any, x: any, y: any) => valueAndGrad((pp: any) => lossFn(pp, c, x, y, null))(p));
+	// deterministic and reconstruction-only, so train and held-out loss stay
+	// the same quantity even when the objective carries a KL term
+	jitLossOnly = jit((p: any, x: any, y: any) => lossFn(p, c, x, y, null));
 
 	const vf = cfg.valFraction ?? 0.1;
 	valStart = Math.max(1, Math.floor(nRows * (1 - vf)));
@@ -491,7 +557,10 @@ function handleTrainLoss() {
 	return { loss: lossVal.item() };
 }
 
-/** Per-layer weight matrices (for weight-image visualizations). */
+/** Per-layer weight matrices (for weight-image visualizations). The buffers are
+ * always the true shapes; `layers` describes them as a plain chain, which a
+ * variational waist is not (its matrix is twice as wide as stated). No
+ * visualization asks a variational model for its weights today. */
 function handleWeights() {
 	const c = cfg!;
 	const L = c.layers.length - 1;

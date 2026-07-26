@@ -1,7 +1,7 @@
 // Two-dimensional toy datasets for the classification playground — the cast
 // of characters in “Bending Space”. All coordinates live in [-1, 1]².
 
-export type Dataset2dId = 'blobs' | 'circles' | 'moons' | 'spirals';
+export type Dataset2dId = 'blobs' | 'waves' | 'moons' | 'circles' | 'xor' | 'yinyang' | 'spirals';
 
 export interface Dataset2d {
 	x: Float32Array; // n × 2
@@ -83,6 +83,50 @@ export function makeDataset2d(id: Dataset2dId, n = 400, noise = 0.06, seed = 7):
 				1
 			]);
 		}
+	} else if (id === 'waves') {
+		// two bands separated by a sine ridge — one cut is enough, if it can bend
+		let placed = 0;
+		while (placed < n) {
+			const px = (rand() * 2 - 1) * 0.95;
+			const py = (rand() * 2 - 1) * 0.95;
+			const s = py - 0.42 * Math.sin(3.1 * px);
+			if (Math.abs(s) < 0.08 + noise) continue; // carve a margin along the ridge
+			pts.push([px, py, s > 0 ? 1 : 0]);
+			placed++;
+		}
+	} else if (id === 'xor') {
+		// four quadrants, opposite corners allied — the classic xor
+		for (let i = 0; i < n; i++) {
+			let px = (rand() * 2 - 1) * 0.88;
+			let py = (rand() * 2 - 1) * 0.88;
+			px += Math.sign(px) * 0.07;
+			py += Math.sign(py) * 0.07;
+			pts.push([
+				px + gauss(rand) * noise * 0.3,
+				py + gauss(rand) * noise * 0.3,
+				px * py > 0 ? 0 : 1
+			]);
+		}
+	} else if (id === 'yinyang') {
+		// the taijitu: two lobes chasing each other, each carrying the other's eye
+		const R = 0.92;
+		let placed = 0;
+		while (placed < n) {
+			const a = rand() * Math.PI * 2;
+			const r = R * Math.sqrt(rand());
+			const px = Math.cos(a) * r;
+			const py = Math.sin(a) * r;
+			const dTop = Math.hypot(px, py - R / 2);
+			const dBot = Math.hypot(px, py + R / 2);
+			let l: number;
+			if (dTop < R * 0.17) l = 1;
+			else if (dBot < R * 0.17) l = 0;
+			else if (dTop < R / 2) l = 0;
+			else if (dBot < R / 2) l = 1;
+			else l = px > 0 ? 0 : 1;
+			pts.push([px + gauss(rand) * noise * 0.4, py + gauss(rand) * noise * 0.4, l]);
+			placed++;
+		}
 	} else {
 		// two interlocking spirals — the chapter’s final boss
 		for (let c = 0; c < 2; c++) {
@@ -101,9 +145,13 @@ export function makeDataset2d(id: Dataset2dId, n = 400, noise = 0.06, seed = 7):
 	return assemble(pts, rand);
 }
 
+/** Ordered easiest → hardest; the order sets the thumbnail rail. */
 export const DATASET_LABELS: Record<Dataset2dId, string> = {
 	blobs: 'Two clouds',
-	circles: 'Rings',
+	waves: 'Waves',
 	moons: 'Two moons',
+	circles: 'Rings',
+	xor: 'XOR',
+	yinyang: 'Yin-yang',
 	spirals: 'Spirals'
 };

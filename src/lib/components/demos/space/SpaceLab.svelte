@@ -11,7 +11,6 @@
 	import type { Activation, LayerWeights } from '$lib/nn/engine';
 	import { makeDataset2d, DATASET_LABELS, type Dataset2dId } from '$lib/nn/datasets2d';
 	import ArchDiagram, { type NodeRef } from '$lib/components/ui/ArchDiagram.svelte';
-	import WeightLegend from '$lib/components/ui/WeightLegend.svelte';
 	import {
 		makeGridLines,
 		makeProbeGrid,
@@ -77,6 +76,22 @@
 	// non-reactive holder seeded from the initial dataset; switchDataset reassigns it
 	// svelte-ignore state_referenced_locally
 	let data = makeDataset2d(dataset, 400, 0.06, 7);
+
+	// Dataset thumbnails: a miniature of each tangle, drawn once, picked by eye.
+	// svelte-ignore state_referenced_locally
+	const thumbs =
+		variant === 'free'
+			? (Object.entries(DATASET_LABELS) as Array<[Dataset2dId, string]>).map(([id, label]) => {
+					const d = makeDataset2d(id, 90, 0.05, 11);
+					const pts: Array<[number, number, number]> = [];
+					for (let i = 0; i < d.n; i++) {
+						const x = ((d.x[2 * i] + 1.15) / 2.3) * 40;
+						const y = 40 - ((d.x[2 * i + 1] + 1.15) / 2.3) * 40;
+						pts.push([Math.round(x * 10) / 10, Math.round(y * 10) / 10, d.labels[i]]);
+					}
+					return { id, label, pts };
+				})
+			: [];
 	const PROBE_RES = 96;
 	// probe extents follow the input canvas's aspect so the wash fills it edge to edge
 	let probeExt = { x: 1.15, y: 1.15 };
@@ -91,6 +106,11 @@
 	let zoom = 1; // wheel-adjustable view scale (3-D starts wider — see boot)
 	let dragging = $state(false);
 	let lastDraw = 0;
+	// fold ∈ [0, 1]: 0 = the untouched flat sheet, 1 = the network's deformation.
+	// The button animates between the two so the folding itself becomes visible.
+	let foldTarget = $state(1);
+	let foldAnim = { from: 1, to: 1, t0: 0 };
+	let foldCur = 1;
 	const reduced =
 		typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -144,6 +164,9 @@
 			accHist = [];
 			snapA = snapB = null;
 			hovered = null;
+			foldTarget = 1;
+			foldAnim = { from: 1, to: 1, t0: 0 };
+			foldCur = 1;
 			phase = 'ready';
 			startPainter();
 			await refresh();
@@ -428,6 +451,22 @@
 	}
 
 	const ease = (u: number) => 1 - (1 - u) * (1 - u) * (1 - u);
+	const easeInOut = (u: number) => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
+
+	function toggleFold() {
+		const to = foldTarget === 1 ? 0 : 1;
+		foldTarget = to;
+		foldAnim = { from: foldCur, to, t0: performance.now() };
+	}
+
+	/** Current fold factor — eased between button presses, honored by every frame. */
+	function foldAt(t: number): number {
+		const { from, to, t0 } = foldAnim;
+		const dur = reduced ? 1 : 1400;
+		const u = Math.min(1, Math.max(0, (t - t0) / dur));
+		foldCur = from + (to - from) * easeInOut(u);
+		return foldCur;
+	}
 
 	/** Interpolated view coords for index i of pts/grid arrays. */
 	function lerpAt(
@@ -458,6 +497,14 @@
 		const d = snap.hDim;
 		const turns = snap.mode !== '2d'; // both 3-D and the PCA shadow rotate
 
+		// fold factor: pull every vertex back toward its input-plane position
+		const f = foldAt(t);
+		const blendFlat = (v: number[], gx: number, gy: number) => {
+			v[0] = (gx / S) * (1 - f) + v[0] * f;
+			v[1] = (gy / S) * (1 - f) + v[1] * f;
+			for (let k = 2; k < d; k++) v[k] *= f;
+		};
+
 		const toXY = (v: number[]): [number, number, number] => {
 			if (turns) {
 				const [x, y, z] = project3(v[0] * S, v[1] * S, v[2] * S, yaw, pitch);
@@ -473,6 +520,7 @@
 			ctx.beginPath();
 			for (let s = 0; s < count; s++) {
 				lerpAt(prev?.gridV ?? null, snap.gridV, start + s, d, u, tmp);
+				if (f < 1) blendFlat(tmp, grid.verts[(start + s) * 2], grid.verts[(start + s) * 2 + 1]);
 				const [x, y] = toXY(tmp);
 				if (s === 0) ctx.moveTo(x, y);
 				else ctx.lineTo(x, y);
@@ -483,8 +531,11 @@
 		}
 		ctx.globalAlpha = 1;
 
-		// the separator: a straight line (2-D) or a flat plane (3-D)
-		if (snap.mode === '2d') {
+		// the separator: a straight line (2-D) or a flat plane (3-D).
+		// It lives in hidden coordinates, so it fades away as the space unfolds.
+		if (f < 0.02) {
+			// fully unfolded — nothing but the flat sheet and the points
+		} else if (snap.mode === '2d') {
 			const [a, b] = snap.sepN;
 			const c = snap.sepC;
 			// n·h + c = 0 → draw across the view box (hidden coords, scaled by S)
@@ -517,7 +568,9 @@
 				ctx.lineTo(x1, y1);
 				ctx.strokeStyle = tk.ink;
 				ctx.lineWidth = 1.6;
+				ctx.globalAlpha = f;
 				ctx.stroke();
+				ctx.globalAlpha = 1;
 			}
 		} else if (snap.mode === '3d') {
 			const [n0, n1, n2] = snap.sepN;
@@ -531,10 +584,10 @@
 				});
 				ctx.closePath();
 				const ca = hexRgb(tk.ink);
-				ctx.fillStyle = `rgba(${ca[0]},${ca[1]},${ca[2]},0.06)`;
+				ctx.fillStyle = `rgba(${ca[0]},${ca[1]},${ca[2]},${(0.06 * f).toFixed(3)})`;
 				ctx.fill();
 				ctx.strokeStyle = tk.ink;
-				ctx.globalAlpha = 0.55;
+				ctx.globalAlpha = 0.55 * f;
 				ctx.lineWidth = 1.2;
 				ctx.stroke();
 				ctx.globalAlpha = 1;
@@ -547,6 +600,7 @@
 		const coords: Array<[number, number, number]> = [];
 		for (let i = 0; i < n; i++) {
 			lerpAt(prev?.ptsV ?? null, snap.ptsV, i, d, u, tmp);
+			if (f < 1) blendFlat(tmp, data.x[2 * i], data.x[2 * i + 1]);
 			coords.push(toXY(tmp));
 		}
 		if (turns) order.sort((a, b) => coords[a][2] - coords[b][2]);
@@ -679,15 +733,42 @@
 			<div
 				class="grid grid-cols-1 gap-px bg-line-soft sm:grid-cols-2 lg:grid-cols-[1fr_1fr_minmax(264px,300px)]"
 			>
-				<div class="relative bg-surface">
+				<div class="relative flex flex-col bg-surface">
 					<span class="eyebrow absolute top-3 left-3 z-10">input space · x</span>
 					<canvas
 						bind:this={inputCanvas}
-						class="block aspect-square h-full w-full cursor-crosshair"
+						class="block aspect-square w-full cursor-crosshair"
 						onpointerdown={pickPoint}
 					></canvas>
+
+					{#if variant === 'free'}
+						<!-- pick the tangle by sight: one miniature per dataset, below the plot -->
+						<div class="flex gap-1.5 px-2 pt-1.5 pb-2" role="group" aria-label="Dataset">
+							{#each thumbs as th (th.id)}
+								<button
+									class="thumb"
+									class:thumb-on={dataset === th.id}
+									title={th.label}
+									aria-label="Dataset: {th.label}"
+									aria-pressed={dataset === th.id}
+									onclick={() => void switchDataset(th.id)}
+								>
+									<svg viewBox="0 0 40 40" aria-hidden="true">
+										{#each th.pts as p, i (i)}
+											<circle
+												cx={p[0]}
+												cy={p[1]}
+												r="1.2"
+												fill={p[2] === 0 ? 'var(--accent)' : 'var(--warm)'}
+											/>
+										{/each}
+									</svg>
+								</button>
+							{/each}
+						</div>
+					{/if}
 				</div>
-				<div class="relative bg-surface">
+				<div class="group relative bg-surface">
 					<span class="eyebrow absolute top-3 left-3 z-10">
 						hidden space · h
 						{#if hiddenMode === '3d'}<span class="tracking-normal text-ink-3 normal-case">
@@ -709,6 +790,17 @@
 						onwheel={hiddenWheel}
 					></canvas>
 
+					<!-- the fold replay: flatten the sheet, then let the network fold it again -->
+					<button
+						class="chip absolute top-2 right-2 z-10 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+						class:opacity-100={foldTarget === 0}
+						aria-pressed={foldTarget === 0}
+						title="Animate between the flat sheet and the network's deformation"
+						onclick={toggleFold}
+					>
+						{foldTarget === 1 ? 'unfold' : 'fold'}
+					</button>
+
 					{#if variant === 'guided' && stage === 'done'}
 						<p class="absolute right-3 bottom-3 z-10 font-serif text-[13.5px] text-good italic">
 							the rings came apart — a flat cut through a lifted space
@@ -717,7 +809,7 @@
 				</div>
 
 				<!-- the network + its settings, harmonized in one column -->
-				<div class="flex flex-col bg-surface px-3 pt-2.5 pb-3 sm:col-span-2 lg:col-span-1">
+				<div class="flex flex-col bg-surface px-3 pt-3 pb-3 sm:col-span-2 lg:col-span-1">
 					<span class="eyebrow block px-1">The network</span>
 					{#if weightsView}
 						<ArchDiagram
@@ -729,7 +821,6 @@
 							outLabels={['blue', 'orange']}
 							outColors={['var(--accent)', 'var(--warm)']}
 						/>
-						<WeightLegend />
 					{/if}
 
 					<div class="mt-2.5 flex flex-col gap-y-2 px-1">
@@ -753,43 +844,35 @@
 							</span>
 						{/if}
 						{#if variant === 'free'}
-							<span class="flex flex-wrap items-center gap-1" role="group" aria-label="Dataset">
-								<span class="eyebrow mr-1 w-11">data</span>
-								{#each Object.entries(DATASET_LABELS) as [id, label] (id)}
+							<span
+								class="flex flex-wrap items-center gap-1"
+								role="group"
+								aria-label="Hidden width"
+							>
+								<span class="eyebrow mr-1 w-11">width</span>
+								{#each [2, 3, 4, 8] as w (w)}
 									<button
 										class="chip"
-										class:chip-on={dataset === id}
-										onclick={() => switchDataset(id as Dataset2dId)}>{label}</button
+										class:chip-on={width === w}
+										onclick={() => {
+											width = w;
+											void rebuild();
+										}}>{w}</button
 									>
 								{/each}
 							</span>
-							<span class="flex flex-wrap items-center gap-1">
-								<span class="eyebrow mr-1 w-11" id="width-label">width</span>
-								<span role="group" aria-labelledby="width-label" class="flex items-center gap-1">
-									{#each [2, 3, 4, 8] as w (w)}
-										<button
-											class="chip"
-											class:chip-on={width === w}
-											onclick={() => {
-												width = w;
-												void rebuild();
-											}}>{w}</button
-										>
-									{/each}
-								</span>
-								<span class="eyebrow mx-1" id="depth-label">depth</span>
-								<span role="group" aria-labelledby="depth-label" class="flex items-center gap-1">
-									{#each [1, 2, 3] as dd (dd)}
-										<button
-											class="chip"
-											class:chip-on={depth === dd}
-											onclick={() => {
-												depth = dd;
-												void rebuild();
-											}}>{dd}</button
-										>
-									{/each}
-								</span>
+							<span class="flex flex-wrap items-center gap-1" role="group" aria-label="Depth">
+								<span class="eyebrow mr-1 w-11">depth</span>
+								{#each [1, 2, 3] as dd (dd)}
+									<button
+										class="chip"
+										class:chip-on={depth === dd}
+										onclick={() => {
+											depth = dd;
+											void rebuild();
+										}}>{dd}</button
+									>
+								{/each}
 							</span>
 						{/if}
 						<span class="flex flex-wrap items-center gap-1" role="group" aria-label="Activation">
@@ -851,6 +934,36 @@
 </Plate>
 
 <style>
+	.thumb {
+		flex: 1 1 0;
+		min-width: 0;
+		max-width: 56px;
+		aspect-ratio: 1;
+		height: auto;
+		padding: 2px;
+		border-radius: 7px;
+		border: 1px solid var(--line);
+		background: var(--surface);
+		cursor: pointer;
+		opacity: 0.94;
+		transition:
+			border-color 0.1s,
+			opacity 0.1s;
+	}
+	.thumb:hover {
+		border-color: var(--ink-3);
+		opacity: 1;
+	}
+	.thumb-on {
+		border-color: var(--ink);
+		opacity: 1;
+	}
+	.thumb svg {
+		display: block;
+		width: 100%;
+		height: 100%;
+	}
+
 	.chip {
 		font-family: var(--font-sans);
 		font-size: 11px;
