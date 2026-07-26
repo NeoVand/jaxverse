@@ -28,22 +28,23 @@ export function makeGridLines(cells = 12, samples = 25, extent = 1.1): GridLines
 	return { verts: new Float32Array(pts), lines, n: pts.length / 2 };
 }
 
-/** The probe lattice the decision map is painted on. */
-export function makeProbeGrid(res: number, extent = 1.15): Float32Array {
+/** The probe lattice the decision map is painted on. Extents may differ per
+ * axis so the wash can cover a non-square canvas without distortion. */
+export function makeProbeGrid(res: number, extentX = 1.15, extentY = extentX): Float32Array {
 	const g = new Float32Array(res * res * 2);
 	for (let j = 0; j < res; j++) {
 		for (let i = 0; i < res; i++) {
 			const k = j * res + i;
-			g[2 * k] = -extent + (2 * extent * (i + 0.5)) / res;
-			g[2 * k + 1] = -extent + (2 * extent * (j + 0.5)) / res;
+			g[2 * k] = -extentX + (2 * extentX * (i + 0.5)) / res;
+			g[2 * k + 1] = -extentY + (2 * extentY * (j + 0.5)) / res;
 		}
 	}
 	return g;
 }
 
-/** Top-2 principal directions by power iteration — the “shadow” view for
- * hidden layers wider than 3. Returns n×2 projections, centered. */
-export function pca2(data: Float32Array, n: number, d: number): Float32Array {
+/** Top-k principal directions by power iteration — the “shadow” view for
+ * hidden layers wider than 3. Returns n×k projections, centered. */
+export function pcaProject(data: Float32Array, n: number, d: number, k = 2): Float32Array {
 	const mean = new Float64Array(d);
 	for (let i = 0; i < n; i++) for (let k = 0; k < d; k++) mean[k] += data[i * d + k];
 	for (let k = 0; k < d; k++) mean[k] /= n;
@@ -63,18 +64,19 @@ export function pca2(data: Float32Array, n: number, d: number): Float32Array {
 		for (let k = 0; k < d; k++) v[k] /= s;
 	};
 
+	const comps = Math.min(k, d);
 	const basis: Float64Array[] = [];
-	for (let c = 0; c < 2; c++) {
+	for (let c = 0; c < comps; c++) {
 		let v = new Float64Array(d);
-		for (let k = 0; k < d; k++) v[k] = Math.sin(k * 2.3 + c * 1.7) + 0.5;
+		for (let q = 0; q < d; q++) v[q] = Math.sin(q * 2.3 + c * 1.7) + 0.5;
 		const tmp = new Float64Array(d);
 		for (let it = 0; it < 24; it++) {
 			matVec(v, tmp);
 			// deflate against earlier components
 			for (const b of basis) {
 				let dot = 0;
-				for (let k = 0; k < d; k++) dot += tmp[k] * b[k];
-				for (let k = 0; k < d; k++) tmp[k] -= dot * b[k];
+				for (let q = 0; q < d; q++) dot += tmp[q] * b[q];
+				for (let q = 0; q < d; q++) tmp[q] -= dot * b[q];
 			}
 			normalize(tmp);
 			v = tmp.slice();
@@ -82,12 +84,12 @@ export function pca2(data: Float32Array, n: number, d: number): Float32Array {
 		basis.push(v.slice());
 	}
 
-	const out = new Float32Array(n * 2);
+	const out = new Float32Array(n * k);
 	for (let i = 0; i < n; i++) {
-		for (let c = 0; c < 2; c++) {
+		for (let c = 0; c < comps; c++) {
 			let dot = 0;
-			for (let k = 0; k < d; k++) dot += (data[i * d + k] - mean[k]) * basis[c][k];
-			out[i * 2 + c] = dot;
+			for (let q = 0; q < d; q++) dot += (data[i * d + q] - mean[q]) * basis[c][q];
+			out[i * k + c] = dot;
 		}
 	}
 	return out;
