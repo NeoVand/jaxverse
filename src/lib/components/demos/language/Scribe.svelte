@@ -21,7 +21,10 @@
 	const archive = $derived(scribe.samples.slice(1));
 
 	// ── loss chart geometry (dynamic width, undistorted text) ──
-	const CH = 190;
+	// The chart is the left column's flexible element: it stretches to absorb
+	// whatever height the desk needs, so the column never shows a blank belt.
+	let chartBoxH = $state(0);
+	const CH = $derived(Math.max(190, chartBoxH || 190));
 	const PADL = 26;
 	const PADR = 10;
 	const PADT = 18;
@@ -61,6 +64,11 @@
 		v >= 1000 ? `${(v / 1000).toFixed(1)}k tok/s` : `${Math.round(v)} tok/s`;
 	const fmtBits = (v: number) =>
 		Number.isFinite(v) ? `${scribe.bitsPerChar(v).toFixed(2)} bits/char` : '—';
+	/** A sample may generate a run of newlines; pre-wrap would render it as a
+	 * hole in the card, so blank lines collapse for display only. */
+	const tidy = (t: string) => t.replace(/\n{2,}/g, '\n');
+	/** The archive grid is always complete: real drafts first, ghosts after. */
+	const DESK_SLOTS = 4;
 
 	function sampleNow() {
 		void scribe.sampleNow(promptText, temperature);
@@ -99,7 +107,7 @@
 
 	{#snippet actions()}
 		{#if usable}
-			<Btn kind="primary" onclick={() => scribe.toggle()}>
+			<Btn onclick={() => scribe.toggle()}>
 				{#if scribe.phase === 'training'}
 					<Pause size={12} aria-hidden="true" /> Pause
 				{:else}
@@ -140,12 +148,16 @@
 							</span>
 						</span>
 					</div>
-					<div class="mt-2" bind:clientWidth={chartW}>
+					<div
+						class="relative mt-2 min-h-[190px] flex-1"
+						bind:clientWidth={chartW}
+						bind:clientHeight={chartBoxH}
+					>
 						<svg
 							width="100%"
-							height={CH}
+							height="100%"
 							viewBox="0 0 {cw} {CH}"
-							class="block"
+							class="absolute inset-0 block"
 							role="img"
 							aria-label="Training loss per step in ultramarine with held-out loss dots in vermilion. A dashed line marks the uniform-guess loss, the natural log of the vocabulary size — the model starts there."
 						>
@@ -293,47 +305,95 @@
 									<span style="color: var(--accent);">step {latest.step}</span>
 									<span>temp {latest.temperature.toFixed(2)}{latest.auto ? '' : ' · yours'}</span>
 								</div>
+								<!-- a fixed six-line window: clamp catches long samples, min-height
+								     holds short ones, so the desk never changes height mid-training -->
 								<p
-									class="font-serif text-[15.5px] leading-[1.62]"
-									style="font-variation-settings: 'opsz' 14;"
+									class="line-clamp-6 font-serif text-[15.5px] leading-[1.62]"
+									style="font-variation-settings: 'opsz' 14; min-height: calc(6 * 1.62em);"
 								>
 									<span class="whitespace-pre-wrap text-ink-3">{latest.prompt}</span><span
-										class="whitespace-pre-wrap">{latest.text}</span
+										class="whitespace-pre-wrap">{tidy(latest.text)}</span
 									>
 								</p>
 							</div>
 						{/key}
 					{:else}
-						<div class="mt-2.5 rounded-md border border-dashed border-line px-4 py-8 text-center">
-							<span class="num text-[11px] text-ink-3">
-								{scribe.sampling ? 'listening…' : 'the first sample arrives in a moment'}
-							</span>
+						<!-- a ghost of the sample to come, so the desk is never a blank -->
+						<div class="mt-2.5 rounded-md border border-dashed border-line px-4 py-3">
+							<div
+								class="num mb-1.5 flex items-baseline justify-between gap-3 text-[10px] text-ink-3"
+							>
+								<span>step 0</span>
+								<span>{scribe.sampling ? 'listening…' : 'waiting for the first sample'}</span>
+							</div>
+							<!-- held to the same six-line window as the card that will replace it -->
+							<div style="min-height: calc(6 * 1.62 * 15.5px);">
+								<p
+									class="font-serif text-[15.5px] leading-[1.62] text-ink-3"
+									style="font-variation-settings: 'opsz' 14;"
+								>
+									{AUTO_PROMPT}
+								</p>
+								<div class="mt-2 flex flex-wrap gap-x-1.5 gap-y-2" aria-hidden="true">
+									{#each [56, 34, 72, 44, 28, 64, 38, 52, 30, 68, 42, 24] as gw (gw)}
+										<span
+											class="inline-block h-[9px] rounded-full"
+											style="width: {gw}px; background: var(--line-soft);"
+										></span>
+									{/each}
+								</div>
+								<p class="num mt-3 text-[10px] text-ink-3">
+									press train — the desk re-asks this prompt after every burst of {TRAIN_CHUNK} steps,
+									so the only thing changing between drafts is the weights
+								</p>
+							</div>
 						</div>
 					{/if}
 
-					{#if archive.length}
-						<span class="eyebrow mt-3.5 block">earlier drafts</span>
-						<div class="mt-1.5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-							{#each archive as s, i (s.id)}
-								<div
-									class="rounded-md border border-line-soft bg-paper px-3 py-2"
-									style="opacity: {Math.max(0.32, 0.7 - i * 0.14)};"
-								>
-									<div class="num mb-1 text-[9.5px] text-ink-3">
-										step {s.step}{s.auto ? '' : ' · yours'}
-									</div>
-									<p
-										class="font-serif text-[12.5px] leading-[1.55]"
-										style="font-variation-settings: 'opsz' 12;"
-									>
-										<span class="whitespace-pre-wrap text-ink-3">{s.prompt}</span><span
-											class="whitespace-pre-wrap">{s.text}</span
-										>
-									</p>
+					<span class="eyebrow mt-3.5 block">earlier drafts</span>
+					<div class="mt-1.5 grid flex-1 grid-cols-1 content-start gap-2.5 sm:grid-cols-2">
+						{#each archive as s, i (s.id)}
+							<div
+								class="rounded-md border border-line-soft bg-paper px-3 py-2"
+								style="opacity: {Math.max(0.32, 0.7 - i * 0.14)};"
+							>
+								<div class="num mb-1 text-[9.5px] text-ink-3">
+									step {s.step}{s.auto ? '' : ' · yours'}
 								</div>
-							{/each}
-						</div>
-					{/if}
+								<!-- the same fixed window at archive scale: six lines, no more, no less -->
+								<p
+									class="line-clamp-6 font-serif text-[12.5px] leading-[1.55]"
+									style="font-variation-settings: 'opsz' 12; min-height: calc(6 * 1.55em);"
+								>
+									<span class="whitespace-pre-wrap text-ink-3">{s.prompt}</span><span
+										class="whitespace-pre-wrap">{tidy(s.text)}</span
+									>
+								</p>
+							</div>
+						{/each}
+						<!-- the grid stays complete: unfilled slots are ghosts of drafts to come -->
+						{#each Array.from({ length: Math.max(0, DESK_SLOTS - archive.length) }, (_, k) => k) as k (k)}
+							<div
+								class="flex flex-col rounded-md border border-dashed border-line-soft px-3 py-2"
+								aria-hidden="true"
+							>
+								<div class="num mb-1 text-[9.5px] text-ink-3" style="opacity: 0.55;">step —</div>
+								<!-- body sized like a real draft's six-line window, so filling a slot
+								     never changes the row height -->
+								<div
+									class="flex flex-wrap content-start gap-x-1.5 gap-y-2"
+									style="opacity: 0.55; min-height: calc(6 * 1.55 * 12.5px);"
+								>
+									{#each [64, 38, 52, 28, 58, 34, 46] as gw (gw)}
+										<span
+											class="inline-block h-[7px] rounded-full"
+											style="width: {gw}px; background: var(--line-soft);"
+										></span>
+									{/each}
+								</div>
+							</div>
+						{/each}
+					</div>
 				</div>
 			</div>
 		{/if}

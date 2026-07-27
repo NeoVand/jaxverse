@@ -106,7 +106,7 @@
 
 	{#snippet actions()}
 		{#if usable}
-			<Btn kind="primary" onclick={() => void read()} disabled={busy}>
+			<Btn onclick={() => void read()} disabled={busy}>
 				<ScanText size={12} aria-hidden="true" />
 				{infos ? 'Read again' : 'Read'}
 			</Btn>

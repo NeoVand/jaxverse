@@ -360,6 +360,13 @@ class ScribeLab {
 			out += r.text;
 			ids = [...ids, ...r.tokens].slice(-MAX_PROMPT);
 		}
+		// The last chunk can overshoot by a whole burst of word-pieces; trim back
+		// to the target at a word boundary so every sample is the same length and
+		// the desk's cards never change height.
+		if (out.length > SAMPLE_CHARS) {
+			const cut = out.slice(0, SAMPLE_CHARS).replace(/\s+\S*$/, '');
+			out = `${cut} …`;
+		}
 		return out;
 	}
 
@@ -403,7 +410,8 @@ class ScribeLab {
 	}
 
 	private pushSample(s: Omit<DeskSample, 'id'>): void {
-		this.samples = [{ id: ++this.sampleSeq, ...s }, ...this.samples].slice(0, 4);
+		// one on the desk + four in the archive, so its 2×2 grid is always full
+		this.samples = [{ id: ++this.sampleSeq, ...s }, ...this.samples].slice(0, 5);
 	}
 
 	async inspect(tokens: number[]): Promise<PerTokenInfo[] | null> {

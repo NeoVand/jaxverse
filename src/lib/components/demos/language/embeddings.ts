@@ -204,16 +204,18 @@ export class SkipGram {
 	}
 }
 
-// ── 2-component PCA ──────────────────────────────────────────────────────────
+// ── 3-component PCA ──────────────────────────────────────────────────────────
 // Ported from LangX (src/lib/runtime/rag/pca.ts): power iteration with the
 // implicit covariance product Cu = Xᵀ(Xu) — the d×d covariance is never
 // materialized, and the deterministic seed keeps the map's orientation stable
-// across refits, so the scatter drifts instead of jumping.
+// across refits, so the scatter drifts instead of jumping. Three components:
+// the flat map reads x·y, the spinnable cloud reads all three.
 
-export interface Pca2 {
+export interface Pca3 {
 	mean: number[];
 	c1: number[];
 	c2: number[];
+	c3: number[];
 }
 
 function dot(a: number[], b: number[]): number {
@@ -233,7 +235,7 @@ function pcaSeed(d: number, salt: number): number[] {
 	return v.map((x) => x / n);
 }
 
-export function fitPca2(vectors: number[][]): Pca2 {
+export function fitPca3(vectors: number[][]): Pca3 {
 	const n = vectors.length;
 	const d = vectors[0]?.length ?? 0;
 	const mean = new Array<number>(d).fill(0);
@@ -269,17 +271,20 @@ export function fitPca2(vectors: number[][]): Pca2 {
 
 	const c1 = d ? iterate(1, []) : [];
 	const c2 = d ? iterate(2, [c1]) : [];
-	return { mean, c1, c2 };
+	const c3 = d ? iterate(3, [c1, c2]) : [];
+	return { mean, c1, c2, c3 };
 }
 
-export function project(v: ArrayLike<number>, pca: Pca2): [number, number] {
-	const { mean, c1, c2 } = pca;
+export function project(v: ArrayLike<number>, pca: Pca3): [number, number, number] {
+	const { mean, c1, c2, c3 } = pca;
 	let x = 0;
 	let y = 0;
+	let z = 0;
 	for (let i = 0; i < mean.length; i++) {
 		const cv = v[i] - mean[i];
 		x += cv * c1[i];
 		y += cv * c2[i];
+		z += cv * c3[i];
 	}
-	return [x, y];
+	return [x, y, z];
 }

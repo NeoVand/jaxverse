@@ -5,6 +5,10 @@
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import Wide from '$lib/components/ui/Wide.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
+	import NextTokenGame from '$lib/components/demos/language/NextTokenGame.svelte';
+	import SkipGramDiagram from '$lib/components/demos/language/SkipGramDiagram.svelte';
+	import TokenTree from '$lib/components/demos/language/TokenTree.svelte';
+	import TransformerMap from '$lib/components/demos/language/TransformerMap.svelte';
 	import WordVectors from '$lib/components/demos/language/WordVectors.svelte';
 	import Tokenizer from '$lib/components/demos/language/Tokenizer.svelte';
 	import Scribe from '$lib/components/demos/language/Scribe.svelte';
@@ -26,6 +30,13 @@
 			this chapter's entire subject — and the claim worth sitting with is that nothing else is
 			needed. A large language model is this game, won at scale.
 		</p>
+	</Prose>
+
+	<Wide>
+		<NextTokenGame />
+	</Wide>
+
+	<Prose>
 		<p>
 			Before a machine can play it, though, there is a problem to solve. Gradient descent works on
 			numbers; it needs a slope to walk down. Words are not numbers, and the obvious fix — number
@@ -46,14 +57,49 @@
 	</Prose>
 
 	<Wide>
+		<SkipGramDiagram />
+	</Wide>
+
+	<Prose>
+		<p>
+			Note what the word trades away in that picture. Its honest representation is the
+			<em>one-hot</em> column on the left — six hundred slots, a single 1, every word exactly as far
+			from every other. The <em>dense</em> row it picks up instead is short, crowded with real numbers,
+			and initially random garbage; it becomes meaningful only because the rule on the right hammers on
+			it once per lesson. Written out, one lesson costs
+		</p>
+		<Math
+			display
+			tex={'\\mathcal{L} \\;=\\; -\\log \\htmlClass{eq-b}{\\sigma}\\big(\\htmlClass{eq-a}{v}^{\\top}\\htmlClass{eq-w}{u_{+}}\\big) \\;-\\; \\sum_{k=1}^{5} \\log\\Big(1 - \\htmlClass{eq-b}{\\sigma}\\big(\\htmlClass{eq-a}{v}^{\\top}\\htmlClass{eq-m}{u^{-}_{k}}\\big)\\Big)'}
+		/>
+		<p>
+			Read it term by term. <Math tex={'\\htmlClass{eq-a}{v}'} /> is the centre word's row of the table
+			— the dense vector everything here is about — and
+			<Math tex={'\\htmlClass{eq-w}{u_{+}}'} /> belongs to the neighbor actually seen beside it. The sigmoid
+			<Math tex={'\\htmlClass{eq-b}{\\sigma}'} /> turns their dot product into a verdict between 0 and
+			1 — <em>did these two really co-occur?</em> — and
+			<Math tex={'-\\log \\htmlClass{eq-b}{\\sigma}'} /> is the surprise at the truth, large exactly when
+			the verdict on a real pair was low. The sum plays prosecutor: five words
+			<Math tex={'\\htmlClass{eq-m}{u^{-}_{k}}'} /> drawn at random, each punished for scoring. Nothing
+			else appears in <Math tex={'\\mathcal{L}'} />, so the only way down is to move the vectors —
+			pull <Math tex={'\\htmlClass{eq-a}{v}'} /> toward
+			<Math tex={'\\htmlClass{eq-w}{u_{+}}'} />, push it off the five impostors. Geometry is not a
+			by-product of this objective; it is the objective. An untrained sigmoid shrugs
+			<Math tex="\ln 2" /> at each of the six verdicts, so the plate's loss meter starts near 4.2 and
+			falls as the space takes shape.
+		</p>
+	</Prose>
+
+	<Wide>
 		<WordVectors />
 	</Wide>
 
 	<Prose>
 		<p>
-			What you are looking at is a flattened shadow of a sixteen-dimensional space — two principal
-			directions of it, the rest projected away — so read distances loosely. What survives the
-			flattening is the grouping, and the neighbor list beside it is computed in the full space, by
+			What you are looking at is a shadow of a sixteen-dimensional space — its three principal
+			directions, the rest projected away, spinnable because even a shadow keeps more of its shape
+			in three dimensions than in two — so read distances loosely. What survives the projection is
+			the grouping, and the neighbor list beside it is computed in the full space, by
 			<em>cosine similarity</em>: the angle between two vectors, ignoring their length. Nothing
 			labeled any of this. The only pressure applied was "predict your neighbors", and geometry was
 			the answer.
@@ -61,9 +107,12 @@
 		<p>
 			The vector arithmetic is the famous part. If the step from "boy" to "girl" is roughly the same
 			displacement as from "he" to "she", then subtracting one and adding the other should land near
-			the fourth word — and on this corpus it does. With 220 words and sixteen dimensions the hits
+			the fourth word — and on this corpus it does. With 600 words and sixteen dimensions the hits
 			are approximate and easy to break; at web scale, on billions of words, this stops being a
-			party trick and becomes the substrate every language model computes on.
+			party trick and becomes the substrate every language model computes on. You will not find the
+			famous king − man + woman ≈ queen here, and the reason is instructive: these are children's
+			stories, and "king" appears nine times in three hundred thousand words. A vector is learned
+			from the company its word keeps — a word barely mentioned barely exists.
 		</p>
 		<p>
 			One question remains before the real model: vectors for <em>what</em>, exactly? Words are a
@@ -75,6 +124,13 @@
 			new token, repeat. Common words end up as single tokens, rare words shatter into a few, and
 			every entry in the vocabulary is a vote cast by frequency.
 		</p>
+	</Prose>
+
+	<Wide>
+		<TokenTree />
+	</Wide>
+
+	<Prose>
 		<p>
 			The plate below runs that exact loop — not a replay of a stored merge list, the algorithm
 			itself — on the same 1.5 million characters the model further down is trained on. It needs no
@@ -221,6 +277,13 @@
 			book's orbit, and a single guess travels five stages — each one visible, with real numbers, in
 			the last plate of this chapter.
 		</p>
+	</Prose>
+
+	<Wide>
+		<TransformerMap />
+	</Wide>
+
+	<Prose>
 		<p>
 			<strong>One:</strong> every token becomes a vector, exactly as words did in the first plate,
 			plus a second vector encoding <em>where</em> it sits — attention has no inherent sense of

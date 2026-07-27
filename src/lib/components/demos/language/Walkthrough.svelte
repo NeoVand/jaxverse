@@ -5,7 +5,7 @@
 	// (softmax(QKᵀ/√d + mask)) and the real next-token distribution. The
 	// temperature control re-softmaxes the stored logit row client-side — the
 	// model is never asked again, which is exactly what temperature is.
-	import { ChevronDown, Dices, ScanEye } from 'lucide-svelte';
+	import { Dices, ScanEye } from 'lucide-svelte';
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Slider from '$lib/components/ui/Slider.svelte';
@@ -136,21 +136,6 @@
 	const glyphOf = (c: string) => c.replaceAll(' ', '␣').replaceAll('\n', '↵');
 </script>
 
-{#snippet flow(label?: string)}
-	<div class="flex flex-col items-center py-1" aria-hidden="true">
-		<span class="block h-4 w-px" style="background: var(--line);"></span>
-		{#if label}
-			<span
-				class="num rounded-full border border-line-soft bg-surface-2 px-2 py-0.5 text-[9.5px] text-ink-3"
-				>{label}</span
-			>
-			<span class="block h-4 w-px" style="background: var(--line);"></span>
-		{:else}
-			<ChevronDown size={13} style="color: var(--line);" />
-		{/if}
-	</div>
-{/snippet}
-
 {#snippet stageHead(n: number, title: string, sub: string)}
 	<div class="mb-2.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
 		<span class="eyebrow" style="color: var(--warm);">stage {n}</span>
@@ -178,7 +163,7 @@
 
 	{#snippet actions()}
 		{#if usable}
-			<Btn kind="primary" onclick={() => void runPass(prompt)} disabled={busy}>
+			<Btn onclick={() => void runPass(prompt)} disabled={busy}>
 				<ScanEye size={12} aria-hidden="true" />
 				{stale ? 'Re-run' : 'Run the pass'}
 			</Btn>
@@ -216,266 +201,265 @@
 				</div>
 			{:else}
 				<div class="px-4 py-4">
-					<!-- ── stage 1: tokens → vectors ── -->
-					<div class="stage">
-						{@render stageHead(1, 'Tokens become vectors', 'lookup + position')}
-						<div class="flex flex-wrap items-center gap-x-4 gap-y-3">
-							<div class="flex min-w-0 flex-1 flex-wrap gap-1">
-								{#each idx.slice(0, 24) as i (i)}
-									<span class="chip-tok">{axis(toks[i])}</span>
-								{/each}
-								{#if N > 24}
-									<span class="num self-center text-[10px] text-ink-3">+{N - 24} more</span>
-								{/if}
-							</div>
+					<!-- ── the machine in one strip: the drawn stations; №3 and №5 run live below ── -->
+					<div class="strip">
+						<div class="cell">
+							<span class="st-n" aria-hidden="true">1</span>
 							<MatrixGlyph
 								rows={N}
 								cols={nEmbd}
 								label="{N} × {nEmbd}"
-								w={120}
-								h={54}
+								w={84}
+								h={42}
 								tone="accent"
 								seed={3}
 							/>
+							<span class="st-t">tokens become vectors</span>
+							<span class="st-s">lookup + position</span>
 						</div>
-						<p class="stage-note">
-							Each token is one row of a lookup table, plus a vector for <em>where</em> it sits —
-							the model has no other way to know order.
-							<MathTex tex="x_i = E[t_i] + P[i]" />
-						</p>
+						<span class="strip-arrow" aria-hidden="true">→</span>
+						<div class="blockwrap">
+							<span class="bw-label">one block · this model stacks {nLayer}</span>
+							<div class="cell cell-bare">
+								<span class="st-n" aria-hidden="true">2</span>
+								<div class="flex gap-1.5">
+									<MatrixGlyph rows={nEmbd} cols={nEmbd} label="W_Q" w={40} h={38} seed={11} />
+									<MatrixGlyph rows={nEmbd} cols={nEmbd} label="W_K" w={40} h={38} seed={12} />
+									<MatrixGlyph rows={nEmbd} cols={nEmbd} label="W_V" w={40} h={38} seed={13} />
+								</div>
+								<span class="st-t">query · key · value</span>
+								<span class="st-s">{nHead} heads × {headDim} dims</span>
+							</div>
+							<span class="strip-arrow" aria-hidden="true">→</span>
+							<div class="cell cell-bare cell-live">
+								<span class="st-n" aria-hidden="true">3</span>
+								<svg width="42" height="38" viewBox="0 0 42 38" aria-hidden="true">
+									{#each [0, 1, 2, 3, 4] as ti (ti)}
+										{#each [0, 1, 2, 3, 4] as tj (tj)}
+											{#if tj <= ti}
+												<rect
+													x={tj * 8 + 1}
+													y={ti * 7.4 + 1}
+													width="6.6"
+													height="6"
+													rx="1.4"
+													fill="var(--accent)"
+													opacity={0.2 + 0.68 * (((ti * 3 + tj * 5 + 2) % 7) / 6)}
+												/>
+											{/if}
+										{/each}
+									{/each}
+								</svg>
+								<span class="st-t">attention</span>
+								<span class="st-s">live · below left</span>
+							</div>
+							<span class="strip-arrow" aria-hidden="true">→</span>
+							<div class="cell cell-bare">
+								<span class="st-n" aria-hidden="true">4</span>
+								<div class="flex items-center gap-1.5">
+									<MatrixGlyph
+										rows={nEmbd}
+										cols={4 * nEmbd}
+										label="{nEmbd} → {4 * nEmbd}"
+										w={58}
+										h={38}
+										tone="warm"
+										seed={21}
+									/>
+									<MatrixGlyph
+										rows={4 * nEmbd}
+										cols={nEmbd}
+										label="{4 * nEmbd} → {nEmbd}"
+										w={36}
+										h={38}
+										tone="warm"
+										seed={22}
+									/>
+								</div>
+								<span class="st-t">each token thinks alone</span>
+								<span class="st-s">widen · relu · squeeze</span>
+							</div>
+						</div>
+						<span class="strip-arrow" aria-hidden="true">→</span>
+						<div class="cell cell-live">
+							<span class="st-n" aria-hidden="true">5</span>
+							<svg width="44" height="38" viewBox="0 0 44 38" aria-hidden="true">
+								{#each [30, 9, 15, 5, 11, 3] as bh, bi (bi)}
+									<rect
+										x={bi * 7 + 1.5}
+										y={35 - bh}
+										width="5"
+										height={bh}
+										rx="1.2"
+										fill="var(--accent)"
+										opacity={bi === 0 ? 0.9 : 0.4}
+									/>
+								{/each}
+								<line x1="0" y1="35.5" x2="44" y2="35.5" stroke="var(--line)" stroke-width="1" />
+							</svg>
+							<span class="st-t">the guess</span>
+							<span class="st-s">live · below right</span>
+						</div>
 					</div>
 
-					{@render flow()}
-
-					<!-- ── stage 2: Q, K, V ── -->
-					<div class="stage">
-						{@render stageHead(2, 'Three questions per vector', 'query, key, value')}
-						<div class="flex flex-wrap items-start gap-x-5 gap-y-3">
-							<MatrixGlyph
-								rows={nEmbd}
-								cols={nEmbd}
-								label="W_Q · 96 × 96"
-								w={78}
-								h={52}
-								seed={11}
-							/>
-							<MatrixGlyph
-								rows={nEmbd}
-								cols={nEmbd}
-								label="W_K · 96 × 96"
-								w={78}
-								h={52}
-								seed={12}
-							/>
-							<MatrixGlyph
-								rows={nEmbd}
-								cols={nEmbd}
-								label="W_V · 96 × 96"
-								w={78}
-								h={52}
-								seed={13}
-							/>
-							<p class="stage-note min-w-48 flex-1">
-								One projection each for <em>query</em>, <em>key</em> and <em>value</em>, split
-								across
-								{nHead} heads of {headDim} dimensions apiece.
+					<div
+						class="mt-3 grid items-stretch gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(264px,324px)]"
+					>
+						<!-- ── stage 3: attention, for real ── -->
+						<div class="stage stage-live">
+							{@render stageHead(3, 'Tokens read each other', 'real softmax rows')}
+							<div class="mb-2.5 flex flex-wrap items-center gap-x-4 gap-y-2">
+								<div class="flex items-center gap-1.5">
+									<span class="eyebrow">layer</span>
+									{#each layerIdx as li (li)}
+										<button
+											class="chip"
+											class:chip-on={layer === li}
+											aria-pressed={layer === li}
+											onclick={() => (layer = li)}>{li + 1}</button
+										>
+									{/each}
+								</div>
+								<div class="flex items-center gap-1.5">
+									<span class="eyebrow">head</span>
+									{#each headIdx as h (h)}
+										<button
+											class="chip"
+											class:chip-on={head === h}
+											aria-pressed={head === h}
+											onclick={() => (head = h)}>{h + 1}</button
+										>
+									{/each}
+								</div>
+							</div>
+							<div class="overflow-x-auto">
+								<svg
+									width={gw}
+									height={gh}
+									viewBox="0 0 {gw} {gh}"
+									class="mx-auto block"
+									role="img"
+									aria-label="Causal attention matrix: rows are the position being predicted, columns the earlier positions it attends to; darker ultramarine is more attention."
+									onpointerleave={() => (hov = null)}
+								>
+									{#each idx as j (j)}
+										<text
+											transform="translate({GUT + j * CELL + CELL / 2} {GUT - 6}) rotate(-90)"
+											text-anchor="start"
+											class="num"
+											font-size="9"
+											fill={hov?.j === j ? 'var(--ink)' : 'var(--ink-3)'}>{axis(toks[j])}</text
+										>
+										<text
+											x={GUT - 6}
+											y={GUT + j * CELL + CELL / 2 + 3}
+											text-anchor="end"
+											class="num"
+											font-size="9"
+											fill={hov?.i === j ? 'var(--ink)' : 'var(--ink-3)'}>{axis(toks[j])}</text
+										>
+									{/each}
+									{#each idx as i (i)}
+										<rect
+											x={GUT}
+											y={GUT + i * CELL + 0.5}
+											width={(i + 1) * CELL}
+											height={CELL - 1}
+											fill="var(--surface-2)"
+											opacity="0.55"
+										/>
+									{/each}
+									{#each idx as i (i)}
+										{#each idx as j (j)}
+											{#if j <= i}
+												<rect
+													x={GUT + j * CELL + 1}
+													y={GUT + i * CELL + 1}
+													width={CELL - 2}
+													height={CELL - 2}
+													rx="2.5"
+													fill="var(--accent)"
+													fill-opacity={alpha(w(i, j))}
+													role="presentation"
+													onpointerenter={() => (hov = { i, j })}
+												>
+													<title
+														>predicting “{axis(toks[i])}” ({i}) ← “{axis(toks[j])}” ({j}): {(
+															w(i, j) * 100
+														).toFixed(1)}%</title
+													>
+												</rect>
+											{/if}
+										{/each}
+									{/each}
+								</svg>
+							</div>
+							<p class="num mt-1.5 min-h-5 text-[11px] text-ink-2">
+								{#if hov}
+									predicting “{axis(toks[hov.i])}” (position {hov.i}) — this head spends {(
+										w(hov.i, hov.j) * 100
+									).toFixed(1)}% of its budget on “{axis(toks[hov.j])}” (position {hov.j})
+								{:else}
+									each row sums to 1 · a leading space is drawn ␣ · hover any cell
+								{/if}
+							</p>
+							<p class="stage-note">
+								Rows are the position being predicted, columns where its attention lands — and only
+								the lower triangle exists, because a model that could peek at the answer would learn
+								nothing by guessing it.
 								<MathTex tex={'\\mathrm{Attn} = \\sigma\\!\\left(QK^{\\top}/\\sqrt{d}\\right)V'} />
 							</p>
 						</div>
-					</div>
 
-					{@render flow()}
-
-					<!-- ── stage 3: attention, for real ── -->
-					<div class="stage stage-live">
-						{@render stageHead(3, 'Tokens read each other', 'real softmax rows')}
-						<div class="mb-2.5 flex flex-wrap items-center gap-x-4 gap-y-2">
-							<div class="flex items-center gap-1.5">
-								<span class="eyebrow">layer</span>
-								{#each layerIdx as li (li)}
-									<button
-										class="chip"
-										class:chip-on={layer === li}
-										aria-pressed={layer === li}
-										onclick={() => (layer = li)}>{li + 1}</button
-									>
+						<!-- ── stage 5: logits → the next token ── -->
+						<div class="stage stage-live flex flex-col">
+							{@render stageHead(5, 'A guess, at last', 'real distribution')}
+							<Slider
+								label="temperature"
+								bind:value={temperature}
+								min={0.2}
+								max={1.6}
+								step={0.05}
+								tone="warm"
+								format={(v) => v.toFixed(2)}
+							/>
+							<div class="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
+								<Btn onclick={() => void drawAndAppend()} disabled={busy}>
+									<Dices size={13} aria-hidden="true" /> Draw one & continue
+								</Btn>
+								<span class="num text-[10.5px] text-ink-3">
+									top guess {(topP * 100).toFixed(1)}%
+								</span>
+							</div>
+							<div class="mt-3 flex flex-col gap-1">
+								{#each dist as row, i (row.id)}
+									<div class="flex items-center gap-2">
+										<span
+											class="num w-16 truncate text-[12px]"
+											style="color: {i === 0 ? 'var(--accent)' : 'var(--ink)'};"
+											>{glyphOf(scribe.textOf(row.id))}</span
+										>
+										<span class="h-2 flex-1 overflow-hidden rounded-sm bg-line-soft">
+											<span
+												class="block h-full rounded-sm"
+												style="width: {(row.p * 100).toFixed(2)}%; background: {i === 0
+													? 'var(--accent)'
+													: 'color-mix(in srgb, var(--accent) 55%, transparent)'}; transition: width 140ms ease;"
+											></span>
+										</span>
+										<span class="num w-11 text-right text-[10px] text-ink-3"
+											>{(row.p * 100).toFixed(1)}%</span
+										>
+									</div>
 								{/each}
 							</div>
-							<div class="flex items-center gap-1.5">
-								<span class="eyebrow">head</span>
-								{#each headIdx as h (h)}
-									<button
-										class="chip"
-										class:chip-on={head === h}
-										aria-pressed={head === h}
-										onclick={() => (head = h)}>{h + 1}</button
-									>
-								{/each}
-							</div>
-						</div>
-						<div class="overflow-x-auto">
-							<svg
-								width={gw}
-								height={gh}
-								viewBox="0 0 {gw} {gh}"
-								class="mx-auto block"
-								role="img"
-								aria-label="Causal attention matrix: rows are the position being predicted, columns the earlier positions it attends to; darker ultramarine is more attention."
-								onpointerleave={() => (hov = null)}
-							>
-								{#each idx as j (j)}
-									<text
-										transform="translate({GUT + j * CELL + CELL / 2} {GUT - 6}) rotate(-90)"
-										text-anchor="start"
-										class="num"
-										font-size="9"
-										fill={hov?.j === j ? 'var(--ink)' : 'var(--ink-3)'}>{axis(toks[j])}</text
-									>
-									<text
-										x={GUT - 6}
-										y={GUT + j * CELL + CELL / 2 + 3}
-										text-anchor="end"
-										class="num"
-										font-size="9"
-										fill={hov?.i === j ? 'var(--ink)' : 'var(--ink-3)'}>{axis(toks[j])}</text
-									>
-								{/each}
-								{#each idx as i (i)}
-									<rect
-										x={GUT}
-										y={GUT + i * CELL + 0.5}
-										width={(i + 1) * CELL}
-										height={CELL - 1}
-										fill="var(--surface-2)"
-										opacity="0.55"
-									/>
-								{/each}
-								{#each idx as i (i)}
-									{#each idx as j (j)}
-										{#if j <= i}
-											<rect
-												x={GUT + j * CELL + 1}
-												y={GUT + i * CELL + 1}
-												width={CELL - 2}
-												height={CELL - 2}
-												rx="2.5"
-												fill="var(--accent)"
-												fill-opacity={alpha(w(i, j))}
-												role="presentation"
-												onpointerenter={() => (hov = { i, j })}
-											>
-												<title
-													>predicting “{axis(toks[i])}” ({i}) ← “{axis(toks[j])}” ({j}): {(
-														w(i, j) * 100
-													).toFixed(1)}%</title
-												>
-											</rect>
-										{/if}
-									{/each}
-								{/each}
-							</svg>
-						</div>
-						<p class="num mt-1.5 min-h-5 text-[11px] text-ink-2">
-							{#if hov}
-								predicting “{axis(toks[hov.i])}” (position {hov.i}) — this head spends {(
-									w(hov.i, hov.j) * 100
-								).toFixed(1)}% of its budget on “{axis(toks[hov.j])}” (position {hov.j})
-							{:else}
-								each row sums to 1 · a leading space is drawn ␣ · hover any cell
-							{/if}
-						</p>
-						<p class="stage-note">
-							Rows are the position being predicted, columns where its attention lands — and only
-							the lower triangle exists, because a model that could peek at the answer would learn
-							nothing by guessing it.
-						</p>
-					</div>
-
-					{@render flow()}
-
-					<!-- ── stage 4: the MLP ── -->
-					<div class="stage">
-						{@render stageHead(4, 'Each token thinks alone', 'widen, rectify, narrow')}
-						<div class="flex flex-wrap items-center gap-x-4 gap-y-3">
-							<MatrixGlyph
-								rows={nEmbd}
-								cols={4 * nEmbd}
-								label="96 → 384"
-								w={132}
-								h={48}
-								tone="warm"
-								seed={21}
-							/>
-							<span class="num text-[11px] text-ink-3">relu</span>
-							<MatrixGlyph
-								rows={4 * nEmbd}
-								cols={nEmbd}
-								label="384 → 96"
-								w={72}
-								h={48}
-								tone="warm"
-								seed={22}
-							/>
-							<p class="stage-note min-w-48 flex-1">
-								Attention is where tokens talk; this is where each one thinks alone. Widened
-								fourfold, rectified, squeezed back — and most of the parameters live here.
+							<p class="stage-note mt-auto">
+								{scribe.vocabSize} scores, softmaxed into a belief.
+								<MathTex tex={'P(x_{t+1}) = \\sigma(z / T)'} />
+								Temperature reshapes the same stored scores — the model is never asked again. Draw one
+								and it joins the context: that loop is all “generating text” has ever meant.
 							</p>
 						</div>
-					</div>
-
-					{@render flow(`stages 2–4 are one block · this model stacks ${nLayer}`)}
-
-					<!-- ── stage 5: logits → the next character ── -->
-					<div class="stage stage-live">
-						{@render stageHead(5, 'A guess, at last', 'real distribution')}
-						<div class="flex flex-wrap items-end gap-x-4 gap-y-2.5">
-							<div class="w-40">
-								<Slider
-									label="temperature"
-									bind:value={temperature}
-									min={0.2}
-									max={1.6}
-									step={0.05}
-									tone="warm"
-									format={(v) => v.toFixed(2)}
-								/>
-							</div>
-							<Btn onclick={() => void drawAndAppend()} disabled={busy}>
-								<Dices size={13} aria-hidden="true" /> Draw one & continue
-							</Btn>
-							<span class="num text-[10.5px] text-ink-3">
-								top guess {(topP * 100).toFixed(1)}%
-							</span>
-						</div>
-						<div class="mt-3 flex flex-col gap-1">
-							{#each dist as row, i (row.id)}
-								<div class="flex items-center gap-2">
-									<span
-										class="num w-16 truncate text-[12px]"
-										style="color: {i === 0 ? 'var(--accent)' : 'var(--ink)'};"
-										>{glyphOf(scribe.textOf(row.id))}</span
-									>
-									<span class="h-2 flex-1 overflow-hidden rounded-sm bg-line-soft">
-										<span
-											class="block h-full rounded-sm"
-											style="width: {(row.p * 100).toFixed(2)}%; background: {i === 0
-												? 'var(--accent)'
-												: 'color-mix(in srgb, var(--accent) 55%, transparent)'}; transition: width 140ms ease;"
-										></span>
-									</span>
-									<span class="num w-11 text-right text-[10px] text-ink-3"
-										>{(row.p * 100).toFixed(1)}%</span
-									>
-								</div>
-							{/each}
-						</div>
-						<p class="stage-note">
-							{nEmbd} numbers in, {scribe.vocabSize} scores out — one per token in the vocabulary — and
-							a softmax turns those scores into probabilities.
-							<MathTex tex={'P(x_{t+1}) = \\sigma(z / T)'} />
-							Dragging the temperature never asks the model again; it reshapes the same stored scores.
-							Draw one and it joins the context: that is the whole loop, 160 times per sample.
-						</p>
 					</div>
 				</div>
 			{/if}
@@ -521,16 +505,93 @@
 	.stage-note :global(.katex) {
 		font-size: 1em;
 	}
-	.chip-tok {
+	/* ── the machine strip: drawn stations №1–5, arrows between ── */
+	.strip {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: stretch;
+		justify-content: center;
+		gap: 8px;
+	}
+	.cell {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 3px;
+		padding: 9px 12px 7px;
+		border: 1px solid var(--line-soft);
+		border-radius: 8px;
+		background: var(--surface);
+	}
+	.cell-bare {
+		border-color: transparent;
+		background: none;
+		padding: 4px 6px 2px;
+	}
+	.cell-live {
+		border-color: color-mix(in srgb, var(--accent) 32%, var(--line));
+		background: var(--surface);
+	}
+	.blockwrap {
+		position: relative;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: stretch;
+		justify-content: center;
+		gap: 6px;
+		padding: 12px 10px 8px;
+		border: 1px dashed var(--line);
+		border-radius: 10px;
+	}
+	.bw-label {
+		position: absolute;
+		top: -7px;
+		left: 12px;
+		padding: 0 6px;
+		background: var(--surface);
 		font-family: var(--font-mono);
+		font-size: 9px;
+		letter-spacing: 0.04em;
+		color: var(--ink-3);
+		white-space: nowrap;
+	}
+	.strip-arrow {
+		align-self: center;
+		color: var(--ink-3);
 		font-size: 12px;
-		line-height: 1.3;
-		white-space: pre;
-		border: 1px solid var(--line);
-		border-radius: 4px;
-		padding: 1px 4px;
-		color: var(--ink);
-		background: color-mix(in srgb, var(--accent) 12%, transparent);
+	}
+	.st-n {
+		position: absolute;
+		top: -7px;
+		left: -7px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 15px;
+		height: 15px;
+		border: 1px solid var(--warm);
+		border-radius: 50%;
+		background: var(--surface);
+		color: var(--warm);
+		font-family: var(--font-mono);
+		font-size: 9px;
+		font-weight: 600;
+	}
+	.st-t {
+		font-family: var(--font-serif);
+		font-style: italic;
+		font-size: 12px;
+		color: var(--ink-2);
+		white-space: nowrap;
+	}
+	.st-s {
+		font-family: var(--font-mono);
+		font-size: 9px;
+		letter-spacing: 0.03em;
+		color: var(--ink-3);
+		white-space: nowrap;
 	}
 	.chip {
 		min-width: 24px;
