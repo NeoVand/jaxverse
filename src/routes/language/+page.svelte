@@ -5,6 +5,7 @@
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import Wide from '$lib/components/ui/Wide.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
+	import AttentionDiagram from '$lib/components/demos/language/AttentionDiagram.svelte';
 	import NextTokenGame from '$lib/components/demos/language/NextTokenGame.svelte';
 	import SkipGramDiagram from '$lib/components/demos/language/SkipGramDiagram.svelte';
 	import TokenTree from '$lib/components/demos/language/TokenTree.svelte';
@@ -289,17 +290,49 @@
 			plus a second vector encoding <em>where</em> it sits — attention has no inherent sense of
 			order, so position must be added by hand. <strong>Two:</strong> each vector is projected three
 			ways, into a <em>query</em> (what am I looking for?), a <em>key</em> (what do I offer?) and a
-			<em>value</em>
-			(what I would pass along), split across four
-			<em>heads</em> that each work in their own 24 dimensions.
+			<em>value</em> (what I would pass along).
 		</p>
 		<p>
-			<strong>Three:</strong> the heads compare every query against every key, and the scores become
-			<em>attention</em> — a budget of exactly 1.0 per position, spent across the past. This is
-			where tokens read each other, and the only stage where information moves between positions.
-			Half the picture is structurally empty: position <Math tex="i" /> may never look at
-			<Math tex="i+1" />. Hiding the future is the game's one rule, and the mask is where it is
-			enforced.
+			<strong>Three:</strong> attention itself — and it has earned the chapter's slowest minute,
+			because this single line is most of what the word <em>transformer</em> means:
+		</p>
+		<Math
+			display
+			tex={'\\mathrm{attention}(\\htmlClass{eq-a}{Q}, \\htmlClass{eq-w}{K}, \\htmlClass{eq-c}{V}) \\;=\\; \\htmlClass{eq-b}{\\operatorname{softmax}}\\!\\left(\\frac{\\htmlClass{eq-a}{Q}\\,\\htmlClass{eq-w}{K}^{\\top}}{\\sqrt{d_k}} + \\htmlClass{eq-m}{M}\\right)\\htmlClass{eq-c}{V}'}
+		/>
+	</Prose>
+
+	<Wide>
+		<AttentionDiagram />
+	</Wide>
+
+	<Prose>
+		<p>
+			Read it inside out. <Math tex={'\\htmlClass{eq-a}{Q}\\,\\htmlClass{eq-w}{K}^{\\top}'} /> dots every
+			query against every key — <em>how well does what I'm looking for match what you offer?</em> —
+			one number per pair of positions, a whole table of raw affinities at once. The
+			<Math tex={'\\sqrt{d_k}'} /> underneath is quiet but load-bearing: dot products of longer vectors
+			are larger by accident of dimension, and dividing by
+			<Math tex={'\\sqrt{24}'} /> here keeps the softmax from saturating into all-or-nothing before training
+			has said anything. <Math tex={'\\htmlClass{eq-m}{M}'} /> is the mask — zero at and below the diagonal,
+			<Math tex="-\infty" /> above it — the game's one rule, <em>no reading the future</em>,
+			enforced as arithmetic: <Math tex={'e^{-\\infty} = 0'} />, so a future token gets exactly
+			nothing, not merely little. Then
+			<Math tex={'\\htmlClass{eq-b}{\\operatorname{softmax}}'} /> — the same machine that turned scores
+			into beliefs in <a href={resolve('/digits')}>Chapter 3</a> — runs along each row and turns it
+			into a budget of exactly 1.0. And multiplying by
+			<Math tex={'\\htmlClass{eq-c}{V}'} /> spends the budget: each token's output is a weighted blend
+			of what earlier tokens offered to pass along.
+		</p>
+		<p>
+			Two things about this line repay staring. It is the only place in the whole architecture where
+			tokens touch — everywhere else each position is processed alone. And it contains no
+			parameters: everything learnable lives in the three lenses
+			<Math tex={'W_{\\htmlClass{eq-a}{Q}}, W_{\\htmlClass{eq-w}{K}}, W_{\\htmlClass{eq-c}{V}}'} />
+			that manufacture the queries, keys and values, so what training changes is not <em>how</em>
+			attention works but <em>what each token asks for and offers</em>. The scribe runs this line
+			four times per block — four <em>heads</em>, each in its own 24 dimensions, each free to learn
+			a different sense of relevance — and you can watch their real rows disagree in the last plate.
 		</p>
 		<p>
 			<strong>Four:</strong> each token thinks alone. Its vector is widened fourfold, rectified —

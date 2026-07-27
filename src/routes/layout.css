@@ -238,6 +238,9 @@ body {
 .eq-g {
 	color: var(--good);
 }
+.eq-c {
+	color: var(--cat-1); /* amber — the value path in the attention equation */
+}
 .eq-m {
 	color: var(--ink-3);
 }

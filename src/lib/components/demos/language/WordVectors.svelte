@@ -51,13 +51,12 @@
 
 	// ≈ 60k pairs/s — structure appears in a few seconds
 	const PACING = { chunk: 4000, pace: 66 };
-	/** Everything trains at VOCAB words; the density slider decides how many
-	 * of them (in frequency order) the stage draws. */
+	/** Everything trains — and draws — at VOCAB words; the label thinning
+	 * keeps the stage legible at full density. */
 	const VOCAB = 600;
 
 	// ── the view: a flat shadow, or a cloud you can spin ──
 	let view = $state<'2d' | '3d'>('3d');
-	let shownCount = $state(320);
 	let dragging = $state(false);
 	let hoverable = $state(false); // a label is under the cursor (2-d affordance)
 	// camera state is plain — only the canvas reads it, every frame
@@ -241,8 +240,8 @@
 	// incumbents keep their room in the thinning, points ease between refits.
 	const H = 420;
 	let canvasEl = $state<HTMLCanvasElement | null>(null);
-	/** How many words (in frequency order) the stage draws; ids ARE freq ranks. */
-	const visCount = $derived(Math.min(shownCount, vocab.length));
+	/** How many words the stage draws — all of them; ids ARE freq ranks. */
+	const visCount = $derived(vocab.length);
 
 	// paint-loop state, all plain: nothing here should wake Svelte
 	let smooth: Float32Array | null = null; // eased copy of pts
@@ -565,18 +564,9 @@
 							>
 						{/each}
 					</div>
-					<div class="absolute bottom-2.5 left-3 z-10 flex items-center gap-2">
-						<input
-							class="dens"
-							type="range"
-							min="120"
-							max={vocab.length || VOCAB}
-							step="20"
-							bind:value={shownCount}
-							aria-label="how many words the map shows"
-						/>
-						<span class="num text-[10px] text-ink-3">{visCount} words</span>
-					</div>
+					<span class="num absolute bottom-2.5 left-3 z-10 text-[10px] text-ink-3">
+						{visCount} words
+					</span>
 					<canvas
 						bind:this={canvasEl}
 						class="block w-full touch-none"
@@ -798,43 +788,5 @@
 		color: var(--accent);
 		background: var(--accent-soft);
 		border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-	}
-	/* how many words to draw — a hairline control that sits on the map
-	   without competing with it */
-	.dens {
-		appearance: none;
-		width: 104px;
-		height: 12px;
-		background: transparent;
-		cursor: pointer;
-	}
-	.dens::-webkit-slider-runnable-track {
-		height: 2px;
-		border-radius: 1px;
-		background: var(--line);
-	}
-	.dens::-webkit-slider-thumb {
-		appearance: none;
-		width: 9px;
-		height: 9px;
-		margin-top: -3.5px;
-		border-radius: 50%;
-		background: var(--ink-3);
-		transition: background 100ms ease;
-	}
-	.dens:hover::-webkit-slider-thumb {
-		background: var(--ink-2);
-	}
-	.dens::-moz-range-track {
-		height: 2px;
-		border-radius: 1px;
-		background: var(--line);
-	}
-	.dens::-moz-range-thumb {
-		width: 9px;
-		height: 9px;
-		border: none;
-		border-radius: 50%;
-		background: var(--ink-3);
 	}
 </style>

@@ -4,7 +4,7 @@
 	import Math from '$lib/components/ui/Math.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import Wide from '$lib/components/ui/Wide.svelte';
-	import Cartpole from '$lib/components/demos/reward/Cartpole.svelte';
+	import DoublePendulum from '$lib/components/demos/reward/DoublePendulum.svelte';
 	import Gridworld from '$lib/components/demos/reward/Gridworld.svelte';
 	import RlLoopDiagram from '$lib/components/demos/reward/RlLoopDiagram.svelte';
 </script>
@@ -76,18 +76,28 @@
 			<em>learning rate</em> in words.
 		</p>
 		<p>
-			Now the classic testbed, a control problem older than deep learning itself: a cart on a short
-			track, a pole balanced upright on it. The policy sees four numbers — cart position and
-			velocity, pole angle and angular velocity — and has exactly two actions, push left or push
-			right, fifty times a second. The reward is +1 for every step the pole stays inside the dashed
-			cones and the cart on the track; episodes end at a fall, at the track's edge, or at a perfect
-			500. Below, that policy starts as a coin flip. Shove the cart — click and drag on the stage —
-			and watch it topple. Then press Train, let the returns climb, and shove it again.
+			Now the testbed — the classic cart-and-pole made meaner twice over: a hinge sliding on a short
+			rail, <em>two</em> pendulum links stacked on top of it, and the stack starting where gravity
+			wants it — hanging straight down. The policy must learn to <em>swing it up</em>: pump energy
+			in with rhythmic pushes, steer the top link <em>through</em> the bottom one (the hinge is all
+			it can touch), and then catch the whole thing upright, where the ±18° cones are. The state is
+			six numbers — hinge position and velocity, two angles and their velocities — read through
+			sixteen hand-crafted gauges: swing gauges that fade out near the top, fine balance gauges that
+			fade in there. Five pushes are available, hard or gentle, left or right, or nothing, fifty
+			times a second. The reward is simply the height of the tip at every tick, plus a hefty bonus
+			for standing caught and calm — no rulebook, no instructions, just
+			<em>higher is better</em>. Nothing ever fails and nothing resets: an episode is an
+			eight-second window, graded and moved past. One honest confession about the practice regime:
+			half the policy's headless practice runs start hanging, a quarter start already balanced (to
+			learn the hold before the climb), and a quarter start at the brink — tilted and moving near
+			the top, exactly where the catch is decided. Below, that policy starts as a coin flip. Press
+			Train, watch it discover swinging, then climbing, then — patience — the catch. Shove the hinge
+			any time: click or drag on the stage.
 		</p>
 	</Prose>
 
 	<Wide>
-		<Cartpole />
+		<DoublePendulum />
 	</Wide>
 
 	<Prose>
@@ -98,13 +108,13 @@
 			Reading the recovery
 		</h2>
 		<p>
-			What changed between the policy you toppled and the one that fights back? Eight numbers — the
-			weights on four features for two actions — nudged by REINFORCE after every episode. Each push
-			is judged by the return that followed it, minus a <em>baseline</em>: the running average of
-			how episodes usually go from that moment. The difference is called the
+			What changed between the flailing policy and the one that climbs? Eighty numbers — the weights
+			on sixteen gauges for five pushes — nudged by REINFORCE after every episode. Each push is
+			judged by the return that followed it, minus a <em>baseline</em>: the running average of how
+			episodes usually go from that moment. The difference is called the
 			<em>advantage</em>, and it makes "good" mean <em>better than usual</em> — a push followed by
-			ten more seconds of balance teaches nothing once ten seconds is normal, but the same push when
-			the pole usually falls is news. That reward-minus-usual idea is exactly what
+			ten seconds of height teaches nothing once that height is normal, but the same push while the
+			stack usually dangles is news. That reward-minus-usual idea is exactly what
 			<a href={resolve('/rook')}>Chapter 7</a> will reuse on a language model, under the same name.
 		</p>
 		<p>
@@ -117,7 +127,7 @@
 			that is why it holds against shoves it has never seen.
 		</p>
 		<p>
-			One thing cartpole cannot show you is the policy itself — its states are four continuous
+			One thing the pendulum cannot show you is the policy itself — its states are six continuous
 			numbers, and there are infinitely many of them. To look at a whole policy at once we need a
 			world small enough to draw. Below is an 8-by-6 field: a start (the small ring), a treasure ◆
 			worth +10, pits worth −8, and a tax of −0.15 on every step — walls block you, and bumping one
@@ -187,7 +197,7 @@
 			The table of arrows you trained is not a toy version of a policy. It <em>is</em> a policy — the
 			same mathematical object the phrase always means — and nothing in REINFORCE ever looked inside it.
 			The update touched only two things: the probability the policy assigned to an action, and the return
-			that followed. The pendulum's eight weights sat in the same seat. Any object that can assign probabilities
+			that followed. The pendulum's eighty weights sat in the same seat. Any object that can assign probabilities
 			and accept gradients can sit there.
 		</p>
 		<p>

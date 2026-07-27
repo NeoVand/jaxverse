@@ -131,24 +131,31 @@
 					stroke-width="1.2"
 				/>
 			{/if}
-			<!-- q·k·v: the three projections, one strip per lane -->
-			<rect
-				x={QKV_X - 4}
-				y={y - 9}
-				width="8"
-				height="18"
-				rx="2"
-				fill="var(--surface-2)"
-				stroke="var(--line)"
-			/>
-			<!-- the mlp lens: widen fourfold, squeeze back -->
-			<path
-				d="M {MLP.x0} {y} C {MLP.x0 + 16} {y - 9}, {MLP.x1 - 16} {y - 9}, {MLP.x1} {y}
-				   C {MLP.x1 - 16} {y + 9}, {MLP.x0 + 16} {y + 9}, {MLP.x0} {y}"
-				fill="color-mix(in srgb, var(--cat-1) 14%, transparent)"
-				stroke="var(--cat-1)"
-				stroke-width="1"
-			/>
+			<!-- q·k·v: three colored projections per lane — the same ultramarine /
+			     vermilion / amber the attention diagram above gives Q, K and V -->
+			{#each ['var(--accent)', 'var(--warm)', 'var(--cat-1)'] as c, ci (c)}
+				<rect
+					x={QKV_X - 4.5}
+					y={y - 9.5 + ci * 6.5}
+					width="9"
+					height="5.5"
+					rx="1.5"
+					fill={c}
+					opacity="0.8"
+				/>
+			{/each}
+			<!-- the mlp: widen fourfold, squeeze back — thin, wide, thin -->
+			{#each [{ dx: 0, h: 9, o: 0.5 }, { dx: 8, h: 19, o: 0.85 }, { dx: 16, h: 9, o: 0.5 }] as b (b.dx)}
+				<rect
+					x={(MLP.x0 + MLP.x1) / 2 - 10 + b.dx}
+					y={y - b.h / 2}
+					width="4"
+					height={b.h}
+					rx="1.3"
+					fill="var(--cat-1)"
+					opacity={b.o}
+				/>
+			{/each}
 		{/each}
 
 		<!-- ── attention: the only place lanes touch, and only backwards ── -->
@@ -162,6 +169,13 @@
 				stroke-width={a.w}
 				opacity="0.5"
 			/>
+		{/each}
+		<!-- pickups and landings, so the curves read as reads, not wiring -->
+		{#each [0, 1, 2] as i (i)}
+			<circle cx={A0} cy={LANE_Y[i]} r="1.8" fill="var(--accent)" opacity="0.45" />
+		{/each}
+		{#each [1, 2, 3] as i (i)}
+			<circle cx={A1} cy={LANE_Y[i]} r="2.3" fill="var(--accent)" opacity="0.75" />
 		{/each}
 
 		<!-- ── the tail: the last lane rises into scores, softmax, belief ── -->
