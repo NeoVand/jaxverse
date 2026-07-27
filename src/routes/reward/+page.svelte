@@ -82,17 +82,23 @@
 			in with rhythmic pushes, steer the top link <em>through</em> the bottom one (the hinge is all
 			it can touch), and then catch the whole thing upright, where the ±18° cones are. The state is
 			six numbers — hinge position and velocity, two angles and their velocities — read through
-			sixteen hand-crafted gauges: swing gauges that fade out near the top, fine balance gauges that
-			fade in there. Five pushes are available, hard or gentle, left or right, or nothing, fifty
-			times a second. The reward is simply the height of the tip at every tick, plus a hefty bonus
-			for standing caught and calm — no rulebook, no instructions, just
-			<em>higher is better</em>. Nothing ever fails and nothing resets: an episode is an
-			eight-second window, graded and moved past. One honest confession about the practice regime:
-			half the policy's headless practice runs start hanging, a quarter start already balanced (to
-			learn the hold before the climb), and a quarter start at the brink — tilted and moving near
-			the top, exactly where the catch is decided. Below, that policy starts as a coin flip. Press
-			Train, watch it discover swinging, then climbing, then — patience — the catch. Shove the hinge
-			any time: click or drag on the stage.
+			hand-crafted gauges arranged as three dashboards that switch with the tip's height: swing
+			gauges below (including the stack's mechanical energy — the fuel gap to the top), catch gauges
+			on the rim, hold gauges at the summit. Five pushes are available, hard or gentle, left or
+			right, or nothing, fifty times a second. The reward splits at the same height: down low the
+			policy is paid once, at the moment it <em>delivers</em> the tip past the hand-off slowly
+			enough to catch — a whirling fly-through counts for nothing, which is exactly what stops the
+			policy from discovering that spinning like a propeller skims reward without ever standing; up
+			high, every calm tick inside the cones pays rent, and spin is taxed. Nothing ever fails and
+			nothing resets: an episode is graded and moved past. One honest confession about the practice
+			regime: half the headless practice swings up — from hanging, or from mid-tumble, so that
+			braking a botched attempt back down into a clean swing is a practiced move — a quarter starts
+			balanced (to learn the hold), and a quarter <em>replays the swing's own deliveries</em> — first
+			eased toward vertical, then raw, as fast as the success rate earns it. That reverse curriculum is
+			what makes the catch learnable at all: practicing only what you already almost can is how the gradient
+			stays informative. Below, that policy starts as a coin flip. Press Train, watch it discover swinging,
+			then delivering, then the catch. Shove the hinge any time: click or drag on the stage — knock it
+			clean over and it will swing back up.
 		</p>
 	</Prose>
 
@@ -108,10 +114,10 @@
 			Reading the recovery
 		</h2>
 		<p>
-			What changed between the flailing policy and the one that climbs? Eighty numbers — the weights
-			on sixteen gauges for five pushes — nudged by REINFORCE after every episode. Each push is
-			judged by the return that followed it, minus a <em>baseline</em>: the running average of how
-			episodes usually go from that moment. The difference is called the
+			What changed between the flailing policy and the one that climbs? A hundred and forty-five
+			numbers — the weights on twenty-nine gauges for five pushes — nudged by REINFORCE after every
+			episode. Each push is judged by the return that followed it, minus a <em>baseline</em>: the
+			running average of how episodes usually go from that moment. The difference is called the
 			<em>advantage</em>, and it makes "good" mean <em>better than usual</em> — a push followed by
 			ten seconds of height teaches nothing once that height is normal, but the same push while the
 			stack usually dangles is news. That reward-minus-usual idea is exactly what

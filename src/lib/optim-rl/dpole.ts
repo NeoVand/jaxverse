@@ -37,10 +37,21 @@ export const L1 = 0.5; // lower rod, metres
 export const L2 = 0.35; // upper rod — shorter, too: a lighter, shorter top
 // link tames the chaos and widens the balance basin. Every published
 // swing-up rig picks its mass ratios kindly; so do we.
-export const FORCE_MAG = 11.0;
+export const FORCE_MAG = 20.0;
 export const DT = 0.02; // one control tick — the policy acts at 50 Hz
 const SUBSTEPS = 4; // RK4 at 200 Hz keeps the chaotic regime honest
 export const X_LIMIT = 2.4; // the rail ends here — a soft bumper, not a failure
+// Drag at the two pins (and a whisper on the slide). The pin drag is
+// QUADRATIC in spin — τ = −c·θ̇|θ̇| — because it must be two things at
+// once: negligible at honest pumping speeds (~5 rad/s it steals a fraction
+// of a percent per swing) and lethal to a runaway propeller (at 40 rad/s
+// it bites 64× harder, bleeding the whirl out in ~5 s). Linear friction
+// cannot do both. Without any, the rig is a perpetual-motion machine: one
+// missed catch leaves the stack over-energized FOREVER, spinning in a
+// state the policy never practiced from, and the live show never recovers.
+const B_X = 0.05; // N·s/m on the slide
+const C_1 = 2e-4; // N·m·s²/rad² at the lower pin
+const C_2 = 5e-5; // and the upper
 export const TH_LIMIT = (18 * Math.PI) / 180; // the drawn target cones, nothing more
 export const MAX_STEPS = 400; // 8 seconds — time to swing up and hold
 export const GAMMA = 0.99;
@@ -66,10 +77,16 @@ export type DpoleStart = 0 | 1 | 2; // 0 = hanging, 1 = up, 2 = brink
 
 export function resetDpole(rand: Rand, kind: DpoleStart = 0): DpoleState {
 	const u = (m: number) => (rand() * 2 - 1) * m;
+	// balanced starts get real perturbations (±7°, some drift): a hold
+	// taught only from ±2° grips so tightly it never learns recoveries,
+	// and then a delivered catch a few degrees out is beyond its basin
 	if (kind === 1)
-		return { x: u(0.04), xd: u(0.04), th1: u(0.04), th1d: u(0.04), th2: u(0.04), th2d: u(0.04) };
+		return { x: u(0.1), xd: u(0.15), th1: u(0.12), th1d: u(0.25), th2: u(0.12), th2d: u(0.35) };
+	// the brink — but never from here: brink episodes replay real delivered
+	// states (see DeliveryBuffer). This fallback only feeds the curriculum
+	// before the first delivery ever lands.
 	if (kind === 2)
-		return { x: u(0.5), xd: u(0.5), th1: u(0.5), th1d: u(1), th2: u(0.5), th2d: u(1.5) };
+		return { x: u(0.5), xd: u(0.5), th1: u(0.4), th1d: u(2.5), th2: u(0.55), th2d: u(3.5) };
 	return {
 		x: u(0.04),
 		xd: u(0.04),
@@ -96,9 +113,13 @@ function accel(s: DpoleState, force: number, out: Float64Array): void {
 	const d23 = M2 * L1 * L2 * c12;
 	const d33 = M2 * L2 * L2;
 
-	const b1 = force + M12 * L1 * s1 * s.th1d * s.th1d + M2 * L2 * s2 * s.th2d * s.th2d;
-	const b2 = M12 * GRAVITY * L1 * s1 - M2 * L1 * L2 * s12 * s.th2d * s.th2d;
-	const b3 = M2 * GRAVITY * L2 * s2 + M2 * L1 * L2 * s12 * s.th1d * s.th1d;
+	const b1 = force + M12 * L1 * s1 * s.th1d * s.th1d + M2 * L2 * s2 * s.th2d * s.th2d - B_X * s.xd;
+	const b2 =
+		M12 * GRAVITY * L1 * s1 -
+		M2 * L1 * L2 * s12 * s.th2d * s.th2d -
+		C_1 * s.th1d * Math.abs(s.th1d);
+	const b3 =
+		M2 * GRAVITY * L2 * s2 + M2 * L1 * L2 * s12 * s.th1d * s.th1d - C_2 * s.th2d * Math.abs(s.th2d);
 
 	// symmetric 3×3 solve by cofactors
 	const a11 = d22 * d33 - d23 * d23;
@@ -178,6 +199,25 @@ export function tipHeight(s: DpoleState): number {
 	return (L1 * Math.cos(s.th1) + L2 * Math.cos(s.th2)) / (L1 + L2);
 }
 
+/** Total mechanical energy of the links (kinetic + potential), treating the
+ * hinge's own sliding energy as the actuator's business, not the stack's. */
+export function mechanicalEnergy(s: DpoleState): number {
+	const v1x = s.xd + L1 * Math.cos(s.th1) * s.th1d;
+	const v1y = -L1 * Math.sin(s.th1) * s.th1d;
+	const v2x = v1x + L2 * Math.cos(s.th2) * s.th2d;
+	const v2y = v1y - L2 * Math.sin(s.th2) * s.th2d;
+	const T = 0.5 * M1 * (v1x * v1x + v1y * v1y) + 0.5 * M2 * (v2x * v2x + v2y * v2y);
+	const V =
+		M1 * GRAVITY * L1 * Math.cos(s.th1) +
+		M2 * GRAVITY * (L1 * Math.cos(s.th1) + L2 * Math.cos(s.th2));
+	return T + V;
+}
+
+/** The energy of standing perfectly still at the top… */
+export const E_TOP = M1 * GRAVITY * L1 + M2 * GRAVITY * (L1 + L2);
+/** …and of hanging perfectly still at the bottom — the span normalizes. */
+export const E_SPAN = 2 * E_TOP;
+
 /** Both links inside the drawn cones — "caught", for the reader's scoreboard. */
 export function isUpright(s: DpoleState): boolean {
 	const a1 = Math.atan2(Math.sin(s.th1), Math.cos(s.th1));
@@ -196,8 +236,41 @@ export function isUpright(s: DpoleState): boolean {
  * the bumpers keeps the swing-up mid-rail. */
 export function dpoleReward(s: DpoleState): number {
 	const h01 = (tipHeight(s) + 1) / 2;
-	const calm = 1 / (1 + 0.5 * (Math.abs(s.th1d) + Math.abs(s.th2d)));
-	return h01 + 5 * h01 ** 8 * calm - 0.01 * (Math.abs(s.x) / X_LIMIT);
+	const spin = Math.abs(s.th1d) + Math.abs(s.th2d);
+	const calm = 1 / (1 + 0.5 * spin);
+	// the energy term: closeness of the stack's mechanical energy to the
+	// value it has standing still at the top. Height alone cannot grade a
+	// good pump — halfway through a rising swing the tip is low but the
+	// energy is right — and it also scolds overshoot: arriving with spin to
+	// spare is not progress toward standing.
+	const eErr = Math.abs(mechanicalEnergy(s) - E_TOP) / E_SPAN;
+	if (!isHighRegime(s)) {
+		// Below the hand-off, the per-step reward is a whisper — shaping
+		// toward height and the right energy, minus a small tax on the
+		// clock. Anything louder and the policy farms it: an earlier draft
+		// paid ~1/tick for cruising at top energy, which made *delivering*
+		// (and ending the episode) a pay cut, so the stack learned to swing
+		// forever, beautifully, and never arrive. Down here the delivery
+		// bonus must be the only real income.
+		return 0.1 * h01 + 0.1 * Math.max(0, 1 - eErr) - 0.2 - 0.01 * (Math.abs(s.x) / X_LIMIT);
+	}
+	// Above the hand-off: height, energy, and a catch bonus sharply peaked
+	// at dead vertical, discounted by calm² — a fast fly-through must be
+	// worth almost nothing next to standing still. The spin tax kills the
+	// orbit (drift past the summit each lap, skimming reward without ever
+	// catching); it lives only up here because at the bottom of an honest
+	// pump the links MUST move ~8 rad/s. Capped: since fly-throughs no
+	// longer end the episode, a 40 rad/s whirl would otherwise stack a
+	// −70/tick monster that swamps the baselines — the CAP keeps the tax at
+	// "you lost the whole upright bonus and then some", which is plenty.
+	const over = Math.max(0, spin - 3);
+	return (
+		h01 +
+		Math.max(0, 1 - eErr) +
+		5 * h01 ** 8 * calm * calm -
+		Math.min(6, 0.05 * over * over) -
+		0.01 * (Math.abs(s.x) / X_LIMIT)
+	);
 }
 
 /** The policy decides every tick — balancing the top of the stack needs
@@ -205,7 +278,7 @@ export function dpoleReward(s: DpoleState): number {
 export const ACTION_REPEAT = 1;
 export const DECISIONS = MAX_STEPS / ACTION_REPEAT;
 
-export const N_FEATURES = 16;
+export const N_FEATURES = 29;
 // Five graded pushes. The swing-up needs the full ±11 N to pump energy in;
 // the catch needs a whisper — with only full-strength pushes available,
 // every correction at the top overshoots the basin, and the policy learns
@@ -219,38 +292,217 @@ export const DPOLE_ACTIONS = ACTION_FORCES.length;
 const clip1 = (v: number) => Math.max(-1, Math.min(1, v));
 const wrap = (th: number) => Math.atan2(Math.sin(th), Math.cos(th));
 
-/** State → feature vector, written into `out`. Two dashboards, one policy:
- * swing gauges (sin/cos of each angle, velocities) that fade out near the
- * top, and fine balance gauges (wrapped angles and velocities, amplified
- * and clipped) that fade in there. The gate g — the tip's height to the
- * fourth power — does the fading. Without it the two skills fight over
- * the same weights: far from the top the clipped gauges saturate into
- * constant flags, near the top cos θ ≈ 1 acts as a stray bias, and a
- * linear policy is forced into one compromise controller that can neither
- * pump cleanly nor hold. Gated, it is two controllers in one rulebook. */
+/** The hand-off: above this tip height the catch half of the rulebook
+ * drives instead of the swing half. */
+export const HANDOFF_H01 = 0.82;
+/** And above this, the hold half: catching (aggressive, tilted, moving)
+ * and holding (gentle trims around dead vertical) are different jobs, and
+ * one linear controller cannot be both — with the two sharing weights,
+ * every catch lesson was a hold un-lesson, and the hold capped at a
+ * quarter of its solo skill. */
+export const CORE_H01 = 0.96;
+
+export function isHighRegime(s: DpoleState): boolean {
+	return (tipHeight(s) + 1) / 2 > HANDOFF_H01;
+}
+
+/** A crossing only counts as a DELIVERY when it arrives slow enough to
+ * catch. Without this gate a swing episode ended at its first fly-through
+ * — so a policy whirling at 40 rad/s could never even practice the bleed
+ * (every braking attempt was cut short at the next crossing), and the live
+ * stage, which never resets, stayed a propeller forever. */
+export function isCatchable(s: DpoleState): boolean {
+	return Math.abs(s.th1d) + Math.abs(s.th2d) < 6;
+}
+
+export function isDelivery(s: DpoleState): boolean {
+	return isHighRegime(s) && isCatchable(s);
+}
+
+/** Once the balance half has the wheel it keeps it until the tip truly
+ * drops out — a lower bar than the hand-off, so the regimes don't chatter
+ * at the boundary. */
+export const REGIME_OUT_H01 = 0.7;
+
+export function hasDroppedOut(s: DpoleState): boolean {
+	return (tipHeight(s) + 1) / 2 < REGIME_OUT_H01;
+}
+
+/** The terminal prize of a swing episode: it ends the moment the tip
+ * crosses the hand-off height, and this grades WHAT it delivered there.
+ * A slow, catchable arrival is worth an order of magnitude more than a
+ * fly-through — the swing policy is paid for serving the catch, not for
+ * visiting the top. */
+export function deliveryBonus(s: DpoleState): number {
+	const spin = Math.abs(s.th1d) + Math.abs(s.th2d);
+	return 100 / (1 + 0.1 * spin * spin);
+}
+
+/** A ring of states the swing actually delivered at the hand-off height.
+ * Brink episodes replay these, so the balance half practices exactly the
+ * arrivals it will face — not some hand-invented distribution of "tilted
+ * and moving", which turned out to be mostly uncatchable noise that washed
+ * the balance weights out. The curriculum anneals itself: as the swing
+ * learns calmer deliveries, the replayed starts get calmer too. */
+export class DeliveryBuffer {
+	private buf: DpoleState[] = [];
+	private head = 0;
+	constructor(private cap = 256) {}
+	get size(): number {
+		return this.buf.length;
+	}
+	push(s: DpoleState): void {
+		const copy = { ...s };
+		if (this.buf.length < this.cap) this.buf.push(copy);
+		else {
+			this.buf[this.head] = copy;
+			this.head = (this.head + 1) % this.cap;
+		}
+	}
+	sample(rand: Rand): DpoleState | null {
+		if (this.buf.length === 0) return null;
+		return { ...this.buf[Math.floor(rand() * this.buf.length)] };
+	}
+}
+
+/** Blend a state toward standing perfectly still at the top. */
+function scaleToward(s: DpoleState, a: number): DpoleState {
+	return {
+		x: s.x * a,
+		xd: s.xd * a,
+		th1: wrap(s.th1) * a,
+		th1d: s.th1d * a,
+		th2: wrap(s.th2) * a,
+		th2d: s.th2d * a
+	};
+}
+
+/** The whole training recipe in one object: the curriculum mix, the
+ * delivery replay, and — the piece that finally made the catch learnable —
+ * a REVERSE curriculum on the brink. Brink episodes replay delivered
+ * states scaled toward vertical by α; α starts small (well inside the
+ * hold's basin, so the catch succeeds and the gradient says something) and
+ * anneals toward 1 (the raw delivery) only as fast as the success rate
+ * allows. Without it, brink episodes fail wholesale, and a hundred
+ * thousand all-failure episodes teach exactly nothing. */
+/** A tumbling, often over-energized start — the state the live stage
+ * actually lives in after a missed catch. Swing drills that only start at
+ * rest teach a policy that can pump but never bleed: on the live stage one
+ * missed catch then turns into an endless forced propeller, orbiting the
+ * top at 40 rad/s and delivering nothing but fly-throughs. A slice of
+ * swing drills starts mid-tumble instead, so "too much energy — brake,
+ * then arrive slowly" is a practiced move, not a novel emergency. */
+export function tumbleStart(rand: Rand): DpoleState {
+	const u = (m: number) => (rand() * 2 - 1) * m;
+	return {
+		x: u(1.2),
+		xd: u(2),
+		th1: rand() * 2 * Math.PI,
+		th1d: u(8),
+		th2: rand() * 2 * Math.PI,
+		th2d: u(12)
+	};
+}
+
+export class DpoleCurriculum {
+	readonly deliveries = new DeliveryBuffer();
+	/** How much of the raw delivered state the brink replays. */
+	alpha = 0.25;
+	/** Recent brink success rate (caught for 2 s), EMA. */
+	winRate = 0;
+	/** Draw the next episode: pick a start kind, replay + scale for brink,
+	 * record deliveries and successes, adapt α. */
+	next(theta: Float64Array, rand: Rand): DpoleEpisode {
+		const k = drawStart(rand);
+		let start: DpoleState | undefined;
+		if (k === 2) {
+			const d = this.deliveries.sample(rand);
+			// a band of difficulties up to α, not just the frontier — the
+			// easy end keeps refreshing what the hard end builds on
+			if (d) start = scaleToward(d, this.alpha * (0.5 + 0.5 * rand()));
+		} else if (k === 0 && rand() < 0.35) {
+			start = tumbleStart(rand);
+		}
+		const ep = runDpoleEpisode(theta, rand, k, start);
+		// every delivery is catchable by construction (the isDelivery gate)
+		if (ep.delivered) this.deliveries.push(ep.delivered);
+		if (ep.kind === 2 && start) {
+			const win = ep.caught >= 100 ? 1 : 0;
+			this.winRate += 0.05 * (win - this.winRate);
+			if (this.winRate > 0.55 && this.alpha < 1) {
+				this.alpha = Math.min(1, this.alpha + 0.05);
+				this.winRate = 0.35; // re-earn the next notch
+			} else if (this.winRate < 0.08 && this.alpha > 0.25) {
+				// the retreat: when a rough patch wrecks the catch, ease the
+				// starts back toward vertical and rebuild — without this, one
+				// collapse is forever, because all-failure episodes teach
+				// nothing to climb back on
+				this.alpha = Math.max(0.25, this.alpha - 0.05);
+				this.winRate = 0.35;
+			}
+		}
+		return ep;
+	}
+}
+
+/** State → feature vector, written into `out`. THREE dashboards, one
+ * policy, and HARD switches between them by tip height: swing gauges below
+ * the hand-off, catch gauges on the rim (0.82–0.96), hold gauges in the
+ * core. Because no two blocks are ever lit together, their weights train
+ * on disjoint data — three controllers in one rulebook, no fighting over
+ * shared weights. This came the hard way: with swing and balance faded
+ * smoothly into each other, the mid region was a compromise neither skill
+ * owned; with catch and hold sharing one block, every catch lesson was a
+ * hold un-lesson. */
 export function dpoleFeatures(s: DpoleState, out: Float64Array): Float64Array {
+	out.fill(0);
 	const h01 = (tipHeight(s) + 1) / 2;
-	const g = h01 ** 4;
-	out[0] = s.x / X_LIMIT;
-	out[1] = s.xd / 3;
-	out[2] = (1 - g) * Math.sin(s.th1);
-	out[3] = (1 - g) * Math.cos(s.th1);
-	out[4] = ((1 - g) * s.th1d) / 6;
-	out[5] = (1 - g) * Math.sin(s.th2);
-	out[6] = (1 - g) * Math.cos(s.th2);
-	out[7] = ((1 - g) * s.th2d) / 8;
-	out[8] = g * clip1(wrap(s.th1) / TH_LIMIT);
-	out[9] = g * clip1(wrap(s.th2) / TH_LIMIT);
-	out[10] = g * clip1(s.th1d / 1.5);
-	out[11] = g * clip1(s.th2d / 2);
-	// wide copies of the same gauges, clipping at ±45° instead of ±18°:
-	// the catch is decided at 20–40° of tilt, where the fine gauges above
-	// are already pegged and the swing gauges are faded — without these
-	// the policy is nearly blind at exactly the moment that matters
-	out[12] = g * clip1(wrap(s.th1) / (2.5 * TH_LIMIT));
-	out[13] = g * clip1(wrap(s.th2) / (2.5 * TH_LIMIT));
-	out[14] = g * clip1(s.th1d / 3.5);
-	out[15] = g * clip1(s.th2d / 5);
+	if (h01 <= HANDOFF_H01) {
+		// ── the swing dashboard ──
+		out[0] = s.x / X_LIMIT;
+		out[1] = s.xd / 3;
+		out[2] = Math.sin(s.th1);
+		out[3] = Math.cos(s.th1);
+		out[4] = s.th1d / 6;
+		out[5] = Math.sin(s.th2);
+		out[6] = Math.cos(s.th2);
+		out[7] = s.th2d / 8;
+		// the energy gauges. eGap is how far the stack's mechanical energy
+		// is below the top's — the fuel still missing. The pump gauges are
+		// the classical energy-shaping law (push when θ̇·cos θ and the gap
+		// agree) served as ready-made dials: a single positive weight on one
+		// is a swing-up controller. The policy still has to learn that
+		// weight, and the catch — but not to reinvent mechanics from coin
+		// flips.
+		const eGap = clip1((E_TOP - mechanicalEnergy(s)) / E_SPAN);
+		out[8] = eGap;
+		out[9] = clip1(s.th1d * Math.cos(s.th1) * 0.3) * eGap;
+		out[10] = clip1(s.th2d * Math.cos(s.th2) * 0.25) * eGap;
+	} else if (h01 <= CORE_H01) {
+		// ── the catch dashboard: wide gauges (pegged at ±45°), the fold
+		// between the links, and the energy surplus to bleed ──
+		out[11] = s.x / X_LIMIT;
+		out[12] = s.xd / 3;
+		out[13] = clip1(wrap(s.th1) / (2.5 * TH_LIMIT));
+		out[14] = clip1(wrap(s.th2) / (2.5 * TH_LIMIT));
+		out[15] = clip1(s.th1d / 3.5);
+		out[16] = clip1(s.th2d / 5);
+		out[17] = clip1(wrap(s.th1 - s.th2) / (2.5 * TH_LIMIT));
+		out[18] = clip1((mechanicalEnergy(s) - E_TOP) / (0.25 * E_SPAN));
+	} else {
+		// ── the hold dashboard: fine gauges pegged at ±18°, wide ones at
+		// ±45° for the moments a gust (or the reader) tips it ──
+		out[19] = s.x / X_LIMIT;
+		out[20] = s.xd / 3;
+		out[21] = clip1(wrap(s.th1) / TH_LIMIT);
+		out[22] = clip1(wrap(s.th2) / TH_LIMIT);
+		out[23] = clip1(s.th1d / 1.5);
+		out[24] = clip1(s.th2d / 2);
+		out[25] = clip1(wrap(s.th1) / (2.5 * TH_LIMIT));
+		out[26] = clip1(wrap(s.th2) / (2.5 * TH_LIMIT));
+		out[27] = clip1(s.th1d / 3.5);
+		out[28] = clip1(s.th2d / 5);
+	}
 	return out;
 }
 
@@ -319,6 +571,9 @@ export interface DpoleEpisode {
 	ret: number;
 	/** Physics ticks spent caught inside the cones — the real scoreboard. */
 	caught: number;
+	/** The state a swing episode delivered at the hand-off, for the replay
+	 * buffer — null for other kinds or if it never arrived. */
+	delivered: DpoleState | null;
 }
 
 /** Curriculum mix: half the practice is the real journey from hanging;
@@ -329,14 +584,23 @@ export function drawStart(rand: Rand): DpoleStart {
 	return r < 0.5 ? 0 : r < 0.75 ? 1 : 2;
 }
 
-/** Roll one headless episode under the current policy. Hanging and brink
- * starts run the full fixed length — there is nothing to fail, only reward
- * to gather. Balanced starts end at the first fall: their return is
- * survival itself, and letting them run on would bury the balance signal
- * under four hundred steps of chaotic-swing luck. */
-export function runDpoleEpisode(theta: Float64Array, rand: Rand, kind?: DpoleStart): DpoleEpisode {
+/** Roll one headless episode under the current policy. The episode
+ * boundaries ARE the division of labour: a hanging start ends the moment
+ * the tip crosses the hand-off height, collecting the delivery bonus — it
+ * trains only the swing gauges' weights and never grades the catch. Up
+ * and brink starts end when the tip truly drops out — they train only the
+ * balance gauges' weights. Without this cut, the two skills share one
+ * time-indexed baseline, and a lucky fly-through during a swing episode
+ * reinforces whatever random flailing it did up there onto the balance
+ * weights — confident lessons in nonsense. */
+export function runDpoleEpisode(
+	theta: Float64Array,
+	rand: Rand,
+	kind?: DpoleStart,
+	start?: DpoleState
+): DpoleEpisode {
 	const k = kind ?? drawStart(rand);
-	const s = resetDpole(rand, k);
+	const s = start ? { ...start } : resetDpole(rand, k);
 	const feats = new Float64Array(DECISIONS * N_FEATURES);
 	const rewards = new Float64Array(DECISIONS);
 	const actions: number[] = [];
@@ -345,6 +609,7 @@ export function runDpoleEpisode(theta: Float64Array, rand: Rand, kind?: DpoleSta
 	let ret = 0;
 	let caught = 0;
 	let t = 0;
+	let delivered: DpoleState | null = null;
 	while (t < DECISIONS) {
 		dpoleFeatures(s, f);
 		feats.set(f, t * N_FEATURES);
@@ -352,24 +617,32 @@ export function runDpoleEpisode(theta: Float64Array, rand: Rand, kind?: DpoleSta
 		const a = sampleFrom(probs, rand);
 		actions.push(a);
 		let r = 0;
-		for (let k = 0; k < ACTION_REPEAT; k++) {
+		for (let j = 0; j < ACTION_REPEAT; j++) {
 			physicsStep(s, actionForce(a));
 			r += dpoleReward(s) / ACTION_REPEAT;
 			if (isUpright(s)) caught++;
 		}
+		if (k === 0 && isDelivery(s)) {
+			rewards[t] = r + deliveryBonus(s);
+			ret += rewards[t];
+			t++;
+			delivered = { ...s };
+			break;
+		}
 		rewards[t] = r;
 		ret += r;
 		t++;
-		if (k === 1 && !isUpright(s)) break;
+		if (k !== 0 && hasDroppedOut(s)) break;
 	}
-	return { feats, actions, rewards, steps: t, kind: k, ret, caught };
+	return { feats, actions, rewards, steps: t, kind: k, ret, caught, delivered };
 }
 
 export const DPOLE_BASELINE_LR = 0.1;
-/** Gentle weight decay per update: keeps the softmax from saturating, so
- * the policy never stops exploring — REINFORCE's classic failure here is a
- * premature freeze, not a wrong answer. */
-export const DPOLE_DECAY = 1e-3;
+/** Faint weight decay per update — a hedge against runaway logits, and no
+ * more. At 1e-3 it was an eroder: once the baselines converge and the
+ * advantages go quiet, a decay the gradient can't outrun melts a perfected
+ * policy back into mush over tens of thousands of updates. */
+export const DPOLE_DECAY = 1e-4;
 /** Entropy bonus, same purpose from the other side: a small standing
  * reward for staying undecided, so exploration survives the early stretch
  * where every push honestly looks worse than the last. */
@@ -421,7 +694,11 @@ export function dpoleReinforceUpdate(
 			for (let i = 0; i < N_FEATURES; i++) f[i] = ep.feats[t * N_FEATURES + i];
 			forward(theta, f, probs);
 			const a = ep.actions[t];
-			const w = adv[t] / (scale * eps.length);
+			// clamp the whitened advantage: when the curriculum shifts, the
+			// first episodes under the new regime can be many RMS's from the
+			// running baseline, and one unclamped mega-update saturates the
+			// softmax into a wrong answer it never recovers from
+			const w = Math.max(-3, Math.min(3, adv[t] / scale)) / eps.length;
 			// ∇ logits of w·log π(a) + β·H(π): the score-function trick plus
 			// the entropy bonus
 			let hent = 0;

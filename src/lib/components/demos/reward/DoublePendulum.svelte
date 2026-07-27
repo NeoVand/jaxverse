@@ -18,43 +18,52 @@
 		createDpoleBaseline,
 		createDpoleTheta,
 		DECISIONS,
+		deliveryBonus,
 		DPOLE_ACTIONS,
+		DpoleCurriculum,
 		dpoleFeatures,
 		dpolePolicy,
 		dpoleReinforceUpdate,
 		dpoleReward,
+		hasDroppedOut,
+		isDelivery,
 		isUpright,
 		L1,
 		L2,
 		N_FEATURES,
 		physicsStep,
 		resetDpole,
-		runDpoleEpisode,
 		TH_LIMIT,
 		X_LIMIT,
 		type DpoleEpisode,
+		type DpoleStart,
 		type DpoleState
 	} from '$lib/optim-rl/dpole';
 	import { mulberry32 } from '$lib/optim-rl/rng';
 
 	const SEED = 512;
 	const KEEP = 300; // sparkline window
-	const SHOVE_GAIN = 8; // newtons per metre of pointer–hinge separation
-	const SHOVE_MAX = 14; // a trained policy survives a tap, not a haul
+	const SHOVE_GAIN = 10; // newtons per metre of pointer–hinge separation
+	const SHOVE_MAX = 24; // enough to out-muscle the policy's 20 N, barely
 	const SHOVE_HOLD_MS = 180; // a quick click still lands a real push
-	const BURST_MS = 6; // per-frame budget for headless training episodes —
-	const BURST_CAP = 30; // the swing-up needs tens of thousands of them
+	const BURST_MS = 9; // per-frame budget for headless training episodes —
+	const BURST_CAP = 45; // the swing-up needs tens of thousands of them
 
 	// ── the learner: non-reactive, mutated in place ──
 	let theta = createDpoleTheta();
 	let baseline = createDpoleBaseline();
+	let curriculum = new DpoleCurriculum();
 	let rand = mulberry32(SEED);
 	const featBuf = new Float64Array(N_FEATURES);
 	const probBuf = new Float64Array(DPOLE_ACTIONS);
 
 	// The live simulation the canvas shows — begins hanging, like every
-	// honest episode.
+	// honest episode. Its recorded segments switch kind at the hand-off
+	// height, mirroring how headless episodes are cut: swing segments end
+	// at delivery (and bank the delivery bonus), catch segments end when
+	// the tip drops back out.
 	let sim: DpoleState = resetDpole(() => 0.5);
+	let liveKind: DpoleStart = 0;
 	let liveFeats: number[] = [];
 	let liveActions: number[] = [];
 	let liveRewards: number[] = [];
@@ -70,8 +79,9 @@
 	let training = $state(false);
 	let lr = $state(0.15);
 	let episodes = $state(0);
-	let caughtLog = $state<number[]>([]); // ticks caught upright, hanging starts only
+	let caughtLog = $state<number[]>([]); // ticks caught per brink drill
 	let best = $state(0);
+	let alphaPct = $state(25); // catch curriculum: % of the raw delivery replayed
 	let upright = $state(0); // consecutive live ticks inside the cones
 	let canvas: HTMLCanvasElement | undefined = $state();
 
@@ -106,6 +116,7 @@
 	/** Reset the simulation only — back to hanging, weights untouched. */
 	function rest() {
 		sim = resetDpole(rand);
+		liveKind = 0;
 		liveFeats = [];
 		liveActions = [];
 		liveRewards = [];
@@ -115,11 +126,10 @@
 		if (reduced) draw();
 	}
 
-	/** The live episode window closed — while training, it teaches. Your
-	 * shoves are part of the lesson: a disturbance the policy rides out is
-	 * a window with high return, so recovering from you is what gets
-	 * reinforced. */
-	function closeEpisode() {
+	/** A live segment closed — while training, it teaches. Your shoves are
+	 * part of the lesson: a disturbance the policy rides out is a window
+	 * with high return, so recovering from you is what gets reinforced. */
+	function closeSegment(nextKind: DpoleStart) {
 		const steps = liveActions.length;
 		if (training && steps > 0) {
 			const ep: DpoleEpisode = {
@@ -127,13 +137,15 @@
 				actions: liveActions,
 				rewards: Float64Array.from(liveRewards),
 				steps,
-				kind: 0,
+				kind: liveKind,
 				ret: liveRewards.reduce((a, b) => a + b, 0),
-				caught: 0 // unused by the update; the live window has its own counter
+				caught: 0, // unused by the update; the live window has its own counter
+				delivered: null
 			};
 			dpoleReinforceUpdate(theta, baseline, [ep], lr);
 			episodes++;
 		}
+		liveKind = nextKind;
 		liveFeats = [];
 		liveActions = [];
 		liveRewards = [];
@@ -166,8 +178,19 @@
 		liveRewards.push(dpoleReward(sim));
 		upright = isUpright(sim) ? upright + 1 : 0;
 		pushTrail();
-		// the learner grades a full window; the stage never blinks
-		if (liveActions.length >= DECISIONS) closeEpisode();
+		// cut the segment the same way headless episodes are cut — the
+		// stage never blinks, only the ledger turns a page. A fly-through is
+		// not a delivery: the segment (and the whisper reward) carries on
+		// until the stack arrives slowly enough to catch.
+		if (liveKind === 0 && isDelivery(sim)) {
+			liveRewards[liveRewards.length - 1] += deliveryBonus(sim);
+			curriculum.deliveries.push({ ...sim });
+			closeSegment(2);
+		} else if (liveKind === 2 && hasDroppedOut(sim)) {
+			closeSegment(0);
+		} else if (liveActions.length >= DECISIONS) {
+			closeSegment(liveKind);
+		}
 	}
 
 	function pushTrail() {
@@ -177,21 +200,23 @@
 		if (trail.length > 96) trail.splice(0, trail.length - 96);
 	}
 
-	// Batch headless training: one $state reassignment per burst, not per
-	// episode. Only hanging starts land on the sparkline — they are the
-	// real exam; the balanced and brink starts are practice drills.
+	// Batch headless training through the curriculum: one $state
+	// reassignment per burst, not per episode. Only the brink drills land
+	// on the sparkline — "given a delivery, how long did it stay caught" is
+	// the skill being built; the swing's own exam is the delivery counter.
 	function trainBatch(runUntil: (done: number, t0: number) => boolean) {
 		const t0 = performance.now();
 		const fresh: number[] = [];
 		let n = 0;
 		do {
 			const batch: DpoleEpisode[] = [];
-			for (let i = 0; i < 8; i++) batch.push(runDpoleEpisode(theta, rand));
+			for (let i = 0; i < 8; i++) batch.push(curriculum.next(theta, rand));
 			dpoleReinforceUpdate(theta, baseline, batch, lr);
 			n += batch.length;
-			for (const ep of batch) if (ep.kind === 0) fresh.push(ep.caught);
+			for (const ep of batch) if (ep.kind === 2) fresh.push(ep.caught);
 		} while (runUntil(n, t0));
 		episodes += n;
+		alphaPct = Math.round(curriculum.alpha * 100);
 		if (fresh.length) {
 			for (const c of fresh) if (c > best) best = c;
 			caughtLog = [...caughtLog, ...fresh].slice(-KEEP);
@@ -206,10 +231,12 @@
 	function resetTheta() {
 		theta = createDpoleTheta();
 		baseline = createDpoleBaseline();
+		curriculum = new DpoleCurriculum();
 		rand = mulberry32(SEED);
 		episodes = 0;
 		caughtLog = [];
 		best = 0;
+		alphaPct = 25;
 		rest();
 	}
 
@@ -418,7 +445,7 @@
 <Plate
 	n={1}
 	title="The double pendulum swing-up"
-	caption="The links start hanging. Reward is the height of the tip at every tick, plus a hefty bonus for being caught — both links inside the dashed 18° cones — calm and centred; the score never says which push was wrong. Press Train and watch the practice counter spin: first it learns to swing, then to climb, and much later to catch. Shove the hinge (click or drag the stage) any time — the red arrow is you, the blue one is the policy. This is the hardest task in the book: give it a few minutes, and expect the catch to stay brief."
+	caption="The links start hanging. Below the hand-off height the policy is paid once, at the moment it delivers the tip up top slowly enough to catch — a fast fly-through counts for nothing; above the hand-off, every calm tick inside the dashed 18° cones pays rent. Practice is a curriculum: swing drills start hanging or mid-tumble (so bleeding off a botched attempt is a practiced move), the rest rehearse the catch from replayed deliveries, eased toward vertical at first, raw as the success rate earns it (the drill difficulty gauge). Press Train, give it a minute or two, and then shove the hinge — the red arrow is you, the blue one is the policy. Knock it clean over and it will swing back up on its own."
 >
 	{#snippet status()}
 		<span>
@@ -480,13 +507,13 @@
 
 				<div class="flex flex-col gap-4 border-line-soft px-4 py-4 sm:border-l">
 					<div>
-						<span class="eyebrow">ticks caught per episode</span>
+						<span class="eyebrow">ticks caught per drill</span>
 						<svg
 							viewBox="0 0 {SW} {SH}"
 							preserveAspectRatio="none"
 							class="mt-1.5 h-16 w-full"
 							role="img"
-							aria-label="Ticks spent caught upright per hanging-start episode; the 400-tick ceiling is dashed"
+							aria-label="Ticks spent caught upright per catch drill; the 400-tick ceiling is dashed"
 						>
 							<line
 								x1="0"
@@ -507,7 +534,7 @@
 						</div>
 					</div>
 
-					<div class="grid grid-cols-3 gap-2 sm:grid-cols-1">
+					<div class="grid grid-cols-2 gap-2 sm:grid-cols-1">
 						<div>
 							<span class="eyebrow">episodes</span>
 							<div class="num mt-0.5 text-[15px] text-ink">{episodes}</div>
@@ -521,6 +548,12 @@
 						<div>
 							<span class="eyebrow">best</span>
 							<div class="num mt-0.5 text-[15px] text-ink">{best}</div>
+						</div>
+						<div>
+							<span class="eyebrow" title="How much of a raw delivery the catch drills replay">
+								drill difficulty
+							</span>
+							<div class="num mt-0.5 text-[15px] text-ink">{alphaPct}%</div>
 						</div>
 					</div>
 
