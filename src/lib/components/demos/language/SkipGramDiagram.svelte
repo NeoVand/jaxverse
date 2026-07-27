@@ -50,7 +50,7 @@
 
 <figure class="my-8">
 	<svg
-		viewBox="0 0 660 232"
+		viewBox="0 -8 660 240"
 		class="mx-auto block w-full max-w-[760px]"
 		role="img"
 		aria-label="Skip-gram in one picture. Left: in the sentence 'the little dog wagged his tail', a window around the centre word 'dog' marks its neighbors; every centre–neighbor pair is one lesson. Below, the word 'dog' begins as a one-hot column — six hundred slots, a single 1, which says nothing about meaning — and trades it for row 41 of a 600-by-16 embedding table: sixteen learned numbers, the dense vector the plate scatters. Right: the training rule. The dot product of dog's vector with a real neighbor like 'wagged' is pushed through a sigmoid toward 1, pulling the two vectors together; the dot product with a randomly drawn word like 'spoon' is pushed toward 0, pushing those vectors apart. The loss is the surprise at the real neighbor plus the surprise whenever a random word scores."
@@ -91,10 +91,14 @@
 				class:tok-ctx={w.ctx}>{w.t}</text
 			>
 		{/each}
-		<!-- lessons: arcs from the centre to each word inside the window -->
-		{#each [89, 186, 233] as cx (cx)}
+		<!-- lessons: arcs from the centre to each word inside the window; the
+		     farther the target, the taller the arc, so the hop over "wagged"
+		     to "his" clears the shorter curve instead of riding on it -->
+		{#each [{ cx: 89, lift: 12 }, { cx: 186, lift: 12 }, { cx: 233, lift: 24 }] as a (a.cx)}
 			<path
-				d="M 136 {SENT_Y - 15} C 136 {SENT_Y - 27}, {cx} {SENT_Y - 27}, {cx} {SENT_Y - 13}"
+				d="M 136 {SENT_Y - 15} C 136 {SENT_Y - 15 - a.lift}, {a.cx} {SENT_Y -
+					15 -
+					a.lift}, {a.cx} {SENT_Y - 13}"
 				fill="none"
 				stroke="var(--accent)"
 				stroke-width="1"

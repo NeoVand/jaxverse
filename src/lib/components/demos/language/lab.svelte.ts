@@ -1,8 +1,11 @@
-// The shared scribe: one WorkerEngine, one corpus, one training history that
-// three plates of this chapter read. Plate III trains it; the surprise meter
-// and the forward-pass walkthrough interrogate the same weights, so "ask the
-// model you trained" is literal. Module-level so the model survives scrolling;
-// the chapter page calls disposeAll() on unmount — GPU memory is no souvenir.
+// The shared scribe: one training WorkerEngine, one corpus, one training
+// history that three plates of this chapter read. Plate III trains it; the
+// surprise meter and the forward-pass walkthrough interrogate the same
+// weights, so "ask the model you trained" is literal. A second WorkerEngine
+// (the sampler) writes the desk's samples from couriered checkpoints so the
+// loss curve never pauses for them. Module-level so the model survives
+// scrolling; the chapter page calls disposeAll() on unmount — GPU memory is
+// no souvenir.
 
 import { detectWebGPU } from '$lib/nn/engine';
 import { WorkerEngine } from '$lib/llm/worker-engine';
@@ -107,9 +110,18 @@ class ScribeLab {
 
 	/** The vocabulary in force: encode/decode for every plate in the chapter. */
 	private tokenizer: TokenizedCorpus | null = null;
-	/** Set by Plate II when the reader hands over a vocabulary of their own. */
+	/** Set by Plate II when the reader hands over a vocabulary of your own. */
 	private pending: TokenizedCorpus | null = null;
 	private engine: WorkerEngine | null = null;
+	/** The desk's own scribe: a second worker with its own GPU device. Each
+	 * burst the trainer exports a checkpoint (one quick readback) and this
+	 * worker writes the sample from it, so the loss curve never stops for the
+	 * desk — and every sample is exactly the weights of the step it names.
+	 * Until it boots (or if it can't), sampling rides the training worker and
+	 * the loop waits, as it always used to. */
+	private sampler: WorkerEngine | null = null;
+	private samplerReady = false;
+	private samplePromise: Promise<void> | null = null;
 	private bootPromise: Promise<void> | null = null;
 	private initCkpt: ArrayBuffer | null = null;
 	private webgpu: boolean | null = null;
@@ -210,9 +222,13 @@ class ScribeLab {
 			}
 			const stale = this.engine;
 			this.engine = null;
-			// awaited, not fired and forgotten: the old worker must let go of the
-			// GPU device before the new one asks for it (dispose has its own deadline)
+			const staleSampler = this.sampler;
+			this.sampler = null;
+			this.samplerReady = false;
+			// awaited, not fired and forgotten: the old workers must let go of
+			// their GPU devices before the new ones ask (dispose has a deadline)
 			if (stale) await stale.dispose();
+			if (staleSampler) await staleSampler.dispose();
 			if (myGen !== this.gen) return;
 			this.loadNote = 'fetching the story corpus (about 1.5 MB)…';
 			const tok = await guard('the corpus', this.resolveTokenizer());
@@ -253,10 +269,54 @@ class ScribeLab {
 			this.spoke = false;
 			this.phase = 'ready';
 			void this.autoSample(); // the step-0 baseline: uniform noise, on record
+			void this.bootSampler(tok, config, myGen); // the desk's worker, in the background
 		} catch (err) {
 			if (myGen !== this.gen) return;
 			this.errorMsg = err instanceof Error ? err.message : String(err);
 			this.phase = 'error';
+		}
+	}
+
+	/** Boot the sampling worker. Silent on failure: sampling then stays on the
+	 * training worker, which merely brings back the pause it used to cause. */
+	private async bootSampler(tok: TokenizedCorpus, config: ModelConfig, myGen: number) {
+		const s = new WorkerEngine({
+			tokenData: tok.tokens,
+			decode: (ids) => tok.vocab.decode(ids),
+			decodeOne: (id) => tok.vocab.table[id] ?? '',
+			seed: 43,
+			lr: 1.5e-3
+		});
+		try {
+			await guard('the sampler', s.init(config));
+			if (myGen !== this.gen) {
+				void s.dispose();
+				return;
+			}
+			this.sampler = s;
+			this.samplerReady = true;
+		} catch {
+			void s.dispose();
+		}
+	}
+
+	/** Which engine writes the next sample: the sampler, freshly loaded with
+	 * the trainer's current weights (training keeps running), or the training
+	 * worker itself when the sampler is missing (the caller then waits). */
+	private async sampleEngine(): Promise<WorkerEngine | null> {
+		const e = this.engine;
+		const s = this.samplerReady ? this.sampler : null;
+		if (!e || !s) return e;
+		try {
+			const ckpt = await e.exportCheckpoint();
+			await s.loadWeights(ckpt);
+			return s;
+		} catch {
+			// the sampler died mid-courier — retire it and wait inline again
+			this.samplerReady = false;
+			this.sampler = null;
+			void s.dispose();
+			return this.engine;
 		}
 	}
 
@@ -303,7 +363,13 @@ class ScribeLab {
 					this.spoke = true;
 					progress.reach('language:spoke');
 				}
-				await this.autoSample();
+				// With the sampling worker up, the desk writes on its own device
+				// while the next burst runs — the curve never pauses. (The
+				// checkpoint export posts before the next train call, so the
+				// sample is exactly this burst's weights.) Without it, wait, as
+				// the loop always used to.
+				if (this.samplerReady) void this.autoSample();
+				else await this.autoSample();
 			} catch (err) {
 				if (myGen !== this.gen) return;
 				this.playing = false;
@@ -320,6 +386,9 @@ class ScribeLab {
 		if (!e || !this.initCkpt || this.phase === 'loading') return;
 		const wasPlaying = this.playing;
 		await this.pause();
+		// a desk sample may still be in flight on the sampling worker; let it
+		// land (it gets cleared below) rather than have it surface post-reset
+		if (this.samplePromise) await this.samplePromise.catch(() => {});
 		const myGen = this.gen;
 		try {
 			await e.loadWeights(this.initCkpt.slice(0));
@@ -343,9 +412,11 @@ class ScribeLab {
 
 	/** One sample() call yields at most blockSize−1 tokens; chain calls, feeding
 	 * the tail back as prompt, until SAMPLE_CHARS characters exist. */
-	private async sampleChars(promptIds: number[], temperature: number): Promise<string | null> {
-		const e = this.engine;
-		if (!e) return null;
+	private async sampleChars(
+		e: WorkerEngine,
+		promptIds: number[],
+		temperature: number
+	): Promise<string | null> {
 		const myGen = this.gen;
 		let ids = promptIds.slice(-MAX_PROMPT);
 		let out = '';
@@ -372,36 +443,40 @@ class ScribeLab {
 
 	/** The desk's fixed question: same prompt, same temperature, every burst —
 	 * so the only thing that changes between samples is the weights. */
-	private async autoSample(): Promise<void> {
+	private autoSample(): Promise<void> {
 		const c = this.tokenizer?.vocab;
-		if (!c || this.sampling) return;
-		this.sampling = true;
-		const myGen = this.gen;
-		const atStep = this.step;
-		try {
-			const text = await this.sampleChars(c.encode(AUTO_PROMPT), 0.8);
-			if (text === null || myGen !== this.gen) return;
-			this.pushSample({ step: atStep, prompt: AUTO_PROMPT, text, temperature: 0.8, auto: true });
-		} catch {
-			// disposed mid-sample
-		} finally {
-			this.sampling = false;
-		}
+		if (!c || this.sampling) return Promise.resolve();
+		const p = this.writeSample(c, AUTO_PROMPT, 0.8, true);
+		this.samplePromise = p;
+		return p;
 	}
 
-	async sampleNow(promptText: string, temperature: number): Promise<void> {
+	sampleNow(promptText: string, temperature: number): Promise<void> {
 		const c = this.tokenizer?.vocab;
-		if (!c || this.sampling || !this.engine) return;
+		if (!c || this.sampling || !this.engine) return Promise.resolve();
+		const p = this.writeSample(c, promptText, temperature, false);
+		this.samplePromise = p;
+		return p;
+	}
+
+	private async writeSample(
+		c: TokenizedCorpus['vocab'],
+		promptText: string,
+		temperature: number,
+		auto: boolean
+	): Promise<void> {
 		this.sampling = true;
 		const myGen = this.gen;
 		const atStep = this.step;
 		try {
 			let ids = c.encode(promptText).slice(0, MAX_PROMPT);
 			if (ids.length === 0) ids = c.encode(AUTO_PROMPT);
-			const shown = c.decode(ids); // what the model actually read, post-drop
-			const text = await this.sampleChars(ids, temperature);
+			const shown = auto ? promptText : c.decode(ids); // what the model actually read
+			const via = await this.sampleEngine();
+			if (!via || myGen !== this.gen) return;
+			const text = await this.sampleChars(via, ids, temperature);
 			if (text === null || myGen !== this.gen) return;
-			this.pushSample({ step: atStep, prompt: shown, text, temperature, auto: false });
+			this.pushSample({ step: atStep, prompt: shown, text, temperature, auto });
 		} catch {
 			// disposed mid-sample
 		} finally {
@@ -469,6 +544,11 @@ class ScribeLab {
 		const e = this.engine;
 		this.engine = null;
 		if (e) void e.dispose();
+		const s = this.sampler;
+		this.sampler = null;
+		this.samplerReady = false;
+		if (s) void s.dispose();
+		this.samplePromise = null;
 		this.trainPromise = null;
 		this.initCkpt = null;
 		this.tokenizer = null; // the loaders cache; this is just our handle
