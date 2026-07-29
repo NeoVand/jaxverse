@@ -77,11 +77,13 @@ export type DpoleStart = 0 | 1 | 2; // 0 = hanging, 1 = up, 2 = brink
 
 export function resetDpole(rand: Rand, kind: DpoleStart = 0): DpoleState {
 	const u = (m: number) => (rand() * 2 - 1) * m;
-	// balanced starts get real perturbations (±7°, some drift): a hold
-	// taught only from ±2° grips so tightly it never learns recoveries,
-	// and then a delivered catch a few degrees out is beyond its basin
+	// balanced starts get REAL perturbations (up to ~17°, real drift): the
+	// hold's basin is exactly the target the catch must hand into, and a
+	// hold taught only from ±2° grips so tightly that every slightly-off
+	// catch — and every reader shove — is beyond saving. Wide, sloppy
+	// starts here directly buy catch success and shove recovery.
 	if (kind === 1)
-		return { x: u(0.1), xd: u(0.15), th1: u(0.12), th1d: u(0.25), th2: u(0.12), th2d: u(0.35) };
+		return { x: u(0.3), xd: u(0.4), th1: u(0.3), th1d: u(0.8), th2: u(0.3), th2d: u(1.2) };
 	// the brink — but never from here: brink episodes replay real delivered
 	// states (see DeliveryBuffer). This fallback only feeds the curriculum
 	// before the first delivery ever lands.
@@ -251,8 +253,26 @@ export function dpoleReward(s: DpoleState): number {
 		// paid ~1/tick for cruising at top energy, which made *delivering*
 		// (and ending the episode) a pay cut, so the stack learned to swing
 		// forever, beautifully, and never arrive. Down here the delivery
-		// bonus must be the only real income.
-		return 0.1 * h01 + 0.1 * Math.max(0, 1 - eErr) - 0.2 - 0.01 * (Math.abs(s.x) / X_LIMIT);
+		// bonus must be the only real income. The penalties below are the
+		// stability half of the bargain:
+		// — excess spin: free up to the ~10 rad/s an honest pump needs at
+		//   the bottom, then quadratic — a propeller's good-looking flashes
+		//   near the top must never out-earn its cost down here;
+		// — energy surplus: pumping PAST the top's energy is not neutral,
+		//   it is the whirl being wound up — braking must pay immediately;
+		// — the rail's last stretch: leaning on a bumper is not a strategy.
+		const overSpin = Math.max(0, spin - 10);
+		const surplus = Math.max(0, (mechanicalEnergy(s) - E_TOP) / E_SPAN);
+		const edge = Math.max(0, Math.abs(s.x) / X_LIMIT - 0.7);
+		return (
+			0.1 * h01 +
+			0.1 * Math.max(0, 1 - eErr) -
+			0.2 -
+			0.01 * (Math.abs(s.x) / X_LIMIT) -
+			Math.min(0.6, 0.02 * overSpin * overSpin) -
+			0.3 * Math.min(2, surplus) -
+			2 * edge * edge
+		);
 	}
 	// Above the hand-off: height, energy, and a catch bonus sharply peaked
 	// at dead vertical, discounted by calm² — a fast fly-through must be
@@ -278,7 +298,7 @@ export function dpoleReward(s: DpoleState): number {
 export const ACTION_REPEAT = 1;
 export const DECISIONS = MAX_STEPS / ACTION_REPEAT;
 
-export const N_FEATURES = 29;
+export const N_FEATURES = 33;
 // Five graded pushes. The swing-up needs the full ±11 N to pump energy in;
 // the catch needs a whisper — with only full-strength pushes available,
 // every correction at the top overshoots the basin, and the policy learns
@@ -310,9 +330,14 @@ export function isHighRegime(s: DpoleState): boolean {
  * catch. Without this gate a swing episode ended at its first fly-through
  * — so a policy whirling at 40 rad/s could never even practice the bleed
  * (every braking attempt was cut short at the next crossing), and the live
- * stage, which never resets, stayed a propeller forever. */
+ * stage, which never resets, stayed a propeller forever. The threshold is
+ * strict on purpose, and tuned by trial: at 6 rad/s the median arrival was
+ * caught one in ten. Tightening below 4 backfires — the swing never
+ * DISCOVERS deliveries that slow (0/100 at 2.5, seed-dependent failure at
+ * 3), so nothing downstream trains at all. Four is the workable gate:
+ * the swing brakes to ~3.7 rad/s and still finds the bonus reliably. */
 export function isCatchable(s: DpoleState): boolean {
-	return Math.abs(s.th1d) + Math.abs(s.th2d) < 6;
+	return Math.abs(s.th1d) + Math.abs(s.th2d) < 4;
 }
 
 export function isDelivery(s: DpoleState): boolean {
@@ -330,12 +355,41 @@ export function hasDroppedOut(s: DpoleState): boolean {
 
 /** The terminal prize of a swing episode: it ends the moment the tip
  * crosses the hand-off height, and this grades WHAT it delivered there.
- * A slow, catchable arrival is worth an order of magnitude more than a
- * fly-through — the swing policy is paid for serving the catch, not for
- * visiting the top. */
+ * Three factors, all learned the hard way. Spin: a slow arrival is worth
+ * an order of magnitude more than a fly-through. Lean: the tip-height gate
+ * alone admits states with the links folded 40–60° off vertical — a CEM
+ * planner with perfect knowledge and continuous force could catch only
+ * 7 of 30 such "deliveries", so paying full price for them trained the
+ * swing to produce garbage the catch could never redeem. Rail room: an
+ * arrival at the bumper leaves the cart nowhere to run under the stack;
+ * this factor is also what finally made camping at the rail ends a losing
+ * strategy rather than a quirk. */
 export function deliveryBonus(s: DpoleState): number {
 	const spin = Math.abs(s.th1d) + Math.abs(s.th2d);
-	return 100 / (1 + 0.1 * spin * spin);
+	const lean = Math.abs(wrap(s.th1)) + Math.abs(wrap(s.th2));
+	const room = 1 - Math.abs(s.x) / X_LIMIT;
+	const upFactor = 1 / (1 + 2 * lean * lean);
+	const railFactor = 0.25 + 0.75 * Math.min(1, room / 0.5);
+	// The grade is floored, and the floor is load-bearing: ungated, a
+	// folded wall-hugging arrival paid ~6 % of full price — for lucky RNG
+	// streams that's a fine gradient toward cleaner arrivals, but unlucky
+	// streams never earn enough from their first sloppy deliveries to learn
+	// that delivering pays AT ALL (measured: seed 512 learned the swing,
+	// seed 513 sat at 0/100 forever). With the floor, any delivery is worth
+	// a real prize and a clean one is worth ~6× more.
+	return (100 / (1 + 0.1 * spin * spin)) * Math.max(0.15, upFactor * railFactor);
+}
+
+/** Is a delivered state worth REPLAYING for brink drills? Stricter than
+ * the delivery gate itself: the gate must stay loose so hanging drills can
+ * still discover the bonus, but the replay buffer must not be poisoned by
+ * folded or wall-pinned arrivals that no controller can catch (see
+ * deliveryBonus). Training the catch on uncatchable starts caps the brink
+ * win rate and freezes the α anneal — that, measured, was the whole
+ * "stuck at one-in-ten catches" plateau. */
+export function isPrimeDelivery(s: DpoleState): boolean {
+	const lean = Math.abs(wrap(s.th1)) + Math.abs(wrap(s.th2));
+	return lean < 0.9 && Math.abs(s.x) < 0.6 * X_LIMIT;
 }
 
 /** A ring of states the swing actually delivered at the hand-off height.
@@ -424,8 +478,9 @@ export class DpoleCurriculum {
 			start = tumbleStart(rand);
 		}
 		const ep = runDpoleEpisode(theta, rand, k, start);
-		// every delivery is catchable by construction (the isDelivery gate)
-		if (ep.delivered) this.deliveries.push(ep.delivered);
+		// replay only prime deliveries — the rest are graded (poorly) by the
+		// bonus but must not become the catch's training diet
+		if (ep.delivered && isPrimeDelivery(ep.delivered)) this.deliveries.push(ep.delivered);
 		if (ep.kind === 2 && start) {
 			const win = ep.caught >= 100 ? 1 : 0;
 			this.winRate += 0.05 * (win - this.winRate);
@@ -489,19 +544,30 @@ export function dpoleFeatures(s: DpoleState, out: Float64Array): Float64Array {
 		out[16] = clip1(s.th2d / 5);
 		out[17] = clip1(wrap(s.th1 - s.th2) / (2.5 * TH_LIMIT));
 		out[18] = clip1((mechanicalEnergy(s) - E_TOP) / (0.25 * E_SPAN));
+		// cross gauges — angle × its own rate — because the catch is the one
+		// moment a linear read isn't enough: leaning 20° falling IN and
+		// leaning 20° falling OUT need opposite pushes, and no weighting of
+		// separate angle and rate dials can tell them apart. A product dial
+		// can: this is a quadratic controller exactly (and only) where the
+		// job is hardest. Measured, these took the catch-per-delivery from
+		// roughly one in four to one in two.
+		out[19] = clip1(wrap(s.th1) * s.th1d * 1.2);
+		out[20] = clip1(wrap(s.th2) * s.th2d * 0.8);
+		out[21] = clip1(wrap(s.th1 - s.th2) * (s.th1d - s.th2d) * 0.8);
+		out[22] = clip1(s.xd * wrap(s.th1) * 1.5);
 	} else {
 		// ── the hold dashboard: fine gauges pegged at ±18°, wide ones at
 		// ±45° for the moments a gust (or the reader) tips it ──
-		out[19] = s.x / X_LIMIT;
-		out[20] = s.xd / 3;
-		out[21] = clip1(wrap(s.th1) / TH_LIMIT);
-		out[22] = clip1(wrap(s.th2) / TH_LIMIT);
-		out[23] = clip1(s.th1d / 1.5);
-		out[24] = clip1(s.th2d / 2);
-		out[25] = clip1(wrap(s.th1) / (2.5 * TH_LIMIT));
-		out[26] = clip1(wrap(s.th2) / (2.5 * TH_LIMIT));
-		out[27] = clip1(s.th1d / 3.5);
-		out[28] = clip1(s.th2d / 5);
+		out[23] = s.x / X_LIMIT;
+		out[24] = s.xd / 3;
+		out[25] = clip1(wrap(s.th1) / TH_LIMIT);
+		out[26] = clip1(wrap(s.th2) / TH_LIMIT);
+		out[27] = clip1(s.th1d / 1.5);
+		out[28] = clip1(s.th2d / 2);
+		out[29] = clip1(wrap(s.th1) / (2.5 * TH_LIMIT));
+		out[30] = clip1(wrap(s.th2) / (2.5 * TH_LIMIT));
+		out[31] = clip1(s.th1d / 3.5);
+		out[32] = clip1(s.th2d / 5);
 	}
 	return out;
 }

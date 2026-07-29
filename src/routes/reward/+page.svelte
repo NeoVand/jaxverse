@@ -86,19 +86,25 @@
 			gauges below (including the stack's mechanical energy — the fuel gap to the top), catch gauges
 			on the rim, hold gauges at the summit. Five pushes are available, hard or gentle, left or
 			right, or nothing, fifty times a second. The reward splits at the same height: down low the
-			policy is paid once, at the moment it <em>delivers</em> the tip past the hand-off slowly
-			enough to catch — a whirling fly-through counts for nothing, which is exactly what stops the
-			policy from discovering that spinning like a propeller skims reward without ever standing; up
-			high, every calm tick inside the cones pays rent, and spin is taxed. Nothing ever fails and
-			nothing resets: an episode is graded and moved past. One honest confession about the practice
-			regime: half the headless practice swings up — from hanging, or from mid-tumble, so that
-			braking a botched attempt back down into a clean swing is a practiced move — a quarter starts
-			balanced (to learn the hold), and a quarter <em>replays the swing's own deliveries</em> — first
-			eased toward vertical, then raw, as fast as the success rate earns it. That reverse curriculum is
-			what makes the catch learnable at all: practicing only what you already almost can is how the gradient
-			stays informative. Below, that policy starts as a coin flip. Press Train, watch it discover swinging,
-			then delivering, then the catch. Shove the hinge any time: click or drag on the stage — knock it
-			clean over and it will swing back up.
+			policy is paid once, at the moment it <em>delivers</em> the tip past the hand-off — and the
+			prize is graded on exactly what a catcher would ask for: arriving slowly, links near vertical,
+			cart clear of the rail's ends. A whirling fly-through, a folded-up lunge, an arrival pinned
+			against a bumper — each earns a fraction of what a clean hand-off pays. Down low the meter
+			also runs the other way: spin beyond what an honest pump needs is fined, carrying
+			<em>more</em>
+			energy than the top requires is fined (that surplus is the propeller being wound up), and the rail's
+			last stretch is expensive to loiter in. Up high, every calm tick inside the cones pays rent, and
+			spin is taxed. Together these are the answer to the obvious cheat — a policy that spins the stack
+			like a propeller <em>looks</em> upright twice per revolution, and without the fines it happily
+			farms those moments forever. Nothing ever fails and nothing resets: an episode is graded and
+			moved past. One honest confession about the practice regime: half the headless practice swings
+			up — from hanging, or from mid-tumble, so that braking a botched attempt back down into a
+			clean swing is a practiced move — a quarter starts balanced (to learn the hold), and a quarter
+			<em>replays the swing's own deliveries</em> — first eased toward vertical, then raw, as fast as
+			the success rate earns it. That reverse curriculum is what makes the catch learnable at all: practicing
+			only what you already almost can is how the gradient stays informative. Below, that policy starts
+			as a coin flip. Press Train, watch it discover swinging, then delivering, then the catch. Shove
+			the hinge any time: click or drag on the stage — knock it clean over and it will swing back up.
 		</p>
 	</Prose>
 
@@ -114,8 +120,8 @@
 			Reading the recovery
 		</h2>
 		<p>
-			What changed between the flailing policy and the one that climbs? A hundred and forty-five
-			numbers — the weights on twenty-nine gauges for five pushes — nudged by REINFORCE after every
+			What changed between the flailing policy and the one that climbs? A hundred and sixty-five
+			numbers — the weights on thirty-three gauges for five pushes — nudged by REINFORCE after every
 			episode. Each push is judged by the return that followed it, minus a <em>baseline</em>: the
 			running average of how episodes usually go from that moment. The difference is called the
 			<em>advantage</em>, and it makes "good" mean <em>better than usual</em> — a push followed by
