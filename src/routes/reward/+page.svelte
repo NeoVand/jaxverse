@@ -4,6 +4,7 @@
 	import Math from '$lib/components/ui/Math.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import Wide from '$lib/components/ui/Wide.svelte';
+	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import DoublePendulum from '$lib/components/demos/reward/DoublePendulum.svelte';
 	import Gridworld from '$lib/components/demos/reward/Gridworld.svelte';
 	import RlLoopDiagram from '$lib/components/demos/reward/RlLoopDiagram.svelte';
@@ -79,32 +80,32 @@
 			Now the testbed — the classic cart-and-pole made meaner twice over: a hinge sliding on a short
 			rail, <em>two</em> pendulum links stacked on top of it, and the stack starting where gravity
 			wants it — hanging straight down. The policy must learn to <em>swing it up</em>: pump energy
-			in with rhythmic pushes, steer the top link <em>through</em> the bottom one (the hinge is all
-			it can touch), and then catch the whole thing upright, where the ±18° cones are. The state is
-			six numbers — hinge position and velocity, two angles and their velocities — read through
-			hand-crafted gauges arranged as three dashboards that switch with the tip's height: swing
-			gauges below (including the stack's mechanical energy — the fuel gap to the top), catch gauges
-			on the rim, hold gauges at the summit. Five pushes are available, hard or gentle, left or
-			right, or nothing, fifty times a second. The reward splits at the same height: down low the
-			policy is paid once, at the moment it <em>delivers</em> the tip past the hand-off — and the
-			prize is graded on exactly what a catcher would ask for: arriving slowly, links near vertical,
-			cart clear of the rail's ends. A whirling fly-through, a folded-up lunge, an arrival pinned
-			against a bumper — each earns a fraction of what a clean hand-off pays. Down low the meter
-			also runs the other way: spin beyond what an honest pump needs is fined, carrying
-			<em>more</em>
-			energy than the top requires is fined (that surplus is the propeller being wound up), and the rail's
-			last stretch is expensive to loiter in. Up high, every calm tick inside the cones pays rent, and
-			spin is taxed. Together these are the answer to the obvious cheat — a policy that spins the stack
-			like a propeller <em>looks</em> upright twice per revolution, and without the fines it happily
-			farms those moments forever. Nothing ever fails and nothing resets: an episode is graded and
-			moved past. One honest confession about the practice regime: half the headless practice swings
-			up — from hanging, or from mid-tumble, so that braking a botched attempt back down into a
-			clean swing is a practiced move — a quarter starts balanced (to learn the hold), and a quarter
-			<em>replays the swing's own deliveries</em> — first eased toward vertical, then raw, as fast as
-			the success rate earns it. That reverse curriculum is what makes the catch learnable at all: practicing
-			only what you already almost can is how the gradient stays informative. Below, that policy starts
-			as a coin flip. Press Train, watch it discover swinging, then delivering, then the catch. Shove
-			the hinge any time: click or drag on the stage — knock it clean over and it will swing back up.
+			in with rhythmic pushes, steer the top link <em>through</em> the bottom one (the hinge is all it
+			can touch), and then catch the whole thing upright, inside the ±18° cones. It reads six numbers
+			— hinge position and velocity, two angles and their velocities — through hand-crafted gauges arranged
+			as three dashboards that switch with the tip's height: swing gauges below, catch gauges on the rim,
+			hold gauges at the summit. Five pushes are available, hard or gentle, left or right, or nothing,
+			fifty times a second.
+		</p>
+		<p>
+			The reward splits at the same height, and its shape is the answer to the obvious cheat. Down
+			low the policy is paid once, at the moment it <em>delivers</em> the tip past the hand-off, and
+			the prize is graded on exactly what a catcher would ask for: arrive slowly, links near
+			vertical, cart clear of the rail's ends. Up high, every calm tick inside the cones pays rent.
+			Everything else is fines — spin beyond what an honest pump needs, energy beyond what the top
+			requires, loitering against a bumper — because a stack spun like a propeller <em>looks</em>
+			upright twice per revolution, and without the fines a policy happily farms those moments forever.
+			Nothing ever fails and nothing resets: an episode is graded and moved past.
+		</p>
+		<p>
+			One honest confession about the practice regime. Half the headless practice swings up — from
+			hanging, or from mid-tumble, so that braking a botched attempt back into a clean swing is a
+			practiced move — a quarter starts balanced to learn the hold, and a quarter
+			<em>replays the swing's own deliveries</em>, eased toward vertical at first, raw as the
+			success rate earns it. That reverse curriculum is what makes the catch learnable at all:
+			practicing what you already almost can is how the gradient stays informative. Below, the
+			policy starts as a coin flip. Press Train, watch it discover swinging, then delivering, then
+			the catch — and shove the hinge any time; knock it clean over and it will swing back up.
 		</p>
 	</Prose>
 
@@ -114,8 +115,8 @@
 
 	<Prose>
 		<h2
-			class="mt-12 mb-3 tracking-tight"
-			style="font-size: 1.55rem; line-height: 1.25; font-weight: 520; font-variation-settings: 'opsz' 28;"
+			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
 		>
 			Reading the recovery
 		</h2>
@@ -165,8 +166,8 @@
 
 	<Prose>
 		<h2
-			class="mt-12 mb-3 tracking-tight"
-			style="font-size: 1.55rem; line-height: 1.25; font-weight: 520; font-variation-settings: 'opsz' 28;"
+			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
 		>
 			Reading the river
 		</h2>
@@ -200,8 +201,8 @@
 		</p>
 
 		<h2
-			class="mt-12 mb-3 tracking-tight"
-			style="font-size: 1.55rem; line-height: 1.25; font-weight: 520; font-variation-settings: 'opsz' 28;"
+			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
 		>
 			The same move, one more time
 		</h2>
@@ -227,4 +228,8 @@
 			<a href={resolve('/rook')}>Meet Rook</a>.
 		</p>
 	</Prose>
+
+	<Wide>
+		<UnderTheHood slug="reward" />
+	</Wide>
 </ChapterShell>

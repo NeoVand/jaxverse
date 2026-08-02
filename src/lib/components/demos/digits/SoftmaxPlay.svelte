@@ -11,10 +11,11 @@
 	import { themePulse, watchTheme } from './digits-context.svelte';
 
 	interface Props {
+		n?: number;
 		title: string;
 		caption?: string;
 	}
-	let { title, caption }: Props = $props();
+	let { n, title, caption }: Props = $props();
 
 	// ten scores by default — one per digit class, the case this chapter needs
 	let count = $state(10);
@@ -276,7 +277,7 @@
 	}
 </script>
 
-<Plate {title} {caption}>
+<Plate {n} {title} {caption}>
 	{#snippet status()}
 		<span>top {(topProb * 100).toFixed(1)}%</span>
 		<span aria-hidden="true">·</span>

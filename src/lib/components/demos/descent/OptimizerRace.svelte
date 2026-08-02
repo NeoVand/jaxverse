@@ -681,7 +681,7 @@
 <Plate
 	n={1}
 	title="The descent race"
-	caption="Click anywhere to drop the walkers there. Try the saddle's ridge and watch who escapes; raise γ until Adam overshoots. Flip to 3-D and drag to see the terrain the contours were hiding."
+	caption="Four walkers, one landscape, the same gradient at every point — only the rule for taking the step differs. Click anywhere to drop them there together: on the saddle's ridge, plain descent stalls where the ground flattens, momentum coasts through on stored velocity, and Adam's per-coordinate stride shrugs the geometry off. Raise γ until somebody overshoots; flip to 3-D and drag to see the terrain the contours were hiding."
 >
 	{#snippet status()}
 		<span>t = {t} · γ = {fmtGamma(gamma)}</span>

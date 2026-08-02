@@ -4,6 +4,7 @@
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import Wide from '$lib/components/ui/Wide.svelte';
+	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
 	import AttentionDiagram from '$lib/components/demos/language/AttentionDiagram.svelte';
 	import NextTokenGame from '$lib/components/demos/language/NextTokenGame.svelte';
@@ -149,8 +150,8 @@
 
 	<Prose>
 		<h2
-			class="mt-4 font-serif text-[1.55rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 32;"
+			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
 		>
 			The game itself
 		</h2>
@@ -208,8 +209,8 @@
 
 	<Prose>
 		<h2
-			class="mt-4 font-serif text-[1.55rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 32;"
+			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
 		>
 			From noise to grammar
 		</h2>
@@ -267,8 +268,8 @@
 
 	<Prose>
 		<h2
-			class="mt-4 font-serif text-[1.55rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 32;"
+			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
 		>
 			Inside one guess
 		</h2>
@@ -351,8 +352,8 @@
 
 	<Prose>
 		<h2
-			class="mt-4 font-serif text-[1.55rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 32;"
+			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
 		>
 			The same game, a billionfold
 		</h2>
@@ -381,4 +382,8 @@
 			<a href={resolve('/reward')}>the next chapter</a>.
 		</p>
 	</Prose>
+
+	<Wide>
+		<UnderTheHood slug="language" />
+	</Wide>
 </ChapterShell>

@@ -2,6 +2,7 @@
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import Wide from '$lib/components/ui/Wide.svelte';
+	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import Gallery from '$lib/components/demos/digits/Gallery.svelte';
@@ -16,9 +17,10 @@
 <ChapterShell slug="digits">
 	<Prose>
 		<p>
-			Every experiment in this book so far has been <em>supervised learning</em>, and we never
-			stopped to say its name. Here is the whole recipe, stated plainly. Collect a dataset of paired
-			examples — questions with their answers already attached:
+			Two chapters ago you fit a curve through points; in the last one you bent space until two
+			tangled classes came apart. Both were the same ritual, and the ritual has a name we never
+			stopped to say: <em>supervised learning</em>. Here is the whole recipe. Collect a dataset of
+			paired examples — questions with their answers already attached:
 		</p>
 		<Math display tex={'\\mathcal{D} \\;=\\; \\{(x^{(i)},\\, y^{(i)})\\}_{i=1}^{N}'} />
 		<p>
@@ -48,7 +50,7 @@
 		<Plate
 			n={1}
 			title="The dataset"
-			caption="A random page from the training set — ten thousand of these ride with this chapter, each a 28 × 28 grid of gray written by a different hand."
+			caption="A random page from the training set — ten thousand of these ride with this chapter, each a 28 × 28 grid of gray written by a different hand. Reshuffle a few times and the difficulty announces itself: 4s that could be 9s, 3s a squint away from 5s, 1s with and without a foot. Whatever rule tells them apart, nobody will get to write it down — it will have to be learned."
 		>
 			<Gallery />
 		</Plate>
@@ -84,6 +86,7 @@
 
 	<Wide>
 		<SoftmaxPlay
+			n={2}
 			title="The softmax, by hand"
 			caption="Above: the raw scores, positive up and negative down, with the shape of their distribution beside them. Below: what the softmax makes of them. Move any dial and every probability shifts — belief is a budget of exactly one, spent by comparison. The temperature τ rescales the scores first: below one it exaggerates their differences; above one it shrugs them off. With a handful of scores you can also drag a bar to set it by hand."
 		/>
@@ -136,7 +139,7 @@
 	<Wide>
 		<div id="plate-classifier">
 			<Classifier
-				n={2}
+				n={3}
 				title="The classifier"
 				caption="Sixteen digits from the test set — the model never trains on them. Under each, ten bars: its whole belief, one per class. Then the reading, green when right and red when wrong, and beside it the surprise −log p that cross-entropy charges for it. Untrained, the bars are flat and every surprise sits near 2.30; train, and watch the beliefs spike as the readings correct themselves. Random draws a fresh sixteen, but the other two buttons rank the whole test set by the probability it gives the right answer and show you an end of it: Surest for the digits it has no trouble with, Hardest for the ones it gets confidently, expensively wrong. The right column is the machine itself: change its depth, its width, or the bend it uses, and it starts over with the new shape."
 			/>
@@ -183,7 +186,7 @@
 
 	<Wide>
 		<Plate
-			n={3}
+			n={4}
 			title="Draw your own"
 			caption="A 3 is waiting on the pad; wipe it with the eraser and draw your own. The ring is your brush, and the slider on the left fattens or thins it. On the right, the same two charts as the softmax plate above, now fed by your stroke: ten raw scores over a zero rule, and the belief they become. The evidence square is the gradient of the winning score with respect to each pixel — warm pixels argued for the verdict, blue pixels argued against it, so you can see which parts of your stroke the model leaned on."
 		>
@@ -213,7 +216,7 @@
 
 	<Wide>
 		<Plate
-			n={4}
+			n={5}
 			title="Inside the machine"
 			caption="Left: an explorer over every learned layer, with two ways to look at a unit. Weights draws what it is made of — a first-layer unit owns 784 incoming weights, one per pixel, so it simply is an image, and a deeper unit is carried back to pixel space by multiplying out the matrices behind it, its linear shadow. Excites it drops the algebra and asks the test set: the two dozen digits that drive the unit hardest, averaged. Walk out to the readout in that view and the ten class templates come back as ten clean digits — the machine's idea of each name. Right: the confusion matrix over all 2,000 test digits, rows truth and columns its reading. Hover any cell to open the digits it actually got that way; the heaviest are usually 4 read as 9 and 3 read as 5, mistakes of shared shape."
 		>
@@ -246,4 +249,8 @@
 			with no labels at all — and a map of handwriting appears on its own.
 		</p>
 	</Prose>
+
+	<Wide>
+		<UnderTheHood slug="digits" />
+	</Wide>
 </ChapterShell>

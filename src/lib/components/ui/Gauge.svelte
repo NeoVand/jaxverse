@@ -4,7 +4,7 @@
 		label: string;
 		/** 0..1, or null before the first measurement. */
 		value: number | null;
-		tone?: 'accent' | 'warm' | 'good';
+		tone?: 'accent' | 'warm' | 'good' | 'muted';
 		/** Optional dimmed annotation after the percentage. */
 		detail?: string;
 	}
@@ -12,7 +12,13 @@
 	let { label, value, tone = 'accent', detail }: Props = $props();
 
 	const toneColor = $derived(
-		tone === 'warm' ? 'var(--warm)' : tone === 'good' ? 'var(--good)' : 'var(--accent)'
+		tone === 'warm'
+			? 'var(--warm)'
+			: tone === 'good'
+				? 'var(--good)'
+				: tone === 'muted'
+					? 'var(--ink-3)'
+					: 'var(--accent)'
 	);
 	const pct = $derived(value === null ? 0 : Math.max(0, Math.min(1, value)) * 100);
 </script>

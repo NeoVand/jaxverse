@@ -16,9 +16,10 @@
 		type BoardSnap,
 		type PlyMark
 	} from './chess-eval';
-	import Gauge from './Gauge.svelte';
+	import Gauge from '$lib/components/ui/Gauge.svelte';
 	import MiniBoard from './MiniBoard.svelte';
 	import BootRow from './BootRow.svelte';
+	import { sparkPath } from '$lib/viz/spark';
 
 	interface GameView {
 		snaps: BoardSnap[];
@@ -32,6 +33,9 @@
 	let valNow = $state<number | null>(null);
 	let legalNow = $state<number | null>(null);
 	let games = $state<GameView[]>([]);
+	/** Live-training histories for the telemetry strip; cleared on rewind. */
+	let lossHist = $state<number[]>([]);
+	let valHist = $state<number[]>([]);
 
 	const waypoints = $derived(lab.manifest?.waypoints ?? []);
 	const atWaypoint = $derived(lab.liveSteps === 0 && lab.stage === 'pretrained');
@@ -55,6 +59,7 @@
 			const v = await lab.valLossOn('random');
 			if (myGen !== lab.gen) return;
 			valNow = v;
+			valHist = [...valHist.slice(-199), v];
 			// the same measurement the manifest recorded per waypoint: argmax
 			// next move from 32 fixed real positions, judged by chess.js
 			const rate = await lab.probeLegal(myGen);
@@ -84,6 +89,9 @@
 		valNow = null;
 		legalNow = null;
 		games = [];
+		// the curves described weights that no longer exist — start them over
+		lossHist = [];
+		valHist = [];
 		await evalNow(lab.gen);
 	}
 
@@ -104,6 +112,7 @@
 			await lab.trainChunk(chunkSize, (m) => {
 				lab.liveSteps = m.step;
 				lossNow = m.loss;
+				lossHist = [...lossHist.slice(-399), m.loss];
 				msPerStep = msPerStep ? msPerStep * 0.7 + m.stepMs * 0.3 : m.stepMs;
 			});
 			if (g !== lab.gen || !running) break;
@@ -123,8 +132,21 @@
 		{#if lab.phase === 'ready'}
 			<span>
 				{lab.weightsLabel} · val {valNow === null ? '—' : valNow.toFixed(2)}
+				{#if running && Number.isFinite(lossNow)}
+					· loss {lossNow.toFixed(2)} · {msPerStep.toFixed(0)} ms/step{/if}
 				{#if evaling}· sampling…{:else if running}· training{/if}
 			</span>
+		{/if}
+	{/snippet}
+	{#snippet actions()}
+		{#if lab.phase === 'ready'}
+			<Btn onclick={() => void toggleTrain()}>
+				{#if running}
+					<Pause size={12} aria-hidden="true" /> Pause
+				{:else}
+					<Play size={12} aria-hidden="true" /> Train
+				{/if}
+			</Btn>
 		{/if}
 	{/snippet}
 
@@ -143,20 +165,6 @@
 							step {wp.step} · {Math.round(wp.legalRate * 100)}%
 						</button>
 					{/each}
-				</span>
-				<span class="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2">
-					{#if running}
-						<span class="num text-[11.5px] text-ink-3">
-							loss {Number.isFinite(lossNow) ? lossNow.toFixed(2) : '—'} · {msPerStep.toFixed(0)} ms/step
-						</span>
-					{/if}
-					<Btn onclick={() => void toggleTrain()}>
-						{#if running}
-							<Pause size={12} aria-hidden="true" /> Pause
-						{:else}
-							<Play size={12} aria-hidden="true" /> Train live from here
-						{/if}
-					</Btn>
 				</span>
 			</div>
 
@@ -215,6 +223,57 @@
 					{/if}
 				</div>
 			</div>
+
+			{#if lossHist.length > 1 || valHist.length > 1}
+				<!-- slim telemetry strip: the live loss and the held-out check -->
+				<div
+					class="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-line-soft px-4 py-2"
+				>
+					<span class="flex min-w-40 flex-1 items-center gap-1.5">
+						<span class="eyebrow shrink-0 text-[9.5px]" style="color: var(--accent);">
+							loss · train
+						</span>
+						<svg
+							viewBox="0 0 200 22"
+							preserveAspectRatio="none"
+							class="block h-[22px] w-full"
+							role="img"
+							aria-label="training loss over steps"
+						>
+							<path
+								d={sparkPath(lossHist, 200, 22, { log: true })}
+								fill="none"
+								stroke="var(--accent)"
+								stroke-width="1.4"
+								vector-effect="non-scaling-stroke"
+							/>
+						</svg>
+					</span>
+					<span class="flex min-w-40 flex-1 items-center gap-1.5">
+						<span class="eyebrow shrink-0 text-[9.5px]" style="color: var(--warm);">
+							loss · held out
+						</span>
+						<svg
+							viewBox="0 0 200 22"
+							preserveAspectRatio="none"
+							class="block h-[22px] w-full"
+							role="img"
+							aria-label="validation loss over evaluations"
+						>
+							<path
+								d={sparkPath(valHist, 200, 22, { log: true })}
+								fill="none"
+								stroke="var(--warm)"
+								stroke-width="1.4"
+								vector-effect="non-scaling-stroke"
+							/>
+						</svg>
+					</span>
+					<span class="num text-[10.5px] whitespace-nowrap text-ink-3">
+						{#if msPerStep > 0}{msPerStep.toFixed(0)} ms/step{/if}
+					</span>
+				</div>
+			{/if}
 		{:else}
 			<BootRow />
 		{/if}

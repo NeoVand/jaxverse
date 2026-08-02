@@ -13,7 +13,7 @@
 	import { lab } from './rook-context.svelte';
 	import { loadChess, type ChessGame } from './chess-eval';
 	import Board from './Board.svelte';
-	import Gauge from './Gauge.svelte';
+	import Gauge from '$lib/components/ui/Gauge.svelte';
 	import BootRow from './BootRow.svelte';
 
 	// chess.js isn't reactive; the template keys off the fen mirror. $state.raw
@@ -224,6 +224,11 @@
 				</span>
 			{/if}
 		{/snippet}
+		{#snippet actions()}
+			{#if lab.phase === 'ready' && boardReady}
+				<Btn onclick={resetGame}><RotateCcw size={12} aria-hidden="true" /> New game</Btn>
+			{/if}
+		{/snippet}
 
 		<div use:inview={() => void lab.power()}>
 			{#if lab.phase === 'ready' && boardReady}
@@ -235,7 +240,6 @@
 							<Board {chess} {fen} {selected} {lastMove} {hoverSq} onTap={tap} />
 						</div>
 						<div class="mt-2.5 flex min-h-7 flex-wrap items-center gap-3">
-							<Btn onclick={resetGame}><RotateCcw size={12} aria-hidden="true" /> New game</Btn>
 							{#if thinking}
 								<span class="eyebrow">Rook is thinking…</span>
 							{:else if outcome}

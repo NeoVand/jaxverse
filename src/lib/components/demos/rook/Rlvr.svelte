@@ -213,30 +213,28 @@
 	{#snippet status()}
 		{#if lab.phase === 'ready'}
 			<span>
-				iter {iter} · updates {updates} · skips {skips}
+				G = 8 · iter {iter} · updates {updates} · skips {skips}
 				{#if compiling}· compiling kernels…{:else if running}· running{/if}
 			</span>
+		{/if}
+	{/snippet}
+	{#snippet actions()}
+		{#if lab.phase === 'ready'}
+			<Btn kind="primary" onclick={() => void toggleRun()}>
+				{#if running}
+					<Pause size={12} aria-hidden="true" /> Pause
+				{:else}
+					<Play size={12} aria-hidden="true" /> Run RLVR
+				{/if}
+			</Btn>
 		{/if}
 	{/snippet}
 
 	<div use:inview={() => void lab.power()}>
 		{#if lab.phase === 'ready'}
-			<div class="flex flex-wrap items-center gap-x-5 gap-y-3 border-b border-line-soft px-4 py-3">
-				<Btn kind="primary" onclick={() => void toggleRun()}>
-					{#if running}
-						<Pause size={12} aria-hidden="true" /> Pause
-					{:else}
-						<Play size={12} aria-hidden="true" /> Run RLVR
-					{/if}
-				</Btn>
-				<span class="text-[12.5px] text-ink-3">
-					G = 8 rollouts · ≤14 plies each
-					{#if iter === 0}· the first iteration also compiles two GPU kernels{/if}
-				</span>
-				{#if errMsg}
-					<span class="text-[12px] text-bad">{errMsg}</span>
-				{/if}
-			</div>
+			{#if errMsg}
+				<div class="border-b border-line-soft px-4 py-2 text-[12px] text-bad">{errMsg}</div>
+			{/if}
 
 			<div class="grid grid-cols-1 gap-x-8 gap-y-5 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_230px]">
 				<div class="min-w-0">

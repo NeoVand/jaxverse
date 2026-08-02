@@ -8,7 +8,8 @@
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import { ACTIVATIONS, LATENT_DIMS, lab, layersFor, type Depth } from './latent-context.svelte';
-	import { DIM, TileStrip, logSpan, readTokens, setupCanvas, sparkPath } from './common';
+	import { DIM, TileStrip, readTokens, setupCanvas } from './common';
+	import { sparkPath, sparkSpan } from '$lib/viz/spark';
 
 	interface Props {
 		n: number;
@@ -34,7 +35,7 @@
 
 	const archLabel = $derived(layersFor(lab.latentDim, lab.depth).join(' → '));
 	const DEPTHS: Depth[] = [1, 2, 3];
-	const span = $derived(logSpan([lab.lossHist, lab.valHist]));
+	const span = $derived(sparkSpan([lab.lossHist, lab.valHist]));
 	const fmt = (v: number) => (Number.isFinite(v) ? v.toFixed(4) : '—');
 
 	function pickStrip(): void {
@@ -283,7 +284,12 @@
 						aria-label="reconstruction error on the training rows, log scale"
 					>
 						<path
-							d={sparkPath(lab.lossHist, 200, 22, span[0], span[1])}
+							d={sparkPath(lab.lossHist, 200, 22, {
+								log: true,
+								floor: 1e-6,
+								lo: span[0],
+								hi: span[1]
+							})}
 							fill="none"
 							stroke="var(--accent)"
 							stroke-width="1.4"
@@ -303,7 +309,12 @@
 						aria-label="reconstruction error on the held-out digits, log scale"
 					>
 						<path
-							d={sparkPath(lab.valHist, 200, 22, span[0], span[1])}
+							d={sparkPath(lab.valHist, 200, 22, {
+								log: true,
+								floor: 1e-6,
+								lo: span[0],
+								hi: span[1]
+							})}
 							fill="none"
 							stroke="var(--warm)"
 							stroke-width="1.4"

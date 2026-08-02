@@ -39,11 +39,12 @@
 			</li>
 			<li>
 				<a href="https://jax-js.com" rel="external">jax-js</a> — JAX, reborn in TypeScript on WebGPU;
-				the engine under every live demo here.
+				the engine under every live plate here.
 			</li>
 			<li>
 				Kenneth Li et&nbsp;al., <em>Emergent World Representations</em> (Othello-GPT) and Adam Karvonen’s
-				chess-GPT work — the lineage of Rook’s probe experiment.
+				chess-GPT work — the lineage Rook belongs to: small game-playing transformers that were never
+				shown a board and turn out to carry one anyway.
 			</li>
 		</ul>
 		<p>

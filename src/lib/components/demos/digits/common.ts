@@ -137,26 +137,3 @@ export function divergingImage(
 	}
 	return img;
 }
-
-// ── sparklines ───────────────────────────────────────────────────────────────
-
-/** SVG path for a tiny sparkline; log scale when `logY`. */
-export function sparkPath(vals: number[], w: number, h: number, logY: boolean): string {
-	if (vals.length < 2) return '';
-	let lo = Infinity;
-	let hi = -Infinity;
-	for (const v of vals) {
-		const y = logY ? Math.log(Math.max(v, 1e-4)) : v;
-		lo = Math.min(lo, y);
-		hi = Math.max(hi, y);
-	}
-	if (hi - lo < 1e-9) hi = lo + 1e-9;
-	return vals
-		.map((v, i) => {
-			const yv = logY ? Math.log(Math.max(v, 1e-4)) : v;
-			const x = (i / (vals.length - 1)) * w;
-			const y = h - ((yv - lo) / (hi - lo)) * (h - 4) - 2;
-			return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`;
-		})
-		.join(' ');
-}

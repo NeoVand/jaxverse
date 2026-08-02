@@ -23,3 +23,8 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 # Playwright
 test-results
+
+# Generated lab artifacts (rebuild with: npm run build:labs)
+labs/*/public
+labs/*/node_modules
+/static/labs

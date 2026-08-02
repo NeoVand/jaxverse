@@ -24,6 +24,7 @@
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import Slider from '$lib/components/ui/Slider.svelte';
+	import { sparkPath } from '$lib/viz/spark';
 	import { progress } from '$lib/data/progress.svelte';
 
 	interface Props {
@@ -662,27 +663,6 @@
 		dragging = false;
 		dragLast = null;
 	}
-
-	// ── sparkline paths ──
-	function sparkPath(vals: number[], w: number, h: number, logY: boolean): string {
-		if (vals.length < 2) return '';
-		let lo = Infinity;
-		let hi = -Infinity;
-		for (const v of vals) {
-			const y = logY ? Math.log(Math.max(v, 1e-4)) : v;
-			lo = Math.min(lo, y);
-			hi = Math.max(hi, y);
-		}
-		if (hi - lo < 1e-9) hi = lo + 1e-9;
-		return vals
-			.map((v, i) => {
-				const yv = logY ? Math.log(Math.max(v, 1e-4)) : v;
-				const x = (i / (vals.length - 1)) * w;
-				const y = h - ((yv - lo) / (hi - lo)) * (h - 4) - 2;
-				return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`;
-			})
-			.join(' ');
-	}
 </script>
 
 <Plate {n} {title} {caption}>
@@ -903,29 +883,47 @@
 						/>
 					</span>
 				{/if}
-				<span class="flex items-center gap-1.5 whitespace-nowrap">
-					<span class="eyebrow text-[9.5px]">loss</span>
-					<svg width="96" height="22" class="shrink-0" aria-label="training loss" role="img">
+				<span class="flex min-w-40 flex-1 items-center gap-1.5">
+					<span class="eyebrow shrink-0 text-[9.5px]" style="color: var(--accent);">
+						loss · train
+					</span>
+					<svg
+						viewBox="0 0 200 22"
+						preserveAspectRatio="none"
+						class="block h-[22px] w-full"
+						role="img"
+						aria-label="training loss over steps"
+					>
 						<path
-							d={sparkPath(lossHist, 96, 22, true)}
+							d={sparkPath(lossHist, 200, 22, { log: true })}
 							fill="none"
 							stroke="var(--accent)"
 							stroke-width="1.4"
+							vector-effect="non-scaling-stroke"
 						/>
 					</svg>
 				</span>
-				<span class="flex items-center gap-1.5 whitespace-nowrap">
-					<span class="eyebrow text-[9.5px]">val acc</span>
-					<svg width="96" height="22" class="shrink-0" aria-label="held-out accuracy" role="img">
+				<span class="flex min-w-40 flex-1 items-center gap-1.5">
+					<span class="eyebrow shrink-0 text-[9.5px]" style="color: var(--warm);">
+						accuracy · held out
+					</span>
+					<svg
+						viewBox="0 0 200 22"
+						preserveAspectRatio="none"
+						class="block h-[22px] w-full"
+						role="img"
+						aria-label="held-out accuracy over steps"
+					>
 						<path
-							d={sparkPath(accHist, 96, 22, false)}
+							d={sparkPath(accHist, 200, 22)}
 							fill="none"
 							stroke="var(--warm)"
 							stroke-width="1.4"
+							vector-effect="non-scaling-stroke"
 						/>
 					</svg>
 				</span>
-				<span class="num ml-auto text-[10.5px] text-ink-3">
+				<span class="num text-[10.5px] whitespace-nowrap text-ink-3">
 					{archLabel} · {paramCount} params · {device} · {msPerStep.toFixed(0)} ms/step
 				</span>
 			</div>

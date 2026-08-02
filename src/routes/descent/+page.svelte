@@ -6,6 +6,7 @@
 	import Math from '$lib/components/ui/Math.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import Wide from '$lib/components/ui/Wide.svelte';
+	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import { progress } from '$lib/data/progress.svelte';
 </script>
 
@@ -53,8 +54,8 @@
 		</p>
 
 		<h2
-			class="mt-12 mb-3 tracking-tight"
-			style="font-size: 1.55rem; line-height: 1.25; font-weight: 520; font-variation-settings: 'opsz' 28;"
+			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
 		>
 			Five walkers, one landscape
 		</h2>
@@ -78,8 +79,8 @@
 
 	<Prose>
 		<h2
-			class="mt-12 mb-3 tracking-tight"
-			style="font-size: 1.55rem; line-height: 1.25; font-weight: 520; font-variation-settings: 'opsz' 28;"
+			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
 		>
 			Reading the race
 		</h2>
@@ -111,8 +112,8 @@
 		</p>
 
 		<h2
-			class="mt-12 mb-3 tracking-tight"
-			style="font-size: 1.55rem; line-height: 1.25; font-weight: 520; font-variation-settings: 'opsz' 28;"
+			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
 		>
 			One dimension, three fates
 		</h2>
@@ -144,8 +145,8 @@
 
 	<Prose>
 		<h2
-			class="mt-12 mb-3 tracking-tight"
-			style="font-size: 1.55rem; line-height: 1.25; font-weight: 520; font-variation-settings: 'opsz' 28;"
+			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
 		>
 			The picture is honest
 		</h2>
@@ -171,4 +172,8 @@
 			set loose on richer ground.
 		</p>
 	</Prose>
+
+	<Wide>
+		<UnderTheHood slug="descent" />
+	</Wide>
 </ChapterShell>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Lab 3 · Telling Things Apart</title>
+		<style>
+			:root {
+				color-scheme: light dark;
+			}
+			body {
+				margin: 0 auto;
+				max-width: 72ch;
+				padding: 2rem 1.25rem 4rem;
+				background: #faf9f5;
+				color: #1d1c18;
+				font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+				font-size: 13px;
+				line-height: 1.55;
+			}
+			@media (prefers-color-scheme: dark) {
+				body {
+					background: #141310;
+					color: #e9e6dc;
+				}
+			}
+			h1 {
+				font-size: 15px;
+				font-weight: 600;
+				letter-spacing: 0.02em;
+			}
+			p.blurb {
+				opacity: 0.65;
+			}
+			pre {
+				white-space: pre-wrap;
+				word-break: break-word;
+			}
+			canvas {
+				width: 100%;
+				image-rendering: pixelated;
+				border: 1px solid rgba(128, 128, 128, 0.3);
+				border-radius: 6px;
+			}
+			a {
+				color: inherit;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Lab 3 · Telling Things Apart</h1>
+		<p class="blurb">
+			A real MNIST classifier: spritesheet decoding, minibatch cross-entropy, honest test accuracy.
+			From
+			<a href="https://github.com/NeoVand/jaxverse">jaxverse</a> — the little universe of learning
+			machines.
+		</p>
+		<canvas id="stage" hidden></canvas>
+		<pre id="out">booting…</pre>
+		<script type="module" src="/src/main.ts"></script>
+	</body>
+</html>

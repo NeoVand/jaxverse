@@ -1,10 +1,10 @@
 <script lang="ts">
-	// Plate IV — inside the machine. Two instruments on the shared engine,
+	// Plate V — inside the machine. Two instruments on the shared engine,
 	// deliberately the same height: an explorer over every learned layer (each
 	// unit traced back into a 28 × 28 image) and a confusion matrix over the
 	// full 2,000-row test set, whose cells open a popover of real mistakes.
 	// Refreshes are throttled and only run while the plate is on screen, so the
-	// training loop in Plate II keeps its rhythm.
+	// training loop in Plate III keeps its rhythm.
 	import { onDestroy } from 'svelte';
 	import type { LayerWeights } from '$lib/nn/engine';
 	import { lab, themePulse, watchTheme } from './digits-context.svelte';
@@ -291,7 +291,7 @@
 				<a
 					href="#plate-classifier"
 					class="underline underline-offset-2"
-					style="text-decoration-color: var(--accent);">train the classifier in Plate II</a
+					style="text-decoration-color: var(--accent);">train the classifier in Plate III</a
 				> and this plate will open the machine up.
 			</p>
 		</div>

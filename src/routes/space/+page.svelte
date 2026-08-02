@@ -2,6 +2,7 @@
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import Wide from '$lib/components/ui/Wide.svelte';
+	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
 	import SpaceLab from '$lib/components/demos/space/SpaceLab.svelte';
 	import { resolve } from '$app/paths';
@@ -57,6 +58,12 @@
 	</Wide>
 
 	<Prose>
+		<h2
+			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
+		>
+			Why it failed, and what fixed it
+		</h2>
 		<p>
 			With two hidden units, the network's inner world is itself a plane, and you watched it try
 			every rubber-sheet move it has. It cannot win, and the reason is <em>topology</em>, not
@@ -99,6 +106,12 @@
 	</Wide>
 
 	<Prose>
+		<h2
+			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
+		>
+			The representation is the product
+		</h2>
 		<p>
 			Click any point on the left and find its ghost on the right: the same datum, renamed by the
 			network. That renaming is the product. We call the hidden layer's coordinates a
@@ -115,4 +128,8 @@
 			place. The grid you just watched bend is the only mental image you need.
 		</p>
 	</Prose>
+
+	<Wide>
+		<UnderTheHood slug="space" />
+	</Wide>
 </ChapterShell>

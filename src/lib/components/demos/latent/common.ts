@@ -330,31 +330,3 @@ export function binSubsample(
 	for (const { i } of best.values()) out[j++] = i;
 	return out;
 }
-
-/** Shared log-space range across several series — one honest y-axis. */
-export function logSpan(series: number[][]): [number, number] {
-	let lo = Infinity;
-	let hi = -Infinity;
-	for (const vals of series)
-		for (const v of vals) {
-			const y = Math.log(Math.max(v, 1e-6));
-			if (y < lo) lo = y;
-			if (y > hi) hi = y;
-		}
-	if (!Number.isFinite(lo)) return [0, 1];
-	if (hi - lo < 1e-9) hi = lo + 1e-9;
-	return [lo, hi];
-}
-
-/** SVG sparkline path, log-y, drawn against a shared [lo, hi] range. */
-export function sparkPath(vals: number[], w: number, h: number, lo: number, hi: number): string {
-	if (vals.length < 2) return '';
-	return vals
-		.map((v, i) => {
-			const y = Math.log(Math.max(v, 1e-6));
-			const x = (i / (vals.length - 1)) * w;
-			const yy = h - ((y - lo) / (hi - lo)) * (h - 4) - 2;
-			return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${yy.toFixed(1)}`;
-		})
-		.join(' ');
-}

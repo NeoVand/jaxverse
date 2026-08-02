@@ -8,6 +8,7 @@
 	import { Play, Pause, Shuffle, Eraser } from 'lucide-svelte';
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import Btn from '$lib/components/ui/Btn.svelte';
+	import Gauge from '$lib/components/ui/Gauge.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import {
 		DEFAULT_SIGMA,
@@ -463,7 +464,6 @@
 		if (timer) clearTimeout(timer);
 	});
 
-	const pct = (v: number) => (Number.isFinite(v) ? `${Math.round(v * 100)}%` : '—');
 	const fmt = (v: number) => (Number.isFinite(v) ? v.toFixed(4) : '—');
 
 	const ROWS = [
@@ -683,21 +683,12 @@
 								top {RANK} · {PANEL} held-out queries · chance 10%
 							</span>
 						</div>
-						{#each [{ key: 'z', label: 'in the map', v: zPurity, color: 'var(--accent)' }, { key: 'px', label: 'in pixels', v: pxPurity, color: 'var(--ink-3)' }] as m (m.key)}
-							<div class="flex items-center gap-3">
-								<span class="w-[68px] shrink-0 text-[11.5px] text-ink-2">{m.label}</span>
-								<span class="meter">
-									<i
-										style="width: {Number.isFinite(m.v)
-											? Math.round(m.v * 100)
-											: 0}%; background: {m.color};"
-									></i>
-								</span>
-								<span class="num w-[42px] shrink-0 text-right text-[12.5px] text-ink"
-									>{pct(m.v)}</span
-								>
-							</div>
-						{/each}
+						<Gauge label="in the map" value={Number.isFinite(zPurity) ? zPurity : null} />
+						<Gauge
+							label="in pixels"
+							value={Number.isFinite(pxPurity) ? pxPurity : null}
+							tone="muted"
+						/>
 					</div>
 				</div>
 			</div>
@@ -758,23 +749,6 @@
 		font-size: 9px;
 		line-height: 1;
 		color: var(--ink-3);
-	}
-
-	.meter {
-		position: relative;
-		display: block;
-		flex: 1;
-		height: 6px;
-		border-radius: 3px;
-		background: var(--line-soft);
-		overflow: hidden;
-	}
-	.meter i {
-		position: absolute;
-		inset: 0 auto 0 0;
-		display: block;
-		border-radius: 3px;
-		transition: width 220ms ease;
 	}
 
 	/* the clear button: a quiet square beside the pad's label */

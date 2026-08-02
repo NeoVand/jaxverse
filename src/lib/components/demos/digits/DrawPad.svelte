@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Plate III — draw your own. Borrows the engine Plate II trained (through
+	// Plate IV — draw your own. Borrows the engine Plate III trained (through
 	// digits-context). Every stroke is painted straight into the 784-float
 	// buffer the model reads, re-centered by mass before predicting — MNIST
 	// digits are centered, and the model has never seen one that isn't.
@@ -183,7 +183,7 @@
 		}
 	}
 
-	// keep the verdict honest while Plate II trains on, and read the seeded
+	// keep the verdict honest while Plate III trains on, and read the seeded
 	// digit as soon as there is an engine to read it with
 	$effect(() => {
 		void lab.version;
@@ -386,7 +386,7 @@
 			<a
 				href="#plate-classifier"
 				class="underline underline-offset-2"
-				style="text-decoration-color: var(--accent);">train the classifier in Plate II</a
+				style="text-decoration-color: var(--accent);">train the classifier in Plate III</a
 			> first, then come back and draw.
 		</p>
 	</div>

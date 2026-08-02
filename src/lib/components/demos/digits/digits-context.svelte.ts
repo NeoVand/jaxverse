@@ -1,6 +1,6 @@
-// The shared bench for chapter 3: Plate I owns and trains one MlpEngine;
-// Plates II and III borrow the same weights through this module. Module-level
-// on purpose — the three plates live on one page and must see one model.
+// The shared bench for chapter 3: Plate III (the classifier) owns and trains
+// one MlpEngine; Plates IV and V borrow the same weights through this module.
+// Module-level on purpose — the plates live on one page and must see one model.
 
 import type { MlpEngine } from '$lib/nn/mlp-engine';
 import type { Activation } from '$lib/nn/engine';
@@ -14,7 +14,7 @@ class DigitsLab {
 	/** Decoded dataset — plain field too; large, and read only on demand. */
 	mnist: MnistData | null = null;
 
-	/** Architecture, owned by Plate II and read by the plates downstream. */
+	/** Architecture, owned by Plate III and read by the plates downstream. */
 	depth = $state(2);
 	width = $state(128);
 	activation = $state<Activation>('relu');

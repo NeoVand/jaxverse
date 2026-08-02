@@ -502,6 +502,25 @@
 			{#if solved}<span style="color: var(--good);">· solved</span>{/if}
 		</span>
 	{/snippet}
+	{#snippet actions()}
+		{#if ready}
+			{#if !reduced}
+				<Btn kind={playing ? 'primary' : 'ghost'} onclick={() => (playing = !playing)}>
+					{#if playing}
+						<Pause size={13} aria-hidden="true" /> Pause
+					{:else}
+						<Play size={13} aria-hidden="true" /> Play
+					{/if}
+				</Btn>
+			{/if}
+			<Btn onclick={stepTen}>
+				<StepForward size={13} aria-hidden="true" /> Step ×10
+			</Btn>
+			<Btn onclick={resetTheta} title="Forget everything: uniform policy, zero value">
+				<RotateCcw size={13} aria-hidden="true" /> Reset θ
+			</Btn>
+		{/if}
+	{/snippet}
 
 	<div use:inview={boot} class="flex flex-col">
 		{#if !ready}
@@ -511,23 +530,6 @@
 		{:else}
 			<!-- controls -->
 			<div class="flex flex-wrap items-center gap-x-5 gap-y-3 border-b border-line-soft px-4 py-3">
-				<div class="flex items-center gap-2">
-					{#if !reduced}
-						<Btn kind={playing ? 'primary' : 'ghost'} onclick={() => (playing = !playing)}>
-							{#if playing}
-								<Pause size={13} aria-hidden="true" /> Pause
-							{:else}
-								<Play size={13} aria-hidden="true" /> Play
-							{/if}
-						</Btn>
-					{/if}
-					<Btn onclick={stepTen}>
-						<StepForward size={13} aria-hidden="true" /> Step ×10
-					</Btn>
-					<Btn onclick={resetTheta} title="Forget everything: uniform policy, zero value">
-						<RotateCcw size={13} aria-hidden="true" /> Reset θ
-					</Btn>
-				</div>
 				<span class="flex items-center gap-1" role="group" aria-label="Overlays and editing">
 					<button
 						class="chip"

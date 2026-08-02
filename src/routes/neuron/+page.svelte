@@ -3,6 +3,7 @@
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import Wide from '$lib/components/ui/Wide.svelte';
+	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
 	import OneNeuron from '$lib/components/demos/neuron/OneNeuron.svelte';
 	import ActivationAtlas from '$lib/components/demos/neuron/ActivationAtlas.svelte';
@@ -137,10 +138,10 @@
 			or hover a tile to find its neuron.
 		</p>
 		<p>
-			Things to try: train on the sine and watch the palette organize — units that began as
-			arbitrary steps drift into position. Switch the target to bumps mid-training and watch them
-			renegotiate. Then take the pen and draw your own curve straight onto the plot; the network
-			will chase it while you drag.
+			Train on the sine and watch the palette organize — units that began as arbitrary steps drift
+			into position, each claiming a stretch of the curve. Switch the target to bumps mid-training
+			and the units renegotiate. Then take the pen and draw your own curve straight onto the plot:
+			the network will chase it while you drag.
 		</p>
 	</Prose>
 
@@ -199,4 +200,8 @@
 			ready, <a href={resolve('/space')}>go bend space</a>.
 		</p>
 	</Prose>
+
+	<Wide>
+		<UnderTheHood slug="neuron" />
+	</Wide>
 </ChapterShell>

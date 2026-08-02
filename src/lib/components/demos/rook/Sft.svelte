@@ -18,7 +18,7 @@
 		type PlyMark
 	} from './chess-eval';
 	import { polyline, scale } from './chart';
-	import Gauge from './Gauge.svelte';
+	import Gauge from '$lib/components/ui/Gauge.svelte';
 	import MiniBoard from './MiniBoard.svelte';
 	import BootRow from './BootRow.svelte';
 
@@ -180,39 +180,33 @@
 		{#if lab.phase === 'ready'}
 			<span>
 				{lab.weightsLabel} · diet: {switched ? 'greedy games' : 'random play'}
+				{#if switched}· {sftSteps} steps{/if}
+				{#if running && Number.isFinite(lossNow)}· loss {lossNow.toFixed(2)}{/if}
 				{#if evaling}· sampling…{:else if running}· fine-tuning{/if}
 			</span>
+		{/if}
+	{/snippet}
+	{#snippet actions()}
+		{#if lab.phase === 'ready'}
+			{#if !switched}
+				<Btn kind="primary" onclick={() => void switchDiet()} disabled={switching}>
+					<Replace size={12} aria-hidden="true" />
+					{switching ? 'Switching…' : 'Switch the diet'}
+				</Btn>
+			{:else}
+				<Btn onclick={() => void toggleTrain()}>
+					{#if running}
+						<Pause size={12} aria-hidden="true" /> Pause
+					{:else}
+						<Play size={12} aria-hidden="true" /> Fine-tune
+					{/if}
+				</Btn>
+			{/if}
 		{/if}
 	{/snippet}
 
 	<div use:inview={() => void lab.power()}>
 		{#if lab.phase === 'ready'}
-			<div class="flex flex-wrap items-center gap-x-5 gap-y-3 border-b border-line-soft px-4 py-3">
-				{#if !switched}
-					<Btn kind="primary" onclick={() => void switchDiet()} disabled={switching}>
-						<Replace size={12} aria-hidden="true" />
-						{switching ? 'Switching…' : 'Switch the diet'}
-					</Btn>
-					<span class="text-[12.5px] text-ink-3">
-						swaps the corpus for 2,381 greedy-material games — weights untouched, γ eased to 3·10⁻⁴
-					</span>
-				{:else}
-					<span class="num text-[11.5px] text-ink-2">
-						diet switched · weights kept · γ 3e-4 · {sftSteps} fine-tuning steps
-						{#if running && Number.isFinite(lossNow)}· loss {lossNow.toFixed(2)}{/if}
-					</span>
-					<span class="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2">
-						<Btn onclick={() => void toggleTrain()}>
-							{#if running}
-								<Pause size={12} aria-hidden="true" /> Pause
-							{:else}
-								<Play size={12} aria-hidden="true" /> Fine-tune
-							{/if}
-						</Btn>
-					</span>
-				{/if}
-			</div>
-
 			{#if switched && chart}
 				<div class="grid grid-cols-1 gap-x-8 gap-y-5 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_240px]">
 					<div class="min-w-0">

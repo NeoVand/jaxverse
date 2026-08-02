@@ -3,6 +3,7 @@
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import Wide from '$lib/components/ui/Wide.svelte';
+	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
 	import Pretrain from '$lib/components/demos/rook/Pretrain.svelte';
 	import PlayRook from '$lib/components/demos/rook/PlayRook.svelte';
@@ -290,4 +291,8 @@
 			gradients move. That was the point.
 		</p>
 	</Prose>
+
+	<Wide>
+		<UnderTheHood slug="rook" />
+	</Wide>
 </ChapterShell>

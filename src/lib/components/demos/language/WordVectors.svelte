@@ -12,6 +12,7 @@
 	import { inview } from '$lib/components/ui/inview';
 	import { loadCorpus } from '$lib/data/corpus';
 	import { buildWordCorpus, SkipGram, fitPca3, project, type WordCorpus } from './embeddings';
+	import { sparkPath } from '$lib/viz/spark';
 
 	type Phase = 'idle' | 'loading' | 'running' | 'paused' | 'done' | 'error';
 	let phase = $state<Phase>('idle');
@@ -19,6 +20,7 @@
 	let tick = $state(0); // bumps once per training chunk
 	let pairsSeen = $state(0);
 	let lossNow = $state(NaN);
+	let lossHist = $state<number[]>([]); // for the telemetry strip
 	let rate = $state(0); // pairs/s including display pacing
 	let pts = $state<Float32Array>(new Float32Array(0)); // [3·V] projected coords
 	let vocab = $state<string[]>([]);
@@ -171,6 +173,7 @@
 			lastBeat = now;
 			pairsSeen = s.pairsSeen;
 			lossNow = s.lossEma;
+			if (Number.isFinite(s.lossEma)) lossHist = [...lossHist.slice(-399), s.lossEma];
 			tick++;
 			refit();
 			await new Promise((r) => setTimeout(r, pace));
@@ -200,6 +203,7 @@
 		sg = new SkipGram(words, { dim: 16, seed: 7, budget: 2_000_000 });
 		pairsSeen = 0;
 		lossNow = NaN;
+		lossHist = [];
 		rate = 0;
 		tick++;
 		refit(true);
@@ -721,6 +725,37 @@
 					{/each}
 				</div>
 			</div>
+
+			{#if lossHist.length > 1}
+				<!-- slim telemetry strip: skip-gram loss over the training run -->
+				<div
+					class="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-line-soft px-4 py-2"
+				>
+					<span class="flex min-w-40 flex-1 items-center gap-1.5">
+						<span class="eyebrow shrink-0 text-[9.5px]" style="color: var(--accent);">
+							loss · skip-gram
+						</span>
+						<svg
+							viewBox="0 0 200 22"
+							preserveAspectRatio="none"
+							class="block h-[22px] w-full"
+							role="img"
+							aria-label="skip-gram loss over pairs seen"
+						>
+							<path
+								d={sparkPath(lossHist, 200, 22, { log: true })}
+								fill="none"
+								stroke="var(--accent)"
+								stroke-width="1.4"
+								vector-effect="non-scaling-stroke"
+							/>
+						</svg>
+					</span>
+					<span class="num text-[10.5px] whitespace-nowrap text-ink-3">
+						{fmtK(pairsSeen)} pairs · {fmtK(rate)} pairs/s
+					</span>
+				</div>
+			{/if}
 		{/if}
 	</div>
 </Plate>

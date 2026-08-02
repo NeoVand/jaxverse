@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Plate II — the classifier. Train and test ride in one buffer: 8,000 train
+	// Plate III — the classifier. Train and test ride in one buffer: 8,000 train
 	// rows first, then the 2,000 test rows as the held-out tail (valFraction
 	// 0.2), so the worker's eval() is honest test-set accuracy and the test
 	// rows are never sampled by a training batch. Boots on scroll (inview);
@@ -21,7 +21,8 @@
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import { lab, themePulse, watchTheme } from './digits-context.svelte';
-	import { DIM, argmax, blit, hexRgb, inkImage, readTokens, softmax, sparkPath } from './common';
+	import { DIM, argmax, blit, hexRgb, inkImage, readTokens, softmax } from './common';
+	import { sparkPath } from '$lib/viz/spark';
 
 	interface Props {
 		n?: number;
@@ -604,7 +605,7 @@
 						aria-label="training loss over steps"
 					>
 						<path
-							d={sparkPath(lossHist, 200, 22, true)}
+							d={sparkPath(lossHist, 200, 22, { log: true })}
 							fill="none"
 							stroke="var(--accent)"
 							stroke-width="1.4"
@@ -624,7 +625,7 @@
 						aria-label="test accuracy over steps"
 					>
 						<path
-							d={sparkPath(accHist, 200, 22, false)}
+							d={sparkPath(accHist, 200, 22)}
 							fill="none"
 							stroke="var(--warm)"
 							stroke-width="1.4"

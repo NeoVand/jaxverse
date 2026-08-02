@@ -2,6 +2,7 @@
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import Wide from '$lib/components/ui/Wide.svelte';
+	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
 	import Squeeze from '$lib/components/demos/latent/Squeeze.svelte';
 	import LatentMap from '$lib/components/demos/latent/LatentMap.svelte';
@@ -92,6 +93,12 @@
 	</Wide>
 
 	<Prose>
+		<h2
+			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
+		>
+			The latent space
+		</h2>
 		<p>
 			While it trains, consider the pinch point. Halfway through the network each digit exists as
 			exactly two numbers, <Math tex="z = E(x)" /> — a 392-fold compression, and the only thing the decoder
@@ -136,6 +143,12 @@
 	</Wide>
 
 	<Prose>
+		<h2
+			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
+		>
+			Kind, as a by-product of thrift
+		</h2>
 		<p>
 			They do not fall like confetti. The model was never told what a seven is, and there on the map
 			is the country of sevens — because reconstructing sevens well <em>requires</em> gathering
@@ -164,7 +177,7 @@
 		<ManifoldGrid
 			n={3}
 			title="The manifold — the decoder's answer everywhere"
-			caption="A 21 × 21 grid of addresses laid over the latent square and decoded, tile by tile, live as training moves. The cursor's cell is repeated at right, and under it the nearest real held-out digit to that address, with the distance between them. Past a two-number waist the sheet is one slice through the space and the slider chooses which."
+			caption="The decoder run everywhere at once: a 21 × 21 grid of addresses laid over the latent square and decoded tile by tile, live as training moves. Every tile is a digit that does not exist — the machine's guess at what belongs at an address no example ever claimed. The cursor's cell is enlarged at right, above the nearest real held-out digit and the distance between them: how far invention sits from memory. Past a two-number waist the sheet is one slice through the space, and the slider chooses which."
 		/>
 	</Wide>
 
@@ -183,6 +196,12 @@
 			data never touched is, in the larger systems this book is walking toward, called a hallucination.
 			Same machinery, same geometry.
 		</p>
+		<h2
+			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
+		>
+			From map to embedding
+		</h2>
 		<p>
 			So far we have read the map as a picture. It has a second life as a tool, and this is the one
 			the industry actually runs on. Stop thinking of <Math tex="z" /> as a location on a sheet and start
@@ -279,4 +298,8 @@
 			the language.
 		</p>
 	</Prose>
+
+	<Wide>
+		<UnderTheHood slug="latent" />
+	</Wide>
 </ChapterShell>
