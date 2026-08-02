@@ -129,6 +129,8 @@
 			lab.stage = 'fine-tuned';
 			await evalNow(g);
 		}
+		// photograph the paused weights — the arena (Plate V) fields this student
+		if (g === lab.gen && lab.stage === 'fine-tuned') await lab.captureStage('fine-tuned');
 		lab.endLoop(g);
 		running = false;
 	}

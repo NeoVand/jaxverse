@@ -6,20 +6,20 @@
 	// legality. This plate always plays the CURRENT shared weights — the stage
 	// badge says which act they last came through.
 	import { RotateCcw } from 'lucide-svelte';
-	import { SvelteMap } from 'svelte/reactivity';
 	import type { Square } from 'chess.js';
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import { lab } from './rook-context.svelte';
-	import { loadChess, PIECE_GLYPH, type ChessGame } from './chess-eval';
+	import { loadChess, type ChessGame } from './chess-eval';
+	import Board from './Board.svelte';
 	import Gauge from './Gauge.svelte';
 	import BootRow from './BootRow.svelte';
 
-	const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-
-	// chess.js isn't reactive; the template keys off the fen mirror.
-	let chess: ChessGame | null = null;
+	// chess.js isn't reactive; the template keys off the fen mirror. $state.raw
+	// so the reference itself is reactive (it is passed to <Board>) without
+	// proxying the game object.
+	let chess = $state.raw<ChessGame | null>(null);
 	let historyIds: number[] = [0]; // Rook's context — token 0 opens the game
 
 	let boardReady = $state(false);
@@ -69,48 +69,6 @@
 		vocabMisses = 0;
 	}
 
-	// ── board-facing derivations — row 0 renders on top and is rank 8, so
-	// White (ranks 1–2) sits at the bottom of the screen ──
-	const cells = $derived.by(() => {
-		void fen;
-		if (!chess) return [];
-		const rows = chess.board(); // row 0 = rank 8
-		const out: Array<{ sq: string; glyph: string | null; white: boolean; dark: boolean }> = [];
-		for (let r = 0; r < 8; r++) {
-			for (let f = 0; f < 8; f++) {
-				const p = rows[r][f];
-				out.push({
-					sq: FILES[f] + (8 - r),
-					glyph: p ? (PIECE_GLYPH[p.type] ?? null) : null,
-					white: p?.color === 'w',
-					dark: (r + f) % 2 === 1
-				});
-			}
-		}
-		return out;
-	});
-
-	/** Legal destinations of the selected piece → whether each is a capture. */
-	const targets = $derived.by(() => {
-		void fen;
-		const map = new SvelteMap<string, boolean>();
-		if (!chess || !selected) return map;
-		for (const m of chess.moves({ square: selected, verbose: true })) {
-			map.set(m.to, m.captured !== undefined);
-		}
-		return map;
-	});
-
-	const checkSq = $derived.by(() => {
-		void fen;
-		if (!chess || !chess.inCheck()) return null;
-		const turn = chess.turn();
-		for (const row of chess.board()) {
-			for (const p of row) if (p && p.type === 'k' && p.color === turn) return p.square as string;
-		}
-		return null;
-	});
-
 	const movePairs = $derived.by(() => {
 		const pairs: Array<{ w: string; b: string }> = [];
 		for (let i = 0; i < historyUci.length; i += 2) {
@@ -130,7 +88,7 @@
 	// ── interaction ──
 	function tap(sq: string): void {
 		if (!chess || thinking || outcome || chess.turn() !== 'w') return;
-		if (selected && targets.has(sq)) {
+		if (selected && chess.moves({ square: selected, verbose: true }).some((m) => m.to === sq)) {
 			playUser(selected, sq as Square);
 			return;
 		}
@@ -182,6 +140,10 @@
 		if (!lab.engine || !lab.data || !chess) return;
 		thinking = true;
 		try {
+			// the arena (Plate V) swaps weights in place while it compares stages —
+			// wait until the resident set is back, or "the current weights" would
+			// briefly be some contestant's
+			while (lab.busy === 'arena') await new Promise((r) => setTimeout(r, 60));
 			const row = await lab.engine.nextDistribution(historyIds);
 			const moves = lab.data.vocab.moves;
 			const idOf = lab.data.idOf;
@@ -269,77 +231,8 @@
 					class="grid grid-cols-1 items-start gap-x-8 gap-y-5 px-4 py-4 md:grid-cols-[minmax(0,360px)_minmax(0,1fr)]"
 				>
 					<div>
-						<div
-							class="board overflow-hidden rounded-md border border-line select-none"
-							role="grid"
-							aria-label="Chess board — you play White, at the bottom"
-						>
-							{#each cells as c (c.sq)}
-								<button
-									type="button"
-									class="relative aspect-square"
-									style="background: {c.dark ? 'var(--surface-2)' : 'var(--surface)'};"
-									onclick={() => tap(c.sq)}
-									aria-label="{c.sq}{c.glyph ? ` ${c.white ? 'white' : 'black'} ${c.glyph}` : ''}"
-								>
-									{#if lastMove && (lastMove.from === c.sq || lastMove.to === c.sq)}
-										<span
-											class="absolute inset-0"
-											style="background: color-mix(in srgb, var(--accent) 12%, transparent);"
-											aria-hidden="true"
-										></span>
-									{/if}
-									{#if checkSq === c.sq}
-										<span
-											class="absolute inset-0"
-											style="background: color-mix(in srgb, var(--bad) 18%, transparent);"
-											aria-hidden="true"
-										></span>
-									{/if}
-									{#if hoverSq && (hoverSq.from === c.sq || hoverSq.to === c.sq)}
-										<span
-											class="absolute inset-0"
-											style="background: color-mix(in srgb, var(--accent) 16%, transparent); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);"
-											aria-hidden="true"
-										></span>
-									{/if}
-									{#if c.sq[0] === 'a'}
-										<span class="coord num top-[3%] left-[5%]">{c.sq[1]}</span>
-									{/if}
-									{#if c.sq[1] === '1'}
-										<span class="coord num right-[5%] bottom-[2%]">{c.sq[0]}</span>
-									{/if}
-									{#if c.glyph}
-										<span
-											class="piece absolute inset-0 flex items-center justify-center"
-											class:piece-w={c.white}
-											class:piece-b={!c.white}>{c.glyph}</span
-										>
-									{/if}
-									{#if targets.has(c.sq)}
-										{#if targets.get(c.sq)}
-											<span
-												class="absolute rounded-full"
-												style="inset: 7%; border: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);"
-												aria-hidden="true"
-											></span>
-										{:else}
-											<span
-												class="absolute rounded-full"
-												style="inset: 38%; background: color-mix(in srgb, var(--accent) 45%, transparent);"
-												aria-hidden="true"
-											></span>
-										{/if}
-									{/if}
-									{#if selected === c.sq}
-										<span
-											class="absolute inset-0"
-											style="background: color-mix(in srgb, var(--accent) 14%, transparent); box-shadow: inset 0 0 0 2px var(--accent);"
-											aria-hidden="true"
-										></span>
-									{/if}
-								</button>
-							{/each}
+						<div class="max-w-[360px]">
+							<Board {chess} {fen} {selected} {lastMove} {hoverSq} onTap={tap} />
 						</div>
 						<div class="mt-2.5 flex min-h-7 flex-wrap items-center gap-3">
 							<Btn onclick={resetGame}><RotateCcw size={12} aria-hidden="true" /> New game</Btn>
@@ -455,32 +348,6 @@
 </div>
 
 <style>
-	.board {
-		display: grid;
-		grid-template-columns: repeat(8, 1fr);
-		max-width: 360px;
-	}
-	/* Theme-INDEPENDENT piece colors: a chess set doesn't change sides when the
-	   room goes dark. Both colors use filled glyphs; a thin opposing outline
-	   keeps each side legible on both square shades in both themes. */
-	.piece {
-		font-size: clamp(19px, 5.4vw, 31px);
-		line-height: 1;
-	}
-	.piece-w {
-		color: #f2efe6;
-		-webkit-text-stroke: 1px #35332b;
-	}
-	.piece-b {
-		color: #1b1a17;
-		-webkit-text-stroke: 1px #d8d4c6;
-	}
-	.coord {
-		position: absolute;
-		font-size: 8.5px;
-		color: var(--ink-3);
-		pointer-events: none;
-	}
 	.ply {
 		padding: 0 1px;
 		border-radius: 3px;

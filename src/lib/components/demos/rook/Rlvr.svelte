@@ -77,6 +77,8 @@
 			// let the inspector paint between iterations
 			if (breathMs > 0) await new Promise((r) => setTimeout(r, breathMs));
 		}
+		// photograph the paused weights — the arena (Plate V) fields this student
+		if (g === lab.gen && lab.stage === 'reinforced') await lab.captureStage('reinforced');
 		lab.endLoop(g);
 		running = false;
 	}

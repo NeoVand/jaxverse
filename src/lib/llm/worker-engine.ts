@@ -228,9 +228,13 @@ export class WorkerEngine implements LlmEngine {
 
 	/** Swap the resident weights for a checkpoint in place (cheaper than a full
 	 * re-init: no tokenData re-transfer). The buffer is transferred. Used by the
-	 * time-machine scrubber to re-roll a waypoint's dequantized weights live. */
-	async loadWeights(checkpoint: ArrayBuffer): Promise<void> {
-		await this.call('load', { checkpoint }, [checkpoint]);
+	 * time-machine scrubber to re-roll a waypoint's dequantized weights live,
+	 * and by the arena's swap-query-restore (which preserves the step count —
+	 * a restore is not a rewind). */
+	async loadWeights(checkpoint: ArrayBuffer, opts?: { preserveStep?: boolean }): Promise<void> {
+		await this.call('load', { checkpoint, preserveStep: opts?.preserveStep ?? false }, [
+			checkpoint
+		]);
 	}
 
 	/** A worker mid-jit answers no RPC promptly, and a worker that never releases

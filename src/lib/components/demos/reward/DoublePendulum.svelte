@@ -58,6 +58,10 @@
 	const BURST_MS = 9; // main-thread fallback: per-frame budget for
 	const BURST_CAP = 45; // headless episodes when Workers are unavailable
 	const HALL_CAP = 6; // parallel practice halls (fewer on small machines)
+	const plannedHalls =
+		typeof navigator === 'undefined'
+			? HALL_CAP
+			: Math.max(1, Math.min(HALL_CAP, (navigator.hardwareConcurrency ?? 4) - 2));
 
 	// ── the learner: non-reactive, mutated in place ──
 	let theta = createDpoleTheta();
@@ -120,7 +124,7 @@
 
 	function startPool() {
 		if (pool.length || typeof Worker === 'undefined') return;
-		const n = Math.max(1, Math.min(HALL_CAP, (navigator.hardwareConcurrency ?? 4) - 2));
+		const n = plannedHalls;
 		for (let w = 0; w < n; w++) {
 			const hall = new PracticeHall();
 			hall.onmessage = (e: MessageEvent) => onReport(w, hall, e.data);
@@ -745,23 +749,64 @@
 				<span class="eyebrow">warming up…</span>
 			</div>
 		{:else}
-			<!-- stage + rail -->
+			<!-- stage + rail; the race strip docks under the stage so the left
+			     column fills the same height as the sidebar — no dead band -->
 			<div class="grid grid-cols-1 sm:grid-cols-[1fr_218px]">
-				<div class="relative">
-					<canvas
-						bind:this={canvas}
-						class="block aspect-[16/7] w-full touch-none"
-						class:cursor-pointer={!reduced}
-						aria-label="A hinge sliding on a rail with two pendulum links hanging from it. Click or drag to shove the hinge."
-						onpointerdown={down}
-						onpointermove={move}
-						onpointerup={up}
-						onpointercancel={up}
-					></canvas>
-					{#if upright > 100}
-						<p class="absolute right-3 bottom-2 font-serif text-[13px] text-good italic">
-							it's up — now try to knock it over
-						</p>
+				<div class="flex flex-col">
+					<div class="relative aspect-[16/7] flex-1">
+						<canvas
+							bind:this={canvas}
+							class="block h-full w-full touch-none"
+							class:cursor-pointer={!reduced}
+							aria-label="A hinge sliding on a rail with two pendulum links hanging from it. Click or drag to shove the hinge."
+							onpointerdown={down}
+							onpointermove={move}
+							onpointerup={up}
+							onpointercancel={up}
+						></canvas>
+						{#if upright > 100}
+							<p class="absolute right-3 bottom-2 font-serif text-[13px] text-good italic">
+								it's up — now try to knock it over
+							</p>
+						{/if}
+					</div>
+
+					<!-- the race, visible: one little stage per practice hall -->
+					{#if !reduced}
+						<div class="border-t border-line-soft px-4 pt-2.5 pb-3">
+							<span class="eyebrow">
+								{#if poolSize > 0}
+									the race — each hall its own policy; the stage copies the outlined champion
+								{:else}
+									the race — press Train and {plannedHalls} independent learners start practising
+								{/if}
+							</span>
+							<div class="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
+								{#each Array.from({ length: poolSize || plannedHalls }, (_, i) => i) as w (w)}
+									{#if poolSize > 0}
+										<div
+											class="relative overflow-hidden rounded border"
+											style="border-color: {w === champView
+												? 'var(--accent)'
+												: 'var(--line-soft)'};"
+										>
+											<canvas
+												bind:this={miniCanvases[w]}
+												class="block aspect-[16/9] w-full"
+												aria-label="Practice hall {w + 1}{w === champView
+													? ', the current champion'
+													: ''}"
+											></canvas>
+											<span class="num absolute right-1 bottom-0.5 text-[9.5px] text-ink-3">
+												{(hallScoreView[w] ?? 0).toFixed(2)}
+											</span>
+										</div>
+									{:else}
+										<div class="aspect-[16/9] rounded border border-dashed border-line-soft"></div>
+									{/if}
+								{/each}
+							</div>
+						</div>
 					{/if}
 				</div>
 
@@ -842,34 +887,6 @@
 					</div>
 				</div>
 			</div>
-
-			<!-- the race, visible: one little stage per practice hall -->
-			{#if poolSize > 0 && !reduced}
-				<div class="border-t border-line-soft px-4 pt-3 pb-4">
-					<span class="eyebrow">
-						the race — each hall performs its own policy; the big stage copies the outlined champion
-					</span>
-					<div class="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
-						{#each Array.from({ length: poolSize }, (_, i) => i) as w (w)}
-							<div
-								class="relative overflow-hidden rounded border"
-								style="border-color: {w === champView ? 'var(--accent)' : 'var(--line-soft)'};"
-							>
-								<canvas
-									bind:this={miniCanvases[w]}
-									class="block aspect-[16/9] w-full"
-									aria-label="Practice hall {w + 1}{w === champView
-										? ', the current champion'
-										: ''}"
-								></canvas>
-								<span class="num absolute right-1 bottom-0.5 text-[9.5px] text-ink-3">
-									{(hallScoreView[w] ?? 0).toFixed(2)}
-								</span>
-							</div>
-						{/each}
-					</div>
-				</div>
-			{/if}
 		{/if}
 	</div>
 </Plate>

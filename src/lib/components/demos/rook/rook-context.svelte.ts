@@ -21,7 +21,10 @@ export type LabPhase = 'idle' | 'loading' | 'ready' | 'error' | 'no-webgpu';
 export type LabStage = 'pretrained' | 'fine-tuned' | 'reinforced';
 /** Which corpus the worker currently samples training batches from. */
 export type LabCorpus = 'random' | 'sft';
-export type LabLoop = '' | 'pretrain' | 'sft' | 'rlvr';
+export type LabLoop = '' | 'pretrain' | 'sft' | 'rlvr' | 'arena';
+/** The arena's contestants: the frozen pretraining waypoint plus whatever
+ * stage snapshots exist. 'current' is always the resident weights. */
+export type ArenaStage = 'pretrained' | 'fine-tuned' | 'reinforced';
 
 const SEED = 7;
 /** The offline run's rate — pretraining uses it. */
@@ -46,6 +49,12 @@ class RookLab {
 	/** Which plate currently owns a long-running loop. */
 	busy = $state<LabLoop>('');
 	error = $state('');
+	/** Which stage snapshots the arena can field (the buffers themselves are
+	 * plain fields below — opaque, never templated). */
+	hasSnapshot = $state<{ 'fine-tuned': boolean; reinforced: boolean }>({
+		'fine-tuned': false,
+		reinforced: false
+	});
 
 	readonly weightsLabel = $derived(
 		`w${this.waypointStep}${this.liveSteps > 0 ? ` +${this.liveSteps}` : ''}`
@@ -67,6 +76,13 @@ class RookLab {
 	sftProbeSet: number[][] = [];
 	/** Generation counter — bumping it cancels every in-flight loop. */
 	gen = 0;
+	/** Weight snapshots taken as the SFT and RLVR loops pause — what the
+	 * arena replays. Kept across dispose() like the other caches: a returning
+	 * reader should not lose the students they trained. */
+	private stageSnapshots: { 'fine-tuned': ArrayBuffer | null; reinforced: ArrayBuffer | null } = {
+		'fine-tuned': null,
+		reinforced: null
+	};
 
 	private powering: Promise<void> | null = null;
 	private inflightTrain: Promise<void> | null = null;
@@ -167,6 +183,79 @@ class RookLab {
 		} finally {
 			if (this.inflightTrain === p) this.inflightTrain = null;
 		}
+	}
+
+	/** Photograph the resident weights as a stage artifact for the arena.
+	 * Called by the SFT and RLVR plates as their loops pause. */
+	async captureStage(stage: 'fine-tuned' | 'reinforced'): Promise<void> {
+		if (!this.engine) return;
+		try {
+			this.stageSnapshots[stage] = await this.engine.exportCheckpoint();
+			this.hasSnapshot = { ...this.hasSnapshot, [stage]: true };
+		} catch {
+			/* export raced a dispose — the arena simply won't list this stage */
+		}
+	}
+
+	/** The arena's one trick: ask several checkpoints for their next-token
+	 * distribution over the SAME context. There is only one engine, so this
+	 * swaps weights in place and restores the resident set afterwards. The
+	 * whole swap-query-restore is registered as the in-flight op that
+	 * quiesce() awaits — otherwise a loop starting mid-compare would inherit
+	 * an engine wearing some contestant's weights. */
+	async compareStages(
+		tokens: number[],
+		stages: ArenaStage[]
+	): Promise<Partial<Record<ArenaStage, Float32Array>> | null> {
+		if (!this.engine || !this.manifest) return null;
+		const g = await this.beginLoop('arena');
+		if (g !== this.gen || !this.engine) return null;
+		const run = this.doCompare(tokens, stages);
+		this.inflightTrain = run.then(
+			() => undefined,
+			() => undefined
+		);
+		try {
+			return await run;
+		} finally {
+			this.inflightTrain = null;
+			this.endLoop(g);
+		}
+	}
+
+	private async doCompare(
+		tokens: number[],
+		stages: ArenaStage[]
+	): Promise<Partial<Record<ArenaStage, Float32Array>> | null> {
+		const engine = this.engine;
+		const manifest = this.manifest;
+		if (!engine || !manifest) return null;
+		const resident = await engine.exportCheckpoint();
+		const out: Partial<Record<ArenaStage, Float32Array>> = {};
+		try {
+			for (const stage of stages) {
+				let flat: ArrayBuffer | null = null;
+				if (stage === 'pretrained') {
+					const wp = manifest.waypoints[manifest.waypoints.length - 1];
+					flat = (await loadRookWaypoint(wp.file, manifest)).slice().buffer as ArrayBuffer;
+				} else {
+					const snap = this.stageSnapshots[stage];
+					flat = snap ? snap.slice(0) : null;
+				}
+				if (!flat) continue;
+				await engine.loadWeights(flat, { preserveStep: true });
+				out[stage] = await engine.nextDistribution(tokens);
+			}
+		} finally {
+			// restore unconditionally — even a cancelled compare must not leave
+			// the resident engine wearing a contestant's weights
+			try {
+				await engine.loadWeights(resident, { preserveStep: true });
+			} catch {
+				/* worker gone — dispose() owns the cleanup then */
+			}
+		}
+		return out;
 	}
 
 	/** Rewind (or fast-forward) the time machine to a manifest waypoint. */

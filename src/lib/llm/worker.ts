@@ -422,7 +422,9 @@ function handleRlStep(req: RpcRequest) {
  * tokenData re-transfer). Powers the time-machine scrubber: load a waypoint's
  * dequantized weights, then sample. Requires a prior init with the matching
  * config. Adam moments are reset (a loaded snapshot carries no optimizer
- * history); the time machine only samples, so that cost is inert there. */
+ * history); the time machine only samples, so that cost is inert there.
+ * preserveStep keeps the step counter — the arena's restore is not a rewind,
+ * so the odometer must not roll back. */
 async function handleLoad(req: RpcRequest) {
 	if (!cfg || !solver) throw new Error('load before init');
 	const flat = new Float32Array(req.checkpoint as ArrayBuffer);
@@ -431,7 +433,7 @@ async function handleLoad(req: RpcRequest) {
 	await blockUntilReady(params);
 	if (optState) disposeTree(optState);
 	optState = solver.init(tree.ref(params));
-	stepCounter = 0;
+	if (!req.preserveStep) stepCounter = 0;
 	return { paramCount: paramCount(params) };
 }
 

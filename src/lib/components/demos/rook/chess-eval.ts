@@ -302,6 +302,65 @@ export function buildProbeSet(tokens: Uint16Array, gameStarts: number[], n = 32)
 	return out;
 }
 
+/** The arena's read of one model's next-move beliefs in one position. */
+export interface RowVerdict {
+	/** Masked argmax — the move this model plays when it must move legally.
+	 * Null when the position offers no legal move in the vocabulary. */
+	pick: string | null;
+	/** The pick's share of the model's total belief (unmasked). */
+	pickP: number;
+	/** How much probability sat on legal moves before the mask. */
+	legalMass: number;
+	/** Raw top-N (mask-blind), each judged for legality here. */
+	top: Array<{ uci: string; p: number; legal: boolean }>;
+}
+
+/**
+ * Grade one next-token log-prob row against a position's legal moves: the
+ * masked argmax (a deterministic, comparable "decision"), the legal mass,
+ * and the raw top-N. Shared by the arena's stage-vs-stage columns.
+ */
+export function analyzeRow(
+	row: Float32Array,
+	legalUci: string[],
+	idOf: Map<string, number>,
+	moves: string[],
+	topN = 3
+): RowVerdict {
+	const probs = new Float64Array(row.length);
+	let total = 0;
+	for (let i = 0; i < row.length; i++) {
+		probs[i] = Math.exp(row[i]);
+		total += probs[i];
+	}
+	const legalIds = new Set<number>();
+	let legalMass = 0;
+	let pick: string | null = null;
+	let pickP = -1;
+	for (const uci of legalUci) {
+		const id = idOf.get(uci);
+		const p = id !== undefined ? probs[id] / total : 0;
+		legalMass += p;
+		if (id !== undefined) legalIds.add(id);
+		if (p > pickP && id !== undefined) {
+			pickP = p;
+			pick = uci;
+		}
+	}
+	// a vocabulary hole leaves every legal move unrepresented — no pick then
+	if (pick === null && legalUci.length > 0) {
+		pick = legalUci[0] ?? null;
+		pickP = 0;
+	}
+	const order = Array.from(probs.keys()).sort((a, b) => probs[b] - probs[a]);
+	const top = order.slice(0, topN).map((i) => ({
+		uci: i === 0 ? '⟨game⟩' : moves[i - 1],
+		p: probs[i] / total,
+		legal: legalIds.has(i)
+	}));
+	return { pick, pickP: Math.max(pickP, 0), legalMass, top };
+}
+
 /**
  * The manifest's legal-move metric, live: from each probe position (a real
  * game prefix — teacher-forced, so the model's own mistakes never compound),

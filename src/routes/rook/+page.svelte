@@ -8,6 +8,7 @@
 	import PlayRook from '$lib/components/demos/rook/PlayRook.svelte';
 	import Sft from '$lib/components/demos/rook/Sft.svelte';
 	import Rlvr from '$lib/components/demos/rook/Rlvr.svelte';
+	import Arena from '$lib/components/demos/rook/Arena.svelte';
 	import { lab } from '$lib/components/demos/rook/rook-context.svelte';
 	import { resolve } from '$app/paths';
 
@@ -213,6 +214,30 @@
 
 	<Wide>
 		<Rlvr />
+	</Wide>
+
+	<Prose>
+		<h2
+			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
+			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
+		>
+			Line them up
+		</h2>
+		<p>
+			You have now made three different chess players out of one set of weights, and the honest way
+			to compare them is not a curve — it is a decision. The page has been quietly photographing
+			your work: every time the fine-tuning or RLVR loop pauses, it snapshots the weights, so all
+			three stages survive even though the resident model keeps moving on. The arena below puts them
+			at the same board. Play a move, and every fielded Rook is asked the same question —
+			<em>what would you do here?</em> — each answer drawn as an arrow in its stage's color, with the
+			numbers that explain it: how much of its belief was even legal, and what it wanted most before the
+			mask. Watch the pretrained arrow wander while the fine-tuned one aims at your pieces; watch the
+			RLVR column hold its legal mass in positions that make the earlier stages guess.
+		</p>
+	</Prose>
+
+	<Wide>
+		<Arena />
 	</Wide>
 
 	<Prose>
