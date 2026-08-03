@@ -4,6 +4,7 @@
 // together.
 
 import type { HoodChapter } from './types';
+import { home } from './home';
 import { descent } from './descent';
 import { neuron } from './neuron';
 import { space } from './space';
@@ -14,6 +15,7 @@ import { reward } from './reward';
 import { rook } from './rook';
 
 export const hood: Record<string, HoodChapter> = {
+	home,
 	descent,
 	neuron,
 	space,

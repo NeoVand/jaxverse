@@ -3,11 +3,11 @@
 	import { chapters, type ChapterSlug } from '$lib/data/chapters';
 	import { progress } from '$lib/data/progress.svelte';
 	import HeroField from '$lib/components/ui/HeroField.svelte';
+	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import {
 		ArrowRight,
 		BookOpen,
 		Castle,
-		ChevronRight,
 		Gamepad2,
 		Grid3x3,
 		Map,
@@ -174,23 +174,18 @@
 </section>
 
 <!-- ── the hidden course ── -->
-<section class="mx-auto max-w-2xl px-5 py-8">
-	<h2 class="eyebrow mb-4">A second book, for the builders</h2>
-	<div class="hood-ad rounded-lg px-4 py-3">
-		<span class="flex flex-wrap items-center gap-x-3 gap-y-1">
-			<ChevronRight size={14} aria-hidden="true" style="color: var(--accent);" />
-			<span class="eyebrow" style="color: var(--accent);">Under the hood</span>
-			<span class="font-serif text-[15px] italic" style="font-variation-settings: 'opsz' 14;">
-				the code each plate runs
-			</span>
-			<span class="num ml-auto text-[10.5px] text-ink-3">collapsed, until you want it</span>
-		</span>
-	</div>
-	<p class="chapter-prose mt-4">
-		Beneath every plate that trains something sits a quiet line like the one above. Open it and you
-		get the machinery that plate just ran — the real jax-js code from this repository, annotated,
-		with the stagecraft on its own tab. Followed chapter by chapter, the blocks add up to a short
-		course in <a href="https://jax-js.com" rel="external">jax-js</a> itself: pytrees,
+<section class="mx-auto max-w-2xl px-5 pt-8">
+	<h2 class="eyebrow">A second book, for the builders</h2>
+</section>
+<!-- a real block, not a mock-up: it opens on the code behind the hero map -->
+<UnderTheHood slug="home" block="hero" />
+<section class="mx-auto max-w-2xl px-5 pb-8">
+	<p class="chapter-prose">
+		Beneath every plate that trains something sits a quiet line like the one above — and the one
+		above works: open it for the machinery behind the map at the top of this page. Every block
+		holds the real jax-js code from this repository, annotated, with the stagecraft on its own
+		tab. Followed chapter by chapter, the blocks add up to a short course in
+		<a href="https://jax-js.com" rel="external">jax-js</a> itself: pytrees,
 		<code>valueAndGrad</code>, <code>jit</code>, devices, workers, a whole transformer. Each chapter
 		also ends with a downloadable lab — a standalone npm project that runs the same model with
 		nothing but <code>npm install</code>.
@@ -339,11 +334,6 @@
 		}
 	}
 
-	/* a facsimile of the under-the-hood bar, so readers recognize it later */
-	.hood-ad {
-		border: 1px dashed var(--line);
-		background: color-mix(in srgb, var(--surface-2) 45%, var(--surface));
-	}
 	.chapter-prose code {
 		font-family: var(--font-mono);
 		font-size: 0.86em;
