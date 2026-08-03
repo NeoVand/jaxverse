@@ -1,43 +1,70 @@
-// Verifies the Under-the-Hood section on every chapter page: it renders,
-// expands, both tabs show sections with code, and the lab zip download
-// answers 200. Usage: node scripts/hood-e2e.mjs [baseURL]
+// Verifies the Under-the-Hood blocks on every chapter page: each block
+// renders and expands with content, exactly one block per chapter carries the
+// lab download, and the lab zip answers 200. Usage:
+// node scripts/hood-e2e.mjs [baseURL]
 
 import { chromium } from 'playwright';
 
 const BASE = process.argv[2] ?? 'http://localhost:5173';
-const CHAPTERS = ['descent', 'neuron', 'space', 'digits', 'latent', 'language', 'reward', 'rook'];
+// slug → expected number of hood blocks on the page
+const CHAPTERS = {
+	descent: 2,
+	neuron: 2,
+	space: 2,
+	digits: 2,
+	latent: 2,
+	language: 2,
+	reward: 2,
+	rook: 3
+};
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage();
 let failed = 0;
 
-for (const slug of CHAPTERS) {
+for (const [slug, expected] of Object.entries(CHAPTERS)) {
 	try {
 		await page.goto(`${BASE}/${slug}`, { waitUntil: 'domcontentloaded' });
-		// scrolling down wakes the chapter's lazy-loaded demos; give the main
-		// thread room, and retry the click once if the panel didn't open
-		const toggle = page.locator('.hood-toggle');
-		await toggle.scrollIntoViewIfNeeded();
+		const toggles = page.locator('.hood-toggle');
+		// scrolling wakes the chapter's lazy-loaded demos; walk to the bottom
+		// so every hood block is mounted before counting
+		await page.keyboard.press('End');
 		await page.waitForTimeout(1500);
-		await toggle.click();
-		try {
-			await page.locator('.hood [role="tablist"]').waitFor({ timeout: 15_000 });
-		} catch {
+		const count = await toggles.count();
+
+		// open every block and count its content sections
+		let sections = 0;
+		for (let i = 0; i < count; i++) {
+			const toggle = toggles.nth(i);
+			await toggle.scrollIntoViewIfNeeded();
 			await toggle.click();
-			await page.locator('.hood [role="tablist"]').waitFor({ timeout: 15_000 });
+			const hood = page.locator('.hood').nth(i);
+			try {
+				await hood.locator('h3').first().waitFor({ timeout: 15_000 });
+			} catch {
+				await toggle.click();
+				await hood.locator('h3').first().waitFor({ timeout: 15_000 });
+			}
+			sections += await hood.locator('h3').count();
 		}
-		const mlCode = await page.locator('.hood .code').count();
-		await page.locator('.hood [role="tab"]', { hasText: 'stagecraft' }).click();
-		await page.waitForTimeout(150);
-		const uiSections = await page.locator('.hood h3').count();
-		const href = await page.locator('.hood a[download]').getAttribute('href');
+
+		// exactly one lab download per chapter, and the zip must answer 200
+		const downloads = page.locator('.hood a[download]');
+		const nDownloads = await downloads.count();
+		const href = await downloads.first().getAttribute('href');
 		const res = await page.request.get(`${BASE}${href?.startsWith('/') ? '' : '/'}${href}`);
 		const size = (await res.body()).length;
-		const ok = mlCode > 0 && uiSections > 0 && res.status() === 200 && size > 1000;
+
+		const ok =
+			count === expected &&
+			sections >= expected &&
+			nDownloads === 1 &&
+			res.status() === 200 &&
+			size > 1000;
 		if (!ok) failed++;
 		console.log(
-			`${ok ? '✓' : '✗'} ${slug} — ml code blocks: ${mlCode}, ui sections: ${uiSections}, ` +
-				`zip: ${res.status()} (${(size / 1024).toFixed(0)} KB)`
+			`${ok ? '✓' : '✗'} ${slug} — blocks: ${count}/${expected}, sections: ${sections}, ` +
+				`downloads: ${nDownloads}, zip: ${res.status()} (${(size / 1024).toFixed(0)} KB)`
 		);
 	} catch (e) {
 		failed++;

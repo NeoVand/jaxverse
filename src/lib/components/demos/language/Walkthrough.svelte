@@ -468,6 +468,11 @@
 </Plate>
 
 <style>
+	/* token chips need a floor so single digits stay square-ish */
+	.chip {
+		min-width: 24px;
+		justify-content: center;
+	}
 	.input {
 		width: 100%;
 		height: 32px;
@@ -592,31 +597,5 @@
 		letter-spacing: 0.03em;
 		color: var(--ink-3);
 		white-space: nowrap;
-	}
-	.chip {
-		min-width: 24px;
-		font-family: var(--font-sans);
-		font-size: 10.5px;
-		font-weight: 520;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--ink-2);
-		background: var(--surface);
-		border: 1px solid var(--line);
-		border-radius: 999px;
-		padding: 3px 9px;
-		transition:
-			color 100ms ease,
-			border-color 100ms ease,
-			background 100ms ease;
-	}
-	.chip:hover {
-		border-color: var(--ink-3);
-		color: var(--ink);
-	}
-	.chip-on {
-		color: var(--accent);
-		background: var(--accent-soft);
-		border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
 	}
 </style>

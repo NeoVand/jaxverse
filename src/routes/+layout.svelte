@@ -23,12 +23,23 @@
 		const seg = page.url.pathname.split('/').filter(Boolean).at(-1) ?? '';
 		return chapterBySlug.get(seg);
 	});
+
+	// Reading progress: a hairline of accent that fills as you descend the page.
+	let readFrac = $state(0);
+	function onScroll() {
+		const doc = document.documentElement;
+		const span = doc.scrollHeight - innerHeight;
+		readFrac = span > 200 ? Math.min(1, Math.max(0, scrollY / span)) : 0;
+	}
 </script>
 
+<svelte:window onscroll={onScroll} onresize={onScroll} />
+
 <svelte:head>
+	<!-- the mark at favicon scale: two contour rings + the ball at the minimum -->
 	<link
 		rel="icon"
-		href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M4 6 Q 13 30 17 22 Q 20 16 28 18' fill='none' stroke='%232b45d8' stroke-width='3.4' stroke-linecap='round'/%3E%3Ccircle cx='15.2' cy='24.4' r='3.4' fill='%23d3541f'/%3E%3C/svg%3E"
+		href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'%3E%3Cpath d='M 27.7 12.06 C 28.42 13.99 28.25 16.87 27.26 18.87 C 26.27 20.86 23.92 22.75 21.78 24.02 C 19.64 25.29 16.87 26.4 14.43 26.49 C 12 26.58 8.92 25.84 7.16 24.58 C 5.41 23.32 4.41 20.93 3.88 18.91 C 3.35 16.89 3.24 14.54 4 12.46 C 4.76 10.38 6.38 7.68 8.44 6.41 C 10.5 5.15 13.93 4.73 16.35 4.88 C 18.78 5.03 21.1 6.12 22.99 7.32 C 24.88 8.52 26.99 10.14 27.7 12.06 Z' stroke='%232b45d8' stroke-width='2.2' opacity='0.55'/%3E%3Cpath d='M 24.71 15.09 C 24.89 16.34 24.08 17.88 23.35 19.1 C 22.63 20.32 21.69 21.57 20.37 22.41 C 19.05 23.26 16.98 24.22 15.43 24.17 C 13.88 24.11 12.11 23.02 11.09 22.08 C 10.07 21.14 9.62 19.8 9.31 18.53 C 8.99 17.27 8.64 15.73 9.2 14.49 C 9.75 13.26 11.24 11.8 12.65 11.12 C 14.06 10.44 16.04 10.35 17.64 10.43 C 19.24 10.5 21.08 10.81 22.26 11.58 C 23.43 12.36 24.53 13.83 24.71 15.09 Z' stroke='%232b45d8' stroke-width='2.2'/%3E%3Ccircle cx='17.4' cy='18.1' r='3.4' fill='%23d3541f'/%3E%3C/svg%3E"
 	/>
 	<meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf9f5" />
 	<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#141310" />
@@ -54,14 +65,31 @@
 			</span>
 		</a>
 
-		<div class="flex items-center gap-5">
+		<div class="flex items-center gap-2 sm:gap-3">
 			{#if current}
-				<span class="eyebrow hidden sm:inline" aria-hidden="true">
+				<span class="eyebrow hidden md:inline" aria-hidden="true">
 					{current.n === 0 ? 'Prologue' : `Chapter ${current.n}`} · {current.kicker}
 				</span>
+				<span class="hidden h-3.5 w-px bg-line md:inline-block" aria-hidden="true"></span>
 			{/if}
-			<a href="{resolve('/')}#contents" class="eyebrow transition-colors hover:text-ink">
+			<a
+				href="{resolve('/')}#contents"
+				class="eyebrow rounded-md px-2 py-1.5 transition-colors hover:bg-surface-2 hover:text-ink"
+			>
 				Contents
+			</a>
+			<a
+				href="https://github.com/NeoVand/jaxverse"
+				rel="external"
+				class="flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-ink-2 transition-colors hover:border-line hover:text-ink"
+				aria-label="jaxverse on GitHub"
+				title="View the source on GitHub"
+			>
+				<svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+					<path
+						d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
+					/>
+				</svg>
 			</a>
 			<button
 				onclick={cycleTheme}
@@ -79,6 +107,15 @@
 			</button>
 		</div>
 	</div>
+
+	<!-- reading progress, drawn as the thinnest possible line of accent -->
+	{#if readFrac > 0}
+		<div
+			class="absolute inset-x-0 bottom-[-1px] h-[2px] origin-left"
+			style="background: var(--accent); transform: scaleX({readFrac}); opacity: 0.75;"
+			aria-hidden="true"
+		></div>
+	{/if}
 </header>
 
 <main id="main" style="padding-top: var(--header-h);">
@@ -96,8 +133,15 @@
 			>
 			— nothing is faked, nothing leaves your machine.
 		</p>
-		<a href={resolve('/epilogue')} class="eyebrow transition-colors hover:text-ink"
-			>Epilogue &amp; credits</a
-		>
+		<div class="flex items-center gap-5">
+			<a
+				href="https://github.com/NeoVand/jaxverse"
+				rel="external"
+				class="eyebrow transition-colors hover:text-ink">GitHub</a
+			>
+			<a href={resolve('/epilogue')} class="eyebrow transition-colors hover:text-ink"
+				>Epilogue &amp; credits</a
+			>
+		</div>
 	</div>
 </footer>

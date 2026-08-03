@@ -146,6 +146,8 @@
 		</div>
 	</Wide>
 
+	<UnderTheHood slug="digits" block="training" />
+
 	<Prose>
 		<h2
 			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
@@ -193,6 +195,8 @@
 			<DrawPad />
 		</Plate>
 	</Wide>
+
+	<UnderTheHood slug="digits" block="saliency" />
 
 	<Prose>
 		<h2
@@ -249,8 +253,4 @@
 			with no labels at all — and a map of handwriting appears on its own.
 		</p>
 	</Prose>
-
-	<Wide>
-		<UnderTheHood slug="digits" />
-	</Wide>
 </ChapterShell>

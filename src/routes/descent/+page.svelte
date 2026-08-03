@@ -77,6 +77,8 @@
 		<OptimizerRace onraced={() => progress.reach('descent:done')} />
 	</Wide>
 
+	<UnderTheHood slug="descent" block="gradient" />
+
 	<Prose>
 		<h2
 			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
@@ -143,6 +145,8 @@
 		<StepSize />
 	</Wide>
 
+	<UnderTheHood slug="descent" block="jax" />
+
 	<Prose>
 		<h2
 			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
@@ -172,8 +176,4 @@
 			set loose on richer ground.
 		</p>
 	</Prose>
-
-	<Wide>
-		<UnderTheHood slug="descent" />
-	</Wide>
 </ChapterShell>

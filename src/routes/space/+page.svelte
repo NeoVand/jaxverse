@@ -57,6 +57,8 @@
 		/>
 	</Wide>
 
+	<UnderTheHood slug="space" block="device" />
+
 	<Prose>
 		<h2
 			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
@@ -105,6 +107,8 @@
 		/>
 	</Wide>
 
+	<UnderTheHood slug="space" block="middle" />
+
 	<Prose>
 		<h2
 			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
@@ -128,8 +132,4 @@
 			place. The grid you just watched bend is the only mental image you need.
 		</p>
 	</Prose>
-
-	<Wide>
-		<UnderTheHood slug="space" />
-	</Wide>
 </ChapterShell>

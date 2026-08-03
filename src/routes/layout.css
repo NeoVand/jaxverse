@@ -225,6 +225,100 @@ body {
 	padding: 0.08em 0.35em;
 }
 
+/* ── the control kit: every chip, tab, and segmented switch in the book ──
+   One voice for small controls. Selection is an accent-soft tint — never an
+   ink fill, which reads as a glaring white blob in dark mode. Hover on a
+   selected control deepens the border only; the text stays accent. */
+
+.chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-family: var(--font-sans);
+	font-size: 10.5px;
+	font-weight: 520;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--ink-2);
+	background: var(--surface);
+	border: 1px solid var(--line);
+	border-radius: 6px;
+	padding: 3px 10px;
+	transition:
+		color 100ms ease,
+		background-color 100ms ease,
+		border-color 100ms ease;
+}
+.chip:hover:not(:disabled) {
+	border-color: var(--ink-3);
+	color: var(--ink);
+}
+.chip:disabled {
+	opacity: 0.45;
+	cursor: default;
+}
+.chip-on,
+.chip-on:hover:not(:disabled) {
+	color: var(--accent);
+	background: var(--accent-soft);
+}
+.chip-on {
+	border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+.chip-on:hover:not(:disabled) {
+	border-color: color-mix(in srgb, var(--accent) 70%, var(--line));
+}
+
+/* segmented switch: chips fused into one control */
+.seg {
+	display: inline-flex;
+	border: 1px solid var(--line);
+	border-radius: 6px;
+	overflow: hidden;
+	background: var(--surface);
+}
+.seg > button {
+	font-family: var(--font-sans);
+	font-size: 10.5px;
+	font-weight: 520;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	padding: 4px 11px;
+	color: var(--ink-3);
+	background: transparent;
+	transition:
+		color 100ms ease,
+		background-color 100ms ease;
+}
+.seg > button + button {
+	border-left: 1px solid var(--line);
+}
+.seg > button:hover:not(:disabled) {
+	color: var(--ink);
+}
+.seg > button.on,
+.seg > button.on:hover:not(:disabled) {
+	background: var(--accent-soft);
+	color: var(--accent);
+}
+.seg > button:disabled {
+	opacity: 0.45;
+	cursor: default;
+}
+
+/* solid button: the page-level call to action. Accent fill with paper text
+   adapts to both themes without ever going white-on-dark. */
+.btn-solid {
+	font-family: var(--font-sans);
+	background: var(--accent);
+	border: 1px solid var(--accent);
+	color: var(--paper);
+	transition: opacity 100ms ease;
+}
+.btn-solid:hover {
+	opacity: 0.88;
+}
+
 /* equation term coloring — used via \htmlClass{eq-a}{…} inside <Math> */
 .eq-a {
 	color: var(--accent);

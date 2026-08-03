@@ -417,31 +417,6 @@
 		border-color: var(--accent);
 		box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
 	}
-	.chip {
-		font-family: var(--font-sans);
-		font-size: 10.5px;
-		font-weight: 520;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--ink-2);
-		background: var(--surface);
-		border: 1px solid var(--line);
-		border-radius: 999px;
-		padding: 3px 10px;
-		transition:
-			color 100ms ease,
-			border-color 100ms ease,
-			background 100ms ease;
-	}
-	.chip:hover {
-		border-color: var(--ink-3);
-		color: var(--ink);
-	}
-	.chip-on {
-		color: var(--accent);
-		background: var(--accent-soft);
-		border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-	}
 	/* newest sample settles onto the desk; reduced-motion zeroes this globally */
 	.sample-card {
 		animation: settle 480ms ease both;

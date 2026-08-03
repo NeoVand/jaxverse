@@ -503,27 +503,4 @@
 		height: 7px;
 		border-radius: 50%;
 	}
-
-	.chip {
-		font-family: var(--font-sans);
-		font-size: 11px;
-		font-weight: 500;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
-		padding: 3px 9px;
-		border-radius: 5px;
-		border: 1px solid var(--line);
-		color: var(--ink-2);
-		background: var(--surface);
-		transition: all 100ms ease;
-	}
-	.chip:hover {
-		border-color: var(--ink-3);
-		color: var(--ink);
-	}
-	.chip-on {
-		background: var(--ink);
-		border-color: var(--ink);
-		color: var(--paper);
-	}
 </style>

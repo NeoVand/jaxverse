@@ -806,11 +806,11 @@
 					<div class="mt-2.5 flex flex-col gap-y-2 px-1">
 						{#if variant === 'guided'}
 							<span
-								class="flex flex-wrap items-center gap-1"
+								class="flex flex-wrap items-center gap-1.5"
 								role="group"
 								aria-label="Hidden dimensions"
 							>
-								<span class="eyebrow mr-1 w-11">hidden</span>
+								<span class="eyebrow mr-1 w-14 shrink-0">hidden</span>
 								<button
 									class="chip"
 									class:chip-on={width === 2}
@@ -825,11 +825,11 @@
 						{/if}
 						{#if variant === 'free'}
 							<span
-								class="flex flex-wrap items-center gap-1"
+								class="flex flex-wrap items-center gap-1.5"
 								role="group"
 								aria-label="Hidden width"
 							>
-								<span class="eyebrow mr-1 w-11">width</span>
+								<span class="eyebrow mr-1 w-14 shrink-0">width</span>
 								{#each [2, 3, 4, 8] as w (w)}
 									<button
 										class="chip"
@@ -841,8 +841,8 @@
 									>
 								{/each}
 							</span>
-							<span class="flex flex-wrap items-center gap-1" role="group" aria-label="Depth">
-								<span class="eyebrow mr-1 w-11">depth</span>
+							<span class="flex flex-wrap items-center gap-1.5" role="group" aria-label="Depth">
+								<span class="eyebrow mr-1 w-14 shrink-0">depth</span>
 								{#each [1, 2, 3] as dd (dd)}
 									<button
 										class="chip"
@@ -855,8 +855,8 @@
 								{/each}
 							</span>
 						{/if}
-						<span class="flex flex-wrap items-center gap-1" role="group" aria-label="Activation">
-							<span class="eyebrow mr-1 w-11">bend</span>
+						<span class="flex flex-wrap items-center gap-1.5" role="group" aria-label="Activation">
+							<span class="eyebrow mr-1 w-14 shrink-0">bend</span>
 							{#each ACTS as act (act)}
 								<button
 									class="chip"
@@ -960,28 +960,5 @@
 		display: block;
 		width: 100%;
 		height: 100%;
-	}
-
-	.chip {
-		font-family: var(--font-sans);
-		font-size: 11px;
-		font-weight: 500;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
-		padding: 3px 9px;
-		border-radius: 5px;
-		border: 1px solid var(--line);
-		color: var(--ink-2);
-		background: var(--surface);
-		transition: all 100ms ease;
-	}
-	.chip:hover {
-		border-color: var(--ink-3);
-		color: var(--ink);
-	}
-	.chip-on {
-		background: var(--ink);
-		border-color: var(--ink);
-		color: var(--paper);
 	}
 </style>

@@ -207,6 +207,8 @@
 		<Scribe />
 	</Wide>
 
+	<UnderTheHood slug="language" block="transformer" />
+
 	<Prose>
 		<h2
 			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
@@ -265,6 +267,8 @@
 	<Wide>
 		<Inspector />
 	</Wide>
+
+	<UnderTheHood slug="language" block="attention" />
 
 	<Prose>
 		<h2
@@ -382,8 +386,4 @@
 			<a href={resolve('/reward')}>the next chapter</a>.
 		</p>
 	</Prose>
-
-	<Wide>
-		<UnderTheHood slug="language" />
-	</Wide>
 </ChapterShell>

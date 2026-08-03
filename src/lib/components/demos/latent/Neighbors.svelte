@@ -697,34 +697,6 @@
 </Plate>
 
 <style>
-	.chip {
-		font-family: var(--font-sans);
-		font-size: 11px;
-		font-weight: 500;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
-		padding: 4px 11px;
-		border-radius: 5px;
-		border: 1px solid var(--line);
-		color: var(--ink-2);
-		background: var(--surface);
-		transition: all 100ms ease;
-	}
-	.chip:hover {
-		border-color: var(--ink-3);
-		color: var(--ink);
-	}
-	.chip-on {
-		background: var(--ink);
-		border-color: var(--ink);
-		color: var(--paper);
-	}
-	.chip-on:hover {
-		color: var(--paper);
-		background: color-mix(in srgb, var(--ink) 88%, var(--paper));
-		border-color: color-mix(in srgb, var(--ink) 88%, var(--paper));
-	}
-
 	/* a neighbour: the digit, with its label tucked in the corner */
 	.tile {
 		position: relative;

@@ -806,35 +806,6 @@
 </Plate>
 
 <style>
-	.chip {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		font-family: var(--font-sans);
-		font-size: 10.5px;
-		font-weight: 550;
-		letter-spacing: 0.09em;
-		text-transform: uppercase;
-		color: var(--ink-3);
-		background: transparent;
-		border: 1px solid var(--line-soft);
-		border-radius: 999px;
-		padding: 3px 10px;
-		cursor: pointer;
-		transition:
-			color 120ms ease,
-			border-color 120ms ease,
-			background 120ms ease;
-	}
-	.chip:hover {
-		color: var(--ink-2);
-		border-color: var(--line);
-	}
-	.chip-on {
-		color: var(--ink);
-		border-color: var(--line);
-		background: var(--surface-2);
-	}
 	.dot {
 		width: 7px;
 		height: 7px;

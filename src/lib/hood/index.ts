@@ -1,6 +1,7 @@
-// The hidden course: one under-the-hood entry per chapter, keyed by slug.
-// Content lives in one module per chapter so a chapter's code excerpts and
-// its prose travel together.
+// The hidden course: two or three under-the-hood blocks per chapter, keyed by
+// slug, each anchored beneath the plate it explains. Content lives in one
+// module per chapter so a chapter's code excerpts and its prose travel
+// together.
 
 import type { HoodChapter } from './types';
 import { descent } from './descent';
@@ -23,4 +24,4 @@ export const hood: Record<string, HoodChapter> = {
 	rook
 };
 
-export type { HoodChapter, HoodSection, HoodCode } from './types';
+export type { HoodChapter, HoodBlock, HoodSection, HoodCode } from './types';

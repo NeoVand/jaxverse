@@ -71,6 +71,8 @@
 		<Pretrain />
 	</Wide>
 
+	<UnderTheHood slug="rook" block="engine" />
+
 	<Prose>
 		<p>
 			What did pretraining buy? At step 0 the time machine shows you noise: roughly one sampled move
@@ -217,6 +219,8 @@
 		<Rlvr />
 	</Wide>
 
+	<UnderTheHood slug="rook" block="rlvr" />
+
 	<Prose>
 		<h2
 			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
@@ -240,6 +244,8 @@
 	<Wide>
 		<Arena />
 	</Wide>
+
+	<UnderTheHood slug="rook" block="arena" />
 
 	<Prose>
 		<h2
@@ -291,8 +297,4 @@
 			gradients move. That was the point.
 		</p>
 	</Prose>
-
-	<Wide>
-		<UnderTheHood slug="rook" />
-	</Wide>
 </ChapterShell>

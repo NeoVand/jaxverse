@@ -113,6 +113,8 @@
 		<DoublePendulum />
 	</Wide>
 
+	<UnderTheHood slug="reward" block="pendulum" />
+
 	<Prose>
 		<h2
 			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
@@ -163,6 +165,8 @@
 	<Wide>
 		<Gridworld />
 	</Wide>
+
+	<UnderTheHood slug="reward" block="reinforce" />
 
 	<Prose>
 		<h2
@@ -228,8 +232,4 @@
 			<a href={resolve('/rook')}>Meet Rook</a>.
 		</p>
 	</Prose>
-
-	<Wide>
-		<UnderTheHood slug="reward" />
-	</Wide>
 </ChapterShell>

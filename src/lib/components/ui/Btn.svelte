@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
-	// The house button: quiet by default, ink when primary. Uppercase Inter,
-	// hairline border — chrome that defers to the work.
+	// The house button: quiet by default, accent-tinted when primary.
+	// Uppercase Inter, hairline border — chrome that defers to the work.
 	interface Props {
 		onclick?: () => void;
 		kind?: 'primary' | 'ghost';
@@ -49,14 +49,16 @@
 		border-color: var(--ink-2);
 		color: var(--ink);
 	}
+	/* primary is an accent tint, not an ink fill — an ink fill reads as a
+	   glaring white block in dark mode, and these sit mid-plate */
 	.btn-primary {
-		background: var(--ink);
-		border-color: var(--ink);
-		color: var(--paper);
+		background: var(--accent-soft);
+		border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+		color: var(--accent);
 	}
 	.btn-primary:hover:not(:disabled) {
-		border-color: var(--ink);
-		color: var(--paper);
-		opacity: 0.88;
+		background: var(--accent-soft);
+		border-color: color-mix(in srgb, var(--accent) 70%, var(--line));
+		color: var(--accent);
 	}
 </style>

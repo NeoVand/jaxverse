@@ -1,8 +1,9 @@
-// The under-the-hood sections: one per chapter, collapsed by default, and a
-// second book hiding inside the first — a progressive course in jax-js. Each
-// chapter's entry teaches the JAX ideas its plates actually run on, with the
-// real code quoted from this repository, and a separate tab for the stagecraft
-// so the ML stays readable for the reader who came for the ML.
+// The under-the-hood blocks: a second book hiding inside the first — a
+// progressive course in jax-js. Each chapter contributes two or three blocks,
+// and each block sits directly beneath the plate it explains, collapsed to a
+// single quiet line until the reader wants the code. Blocks carry the real
+// code quoted from this repository, with a separate tab for the stagecraft so
+// the ML stays readable for the reader who came for the ML.
 
 export interface HoodCode {
 	/** The code itself, verbatim or lightly condensed from the repo. */
@@ -19,21 +20,27 @@ export interface HoodSection {
 	code?: HoodCode;
 }
 
-export interface HoodChapter {
-	slug: string;
-	/** The lesson this chapter contributes to the jax-js course. */
+export interface HoodBlock {
+	/** Anchor id, referenced from the chapter page: <UnderTheHood block="…" /> */
+	id: string;
+	/** The lesson this block contributes to the jax-js course. */
 	lesson: string;
-	/** The invitation paragraph shown as soon as the hood opens (HTML). */
-	lede: string;
+	/** Optional invitation paragraph shown as soon as the hood opens (HTML). */
+	lede?: string;
 	/** The machine-learning tab. */
 	ml: HoodSection[];
-	/** The interface tab — the stagecraft. */
+	/** The interface tab — the stagecraft. Empty hides the tab. */
 	ui: HoodSection[];
-	/** Downloadable standalone lab, if the chapter ships one. */
+	/** Downloadable standalone lab; rides on the chapter's final block. */
 	lab?: {
 		/** Zip filename under /labs/. */
 		file: string;
 		/** One sentence: what the lab does when it runs. */
 		note: string;
 	};
+}
+
+export interface HoodChapter {
+	slug: string;
+	blocks: HoodBlock[];
 }

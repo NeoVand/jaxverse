@@ -92,6 +92,8 @@
 		/>
 	</Wide>
 
+	<UnderTheHood slug="latent" block="waist" />
+
 	<Prose>
 		<h2
 			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
@@ -180,6 +182,8 @@
 			caption="The decoder run everywhere at once: a 21 × 21 grid of addresses laid over the latent square and decoded tile by tile, live as training moves. Every tile is a digit that does not exist — the machine's guess at what belongs at an address no example ever claimed. The cursor's cell is enlarged at right, above the nearest real held-out digit and the distance between them: how far invention sits from memory. Past a two-number waist the sheet is one slice through the space, and the slider chooses which."
 		/>
 	</Wide>
+
+	<UnderTheHood slug="latent" block="halves" />
 
 	<Prose>
 		<p>
@@ -298,8 +302,4 @@
 			the language.
 		</p>
 	</Prose>
-
-	<Wide>
-		<UnderTheHood slug="latent" />
-	</Wide>
 </ChapterShell>

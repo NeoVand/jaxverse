@@ -77,6 +77,8 @@
 		<OneNeuron />
 	</Wide>
 
+	<UnderTheHood slug="neuron" block="bare" />
+
 	<Prose>
 		<h2
 			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
@@ -149,6 +151,8 @@
 		<CurveFit />
 	</Wide>
 
+	<UnderTheHood slug="neuron" block="engine" />
+
 	<Prose>
 		<h2
 			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
@@ -200,8 +204,4 @@
 			ready, <a href={resolve('/space')}>go bend space</a>.
 		</p>
 	</Prose>
-
-	<Wide>
-		<UnderTheHood slug="neuron" />
-	</Wide>
 </ChapterShell>
