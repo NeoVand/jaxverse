@@ -29,25 +29,47 @@
 		rook: Castle
 	};
 
-	// The contents rail: one smooth descent curve threading every chapter node.
-	// Node i sits at row center (i + 0.5) / N in a unit viewBox stretched to
-	// the list's real height; the curve wanders left–right between nodes.
+	// The contents rail: one thin thread wandering through every chapter node,
+	// with a soft glow drifting down it. Node positions come from the *measured*
+	// center of each row (rows have different heights, so equal division would
+	// drift), and everything stays inside the 56px rail — the row hover box
+	// starts at 44px and can never touch it.
 	const N = chapters.length + 1; // + epilogue
-	const nodeY = (i: number) => (i + 0.5) / N;
-	const nodeX = (i: number) => 0.5 + 0.34 * Math.sin(i * 1.7 + 0.6);
+	const RAIL_W = 56;
+	let railBox: HTMLElement | undefined = $state();
+	let rowEls: HTMLElement[] = $state([]);
+	let railH = $state(0);
+	let centers = $state<number[]>([]);
+	const nodeX = (i: number) => 22 + 11 * Math.sin(i * 1.7 + 0.6); // 11…33px
 
-	const railPath = (() => {
-		let d = `M ${nodeX(0)} ${nodeY(0)}`;
+	$effect(() => {
+		if (!railBox) return;
+		const box = railBox;
+		const measure = () => {
+			railH = box.clientHeight;
+			const boxTop = box.getBoundingClientRect().top;
+			centers = rowEls.filter(Boolean).map((el) => {
+				// align each node with the row's chapter number, not the row's
+				// geometric center — the number is the first span in the link
+				const r = (el.querySelector('a > span') ?? el).getBoundingClientRect();
+				return r.top - boxTop + r.height / 2;
+			});
+		};
+		measure();
+		const ro = new ResizeObserver(measure);
+		ro.observe(box);
+		return () => ro.disconnect();
+	});
+
+	const spine = $derived.by(() => {
+		if (centers.length < N) return '';
+		let d = `M ${nodeX(0)} ${centers[0]}`;
 		for (let i = 1; i < N; i++) {
-			const x0 = nodeX(i - 1);
-			const y0 = nodeY(i - 1);
-			const x1 = nodeX(i);
-			const y1 = nodeY(i);
-			const my = (y0 + y1) / 2;
-			d += ` C ${x0} ${my}, ${x1} ${my}, ${x1} ${y1}`;
+			const my = (centers[i - 1] + centers[i]) / 2;
+			d += ` C ${nodeX(i - 1)} ${my}, ${nodeX(i)} ${my}, ${nodeX(i)} ${centers[i]}`;
 		}
 		return d;
-	})();
+	});
 </script>
 
 <svelte:head>
@@ -75,28 +97,7 @@
 		single neuron bending a line to a language model learning chess.
 	</p>
 
-	<div class="mt-8 flex flex-wrap items-center gap-3">
-		<a
-			href={resolve('/descent')}
-			class="btn-solid inline-flex items-center gap-2 rounded-md px-4 py-2 text-[11.5px] font-medium tracking-[0.1em] uppercase"
-		>
-			Begin the descent <ArrowRight size={13} aria-hidden="true" />
-		</a>
-		<a
-			href="https://github.com/NeoVand/jaxverse"
-			rel="external"
-			class="cta-ghost inline-flex items-center gap-2 rounded-md px-4 py-2 text-[11.5px] font-medium tracking-[0.1em] uppercase"
-		>
-			<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-				<path
-					d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
-				/>
-			</svg>
-			View the source
-		</a>
-	</div>
-
-	<div class="mt-8">
+	<div class="mt-4">
 		<HeroField height={300} />
 	</div>
 	<p
@@ -116,6 +117,27 @@
 		</span>
 		<span class="font-serif italic">— live now; click the map to drop them somewhere new</span>
 	</p>
+
+	<div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+		<a
+			href={resolve('/descent')}
+			class="btn-solid inline-flex items-center gap-2 rounded-md px-5 py-2.5 text-[11.5px] font-medium tracking-[0.1em] uppercase"
+		>
+			Begin the descent <ArrowRight size={13} aria-hidden="true" />
+		</a>
+		<a
+			href="https://github.com/NeoVand/jaxverse"
+			rel="external"
+			class="cta-ghost inline-flex items-center gap-2 rounded-md px-5 py-2.5 text-[11.5px] font-medium tracking-[0.1em] uppercase"
+		>
+			<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+				<path
+					d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
+				/>
+			</svg>
+			View the source
+		</a>
+	</div>
 </section>
 
 <!-- ── manifesto ── -->
@@ -168,38 +190,55 @@
 <section id="contents" class="mx-auto max-w-3xl px-5 py-14">
 	<h2 class="eyebrow mb-8">Contents — the descent</h2>
 
-	<div class="relative">
-		<!-- the rail -->
-		<svg
-			class="pointer-events-none absolute top-0 left-0 hidden h-full w-14 sm:block"
-			viewBox="0 0 1 1"
-			preserveAspectRatio="none"
-			aria-hidden="true"
-		>
-			<path
-				d={railPath}
-				fill="none"
-				stroke="var(--line)"
-				stroke-width="1.5"
-				vector-effect="non-scaling-stroke"
-			/>
-		</svg>
+	<div class="relative" bind:this={railBox}>
+		<!-- the rail: one thread through every chapter, a soft glow drifting down it -->
+		{#if spine}
+			<svg
+				class="pointer-events-none absolute top-0 left-0 hidden h-full w-14 sm:block"
+				viewBox="0 0 {RAIL_W} {railH}"
+				aria-hidden="true"
+			>
+				<defs>
+					<filter id="rail-glow" x="-200%" y="-200%" width="500%" height="500%">
+						<feGaussianBlur stdDeviation="4" />
+					</filter>
+				</defs>
+				<path d={spine} fill="none" stroke="var(--line)" stroke-width="1.2" />
+				<!-- the signal: a blurred halo and its small bright heart, drifting together -->
+				<g class="rail-signal">
+					<circle r="7" fill="var(--accent)" opacity="0.35" filter="url(#rail-glow)">
+						<animateMotion dur="14s" repeatCount="indefinite" path={spine} />
+					</circle>
+					<circle r="1.6" fill="var(--accent)" opacity="0.8">
+						<animateMotion dur="14s" repeatCount="indefinite" path={spine} />
+					</circle>
+				</g>
+				<!-- the chapter nodes, at the exact measured center of each row -->
+				{#each chapters as c, i (c.slug)}
+					<circle
+						cx={nodeX(i)}
+						cy={centers[i]}
+						r="4"
+						fill={progress.visited.has(c.slug) ? 'var(--warm)' : 'var(--paper)'}
+						stroke={progress.visited.has(c.slug) ? 'var(--warm)' : 'var(--ink-3)'}
+						stroke-width="1.6"
+					/>
+				{/each}
+				<circle
+					cx={nodeX(chapters.length)}
+					cy={centers[chapters.length]}
+					r="4"
+					fill="var(--paper)"
+					stroke="var(--ink-3)"
+					stroke-width="1.6"
+				/>
+			</svg>
+		{/if}
 
-		<ol class="relative">
+		<ol>
 			{#each chapters as c, i (c.slug)}
 				{@const Glyph = glyphs[c.slug]}
-				<li class="relative sm:pl-14">
-					<!-- node -->
-					<span
-						class="absolute top-1/2 hidden h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 sm:block"
-						style="left: calc({nodeX(i)} * 3.5rem); border-color: {progress.visited.has(c.slug)
-							? 'var(--warm)'
-							: 'var(--ink-3)'}; background: {progress.visited.has(c.slug)
-							? 'var(--warm)'
-							: 'var(--paper)'};"
-						aria-hidden="true"
-					></span>
-
+				<li class="sm:pl-14" bind:this={rowEls[i]}>
 					<a
 						href={resolve(`/${c.slug}`)}
 						class="group -mx-3 my-1 flex items-baseline gap-4 rounded-lg border border-line-soft border-transparent px-3 py-4 transition-colors hover:border-line hover:bg-surface"
@@ -237,14 +276,7 @@
 			{/each}
 
 			<!-- epilogue node -->
-			<li class="relative sm:pl-14">
-				<span
-					class="absolute top-1/2 hidden h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 sm:block"
-					style="left: calc({nodeX(
-						chapters.length
-					)} * 3.5rem); border-color: var(--ink-3); background: var(--paper);"
-					aria-hidden="true"
-				></span>
+			<li class="sm:pl-14" bind:this={rowEls[chapters.length]}>
 				<a
 					href={resolve('/epilogue')}
 					class="group -mx-3 my-1 flex items-baseline gap-4 rounded-lg border border-transparent px-3 py-4 transition-colors hover:border-line hover:bg-surface"
@@ -286,6 +318,14 @@
 	.cta-ghost:hover {
 		border-color: var(--ink-3);
 		color: var(--ink);
+	}
+
+	/* the glow drifting down the contents thread disappears for readers who
+	   asked for reduced motion */
+	@media (prefers-reduced-motion: reduce) {
+		.rail-signal {
+			display: none;
+		}
 	}
 
 	/* a facsimile of the under-the-hood bar, so readers recognize it later */

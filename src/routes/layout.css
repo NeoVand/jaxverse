@@ -28,6 +28,7 @@
 
 	/* the two voices */
 	--accent: #2b45d8; /* ultramarine — class A, links, live things */
+	--accent-strong: #4a569b; /* muted indigo fill for solid CTAs */
 	--accent-soft: #eceefc;
 	--warm: #d3541f; /* vermilion — class B, contrast */
 	--warm-soft: #fbeee6;
@@ -74,6 +75,7 @@
 		--ink-3: #6c695e;
 
 		--accent: #93a3ff;
+		--accent-strong: #57639f;
 		--accent-soft: #22243c;
 		--warm: #ff8e57;
 		--warm-soft: #382317;
@@ -109,6 +111,7 @@
 	--ink-3: #6c695e;
 
 	--accent: #93a3ff;
+	--accent-strong: #57639f;
 	--accent-soft: #22243c;
 	--warm: #ff8e57;
 	--warm-soft: #382317;
@@ -306,13 +309,13 @@ body {
 	cursor: default;
 }
 
-/* solid button: the page-level call to action. Accent fill with paper text
-   adapts to both themes without ever going white-on-dark. */
+/* solid button: the page-level call to action. A full-saturation ultramarine
+   in both themes — deep and unmistakable, never a pale tint on dark. */
 .btn-solid {
 	font-family: var(--font-sans);
-	background: var(--accent);
-	border: 1px solid var(--accent);
-	color: var(--paper);
+	background: var(--accent-strong);
+	border: 1px solid var(--accent-strong);
+	color: #fff;
 	transition: opacity 100ms ease;
 }
 .btn-solid:hover {

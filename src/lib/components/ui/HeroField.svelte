@@ -111,10 +111,12 @@
 
 	// ── contour geometry, computed once (the landscape never changes). Rings
 	// that touch the domain boundary are dropped: every line drawn is a closed
-	// loop floating in space, so the map has no clipped ends and no seams. ───
+	// loop floating in space, so the map has no clipped ends and no seams.
+	// Alongside the rings, a per-cell depth field (1 at the lowest loss, 0 at
+	// the rim) drives the interior wash. ─────────────────────────────────────
 	const GX = 108;
 	const GY = 66;
-	const contourPaths = (() => {
+	const { contourPaths, depthField } = (() => {
 		const values = new Float64Array(GX * GY);
 		let lo = Infinity;
 		let hi = -Infinity;
@@ -125,22 +127,66 @@
 				lo = Math.min(lo, v);
 				hi = Math.max(hi, v);
 			}
+		const field = new Float32Array(GX * GY);
+		for (let i = 0; i < field.length; i++) field[i] = (hi - values[i]) / (hi - lo);
 		const n = 18;
 		const thresholds = Array.from({ length: n }, (_, k) => lo + ((k + 0.6) / n) * (hi - lo));
 		const EDGE = 1.2; // grid cells: anything this close to the border is a cut ring
 		const touchesEdge = (ring: number[][]) =>
 			ring.some(([x, y]) => x < EDGE || y < EDGE || x > GX - 1 - EDGE || y > GY - 1 - EDGE);
-		return contours()
+		const paths = contours()
 			.size([GX, GY])
 			.thresholds(thresholds)(values as unknown as number[])
 			.map((c, k) => ({
-				index: k % 4 === 0,
+				// 1 at the lowest-loss ring, 0 at the rim — drives the depth ramp
+				depth: 1 - k / (n - 1),
 				rings: c.coordinates
 					.map((poly) => poly.filter((ring) => !touchesEdge(ring)))
 					.filter((poly) => poly.length > 0)
 			}))
 			.filter((c) => c.rings.length > 0);
+		return { contourPaths: paths, depthField: field };
 	})();
+
+	// ── the interior wash: the basins filled with a soft accent gradient — the
+	// rim is exactly the page background (alpha 0), and the fill deepens toward
+	// the minima. Painted once per theme into a tiny offscreen canvas, then
+	// stretched with smoothing so it reads as a continuous gradient. ──────────
+	let washCanvas: HTMLCanvasElement | null = null;
+	let washKey = '';
+	function washFor(accentCss: string, ctx: CanvasRenderingContext2D): HTMLCanvasElement {
+		if (washCanvas && washKey === accentCss) return washCanvas;
+		// let the 2d context normalize whatever the token holds to #rrggbb
+		ctx.save();
+		ctx.fillStyle = accentCss;
+		const norm = String(ctx.fillStyle);
+		ctx.restore();
+		const m = /^#([0-9a-f]{6})$/i.exec(norm);
+		const [r, g, b] = m
+			? [0, 2, 4].map((o) => parseInt(m[1].slice(o, o + 2), 16))
+			: (norm
+					.match(/[\d.]+/g)
+					?.slice(0, 3)
+					.map(Number) ?? [43, 69, 216]);
+		const off = document.createElement('canvas');
+		off.width = GX;
+		off.height = GY;
+		const g2 = off.getContext('2d')!;
+		const img = g2.createImageData(GX, GY);
+		for (let i = 0; i < depthField.length; i++) {
+			// dead zone below 0.16 keeps the outskirts *exactly* the background
+			const d = Math.max(0, (depthField[i] - 0.16) / 0.84);
+			const a = Math.pow(d, 2) * 0.38;
+			img.data[i * 4] = r;
+			img.data[i * 4 + 1] = g;
+			img.data[i * 4 + 2] = b;
+			img.data[i * 4 + 3] = Math.round(a * 255);
+		}
+		g2.putImageData(img, 0, 0);
+		washCanvas = off;
+		washKey = accentCss;
+		return off;
+	}
 
 	$effect(() => {
 		const ctx = canvas.getContext('2d');
@@ -173,7 +219,6 @@
 			ctx.clearRect(0, 0, W, H);
 
 			const style = getComputedStyle(canvas);
-			const line = style.getPropertyValue('--line').trim() || '#ddd';
 			const ink3 = style.getPropertyValue('--ink-3').trim() || '#999';
 			const accent = style.getPropertyValue('--accent').trim() || '#2b45d8';
 			const warm = style.getPropertyValue('--warm').trim() || '#d3541f';
@@ -182,7 +227,14 @@
 			const px = (u: number) => u * W;
 			const py = (u: number) => u * H;
 
-			// the map: light contours, every fourth one heavier — like real topo
+			// the interior wash first: over a dark page the accent fill reads as
+			// the basins getting lighter toward low loss; over a light page, as
+			// getting gently darker — the same paint, both directions honest
+			ctx.imageSmoothingEnabled = true;
+			ctx.imageSmoothingQuality = 'high';
+			ctx.drawImage(washFor(accent, ctx), 0, 0, GX, GY, 0, 0, W, H);
+
+			// then the rings, kept thin — quiet hairlines over the gradient
 			for (const c of contourPaths) {
 				ctx.beginPath();
 				for (const poly of c.rings)
@@ -195,9 +247,10 @@
 						}
 						ctx.closePath();
 					}
-				ctx.strokeStyle = c.index ? ink3 : line;
-				ctx.globalAlpha = c.index ? 0.6 : 0.9;
-				ctx.lineWidth = c.index ? 1.15 : 0.75;
+				const d = Math.pow(c.depth, 1.4);
+				ctx.strokeStyle = accent;
+				ctx.globalAlpha = 0.05 + 0.32 * d;
+				ctx.lineWidth = 0.6;
 				ctx.stroke();
 			}
 			ctx.globalAlpha = 1;
