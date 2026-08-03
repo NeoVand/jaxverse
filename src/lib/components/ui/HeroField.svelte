@@ -11,15 +11,20 @@
 
 	let canvas: HTMLCanvasElement;
 
-	// ── the landscape: three pits of different depths in a tilted plain ───────
+	// ── the landscape: four pits with 180° rotational symmetry about the
+	// center, so the composition balances instead of leaning right — the
+	// global minimum lower-right, its near-twin upper-left, and a mirrored
+	// pair of shallow traps between them ──────────────────────────────────────
 	const PITS = [
-		{ cx: 0.7, cy: 0.6, d: 1.0, s: 0.2 }, // the global minimum
-		{ cx: 0.24, cy: 0.36, d: 0.55, s: 0.15 }, // a tempting local one
-		{ cx: 0.42, cy: 0.82, d: 0.3, s: 0.1 } // a shallow trap
+		{ cx: 0.71, cy: 0.62, d: 1.0, s: 0.18 }, // the global minimum
+		{ cx: 0.29, cy: 0.38, d: 0.55, s: 0.16 }, // its tempting, weaker twin
+		{ cx: 0.34, cy: 0.74, d: 0.28, s: 0.09 }, // a shallow trap…
+		{ cx: 0.66, cy: 0.26, d: 0.28, s: 0.09 } // …and its mirror
 	];
 	function f(x: number, y: number): number {
-		// a broad bowl so every rim drains inward — no walker ever leaves the map
-		let v = 0.55 * ((x - 0.6) * (x - 0.6) + 0.8 * (y - 0.52) * (y - 0.52));
+		// a broad centered bowl so every rim drains inward — no walker ever
+		// leaves the map
+		let v = 0.55 * ((x - 0.5) * (x - 0.5) + 0.8 * (y - 0.5) * (y - 0.5));
 		for (const p of PITS) {
 			const dx = x - p.cx;
 			const dy = y - p.cy;
@@ -68,11 +73,15 @@
 		walkers = [mkWalker('sgd', x, y), mkWalker('momentum', x, y), mkWalker('adam', x, y)];
 	}
 	function spawnRandom() {
-		// start on the ridge between basins, so the rules genuinely disagree:
-		// SGD tends to slide into the nearest pit while momentum and Adam can
-		// carry across to the deeper one — the chapter's whole argument in
-		// miniature, playing on the landing page
-		spawnAll(0.36 + Math.random() * 0.32, 0.05 + Math.random() * 0.2);
+		// start just uphill of the weaker twin, so the rules genuinely
+		// disagree: SGD sinks into the nearest pit while momentum and Adam
+		// carry through it toward the global minimum — the chapter's whole
+		// argument in miniature, playing on the landing page. The band
+		// alternates with its point mirror, matching the symmetric terrain.
+		const x = 0.18 + Math.random() * 0.24;
+		const y = 0.04 + Math.random() * 0.14;
+		if (Math.random() < 0.5) spawnAll(x, y);
+		else spawnAll(1 - x, 1 - y);
 	}
 
 	function stepWalker(w: Walker) {
@@ -112,11 +121,13 @@
 	// ── contour geometry, computed once (the landscape never changes). Rings
 	// that touch the domain boundary are dropped: every line drawn is a closed
 	// loop floating in space, so the map has no clipped ends and no seams.
-	// Alongside the rings, a per-cell depth field (1 at the lowest loss, 0 at
-	// the rim) drives the interior wash. ─────────────────────────────────────
+	// Alongside the rings, a per-cell wash field drives the interior gradient:
+	// it is *anchored to the outermost surviving contour* — zero everywhere
+	// outside that ring, deepening toward the minima inside it — so no tint
+	// ever leaks past the last drawn line. ────────────────────────────────────
 	const GX = 108;
 	const GY = 66;
-	const { contourPaths, depthField } = (() => {
+	const { contourPaths, washField } = (() => {
 		const values = new Float64Array(GX * GY);
 		let lo = Infinity;
 		let hi = -Infinity;
@@ -127,25 +138,36 @@
 				lo = Math.min(lo, v);
 				hi = Math.max(hi, v);
 			}
-		const field = new Float32Array(GX * GY);
-		for (let i = 0; i < field.length; i++) field[i] = (hi - values[i]) / (hi - lo);
 		const n = 18;
 		const thresholds = Array.from({ length: n }, (_, k) => lo + ((k + 0.6) / n) * (hi - lo));
 		const EDGE = 1.2; // grid cells: anything this close to the border is a cut ring
 		const touchesEdge = (ring: number[][]) =>
 			ring.some(([x, y]) => x < EDGE || y < EDGE || x > GX - 1 - EDGE || y > GY - 1 - EDGE);
-		const paths = contours()
+		const levels = contours()
 			.size([GX, GY])
 			.thresholds(thresholds)(values as unknown as number[])
 			.map((c, k) => ({
-				// 1 at the lowest-loss ring, 0 at the rim — drives the depth ramp
+				k,
+				// 1 at the lowest-loss ring, 0 at the rim — drives the line ramp
 				depth: 1 - k / (n - 1),
 				rings: c.coordinates
 					.map((poly) => poly.filter((ring) => !touchesEdge(ring)))
 					.filter((poly) => poly.length > 0)
 			}))
 			.filter((c) => c.rings.length > 0);
-		return { contourPaths: paths, depthField: field };
+		// the wash stops exactly at the outermost drawn contour: alpha is zero
+		// wherever the loss sits above that ring's threshold
+		const tOut = thresholds[Math.max(...levels.map((c) => c.k))];
+		const field = new Float32Array(GX * GY);
+		const FADE = 6; // belt-and-suspenders falloff at the canvas border
+		for (let j = 0; j < GY; j++)
+			for (let i = 0; i < GX; i++) {
+				const idx = j * GX + i;
+				const u = Math.max(0, (tOut - values[idx]) / (tOut - lo));
+				const e = Math.min(1, Math.min(i, GX - 1 - i, j, GY - 1 - j) / FADE);
+				field[idx] = Math.pow(u, 1.9) * (e * e * (3 - 2 * e));
+			}
+		return { contourPaths: levels, washField: field };
 	})();
 
 	// ── the interior wash: the basins filled with a soft accent gradient — the
@@ -173,14 +195,11 @@
 		off.height = GY;
 		const g2 = off.getContext('2d')!;
 		const img = g2.createImageData(GX, GY);
-		for (let i = 0; i < depthField.length; i++) {
-			// dead zone below 0.16 keeps the outskirts *exactly* the background
-			const d = Math.max(0, (depthField[i] - 0.16) / 0.84);
-			const a = Math.pow(d, 2) * 0.38;
-			img.data[i * 4] = r;
-			img.data[i * 4 + 1] = g;
-			img.data[i * 4 + 2] = b;
-			img.data[i * 4 + 3] = Math.round(a * 255);
+		for (let idx = 0; idx < washField.length; idx++) {
+			img.data[idx * 4] = r;
+			img.data[idx * 4 + 1] = g;
+			img.data[idx * 4 + 2] = b;
+			img.data[idx * 4 + 3] = Math.round(washField[idx] * 0.4 * 255);
 		}
 		g2.putImageData(img, 0, 0);
 		washCanvas = off;

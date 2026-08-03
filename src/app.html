@@ -5,14 +5,17 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
 		<script>
-			// Pre-paint theme: pinned 'light'/'dark' wins, otherwise follow the system.
+			// Pre-paint theme: a pinned choice wins; 'system' follows the OS;
+			// with nothing chosen, the book opens dark.
 			(function () {
+				var t = 'dark';
 				try {
-					var t = localStorage.getItem('jaxverse-theme');
-					if (t === 'light' || t === 'dark') document.documentElement.classList.add(t);
+					var s = localStorage.getItem('jaxverse-theme');
+					if (s === 'light' || s === 'system') t = s;
 				} catch (e) {
-					/* storage unavailable — system theme applies */
+					/* storage unavailable — dark applies */
 				}
+				if (t !== 'system') document.documentElement.classList.add(t);
 			})();
 		</script>
 		%sveltekit.head%
