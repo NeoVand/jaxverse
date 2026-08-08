@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Plate from '$lib/components/ui/Plate.svelte';
 	// How two words fare under the shipped 300 merges — real history, read off
 	// static/data/text-merges.json (the same snapshot bpe.test.ts guards).
 	// "␣little" is common in this corpus and assembles into one token by merge
@@ -84,10 +85,14 @@
 	const pillW = (text: string) => text.length * 6.6 + 12;
 </script>
 
-<figure class="my-8">
+<Plate
+	id="tokentree"
+	title="Two words, as the tokenizer leaves them"
+	caption="Two words, as this book's actual tokenizer leaves them. Every pill is a merge the corpus voted for, numbered in the order it was elected; the tinted pieces are the tokens the model will actually read. Frequency decides everything — &quot;little&quot; is everywhere in children's stories, &quot;wagged&quot; is not."
+>
 	<svg
 		viewBox="0 0 620 178"
-		class="mx-auto block w-full max-w-[680px]"
+		class="mx-auto block w-full max-w-[850px]"
 		role="img"
 		aria-label="Two byte-pair merge trees from this book's actual tokenizer. The common word ' little' fuses, merge by merge, into a single token by merge 124. The rare word ' wagged' has only three of its pairs elected in 300 merges and remains four pieces: ' wa', 'g', 'g', 'ed'."
 	>
@@ -178,16 +183,7 @@
 			rare — still ␣wa + g + g + ed after 300
 		</text>
 	</svg>
-	<figcaption
-		class="mx-auto mt-2 max-w-[560px] text-center font-serif text-[13.5px] text-ink-2 italic"
-		style="font-variation-settings: 'opsz' 13;"
-	>
-		Two words, as this book's actual tokenizer leaves them. Every pill is a merge the corpus voted
-		for, numbered in the order it was elected; the tinted pieces are the tokens the model will
-		actually read. Frequency decides everything — "little" is everywhere in children's stories,
-		"wagged" is not.
-	</figcaption>
-</figure>
+</Plate>
 
 <style>
 	.leaf {

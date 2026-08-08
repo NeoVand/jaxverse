@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Plate IV — the surprise meter. One inspect() call bills a sentence
+	// The surprise meter. One inspect() call bills a sentence
 	// character by character: background heat is the per-token loss, and the
 	// detail strip below holds the distribution the model had just before each
 	// reveal. The strip is a fixed part of the layout rather than a floating
@@ -86,7 +86,8 @@
 </script>
 
 <Plate
-	n={4}
+	id="inspector"
+	live
 	title="The surprise meter"
 	caption="Each token's background is what the model paid to see it — hotter is more surprising. Function words in expected places run cool; the nouns and names carrying the sentence's actual news run hot, and a word the vocabulary never learned costs most of all, because the model must spell it out of fragments. Hover or tap any token for the five candidates it was weighing there, with the one that actually came in vermilion; a leading space is drawn ␣, since “the” and “ the” are different tokens. The first token carries a dotted underline because nothing precedes it, so it is never predicted."
 >
@@ -252,7 +253,7 @@
 	.input:focus {
 		outline: none;
 		border-color: var(--accent);
-		box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+		box-shadow: var(--focus-ring);
 	}
 	/* the heat scale the characters are painted with, as a legend */
 	.ramp {

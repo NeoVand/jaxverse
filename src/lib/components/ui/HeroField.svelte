@@ -6,6 +6,7 @@
 	// Clicking (or tapping) the map drops them at the pointer. Honors
 	// prefers-reduced-motion by drawing a single settled frame.
 	import { contours } from 'd3-contour';
+	import { racerColors } from '$lib/optim/optimizers';
 
 	let { height = 300 }: { height?: number } = $props();
 
@@ -238,10 +239,14 @@
 			ctx.clearRect(0, 0, W, H);
 
 			const style = getComputedStyle(canvas);
-			const ink3 = style.getPropertyValue('--ink-3').trim() || '#999';
 			const accent = style.getPropertyValue('--accent').trim() || '#2b45d8';
-			const warm = style.getPropertyValue('--warm').trim() || '#d3541f';
-			const colorOf = { sgd: ink3, momentum: accent, adam: warm } as const;
+			// the same three colors the descent race uses, read from the theme
+			const racers = racerColors(canvas);
+			const colorOf = {
+				sgd: racers.gd,
+				momentum: racers.momentum,
+				adam: racers.adam
+			} as const;
 
 			const px = (u: number) => u * W;
 			const py = (u: number) => u * H;

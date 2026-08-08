@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Plate IV — draw your own. Borrows the engine Plate III trained (through
+	// Draw your own. Borrows the engine the classifier plate trained (through
 	// digits-context). Every stroke is painted straight into the 784-float
 	// buffer the model reads, re-centered by mass before predicting — MNIST
 	// digits are centered, and the model has never seen one that isn't.
@@ -9,6 +9,7 @@
 	import { Eraser } from 'lucide-svelte';
 	import { lab, themePulse, watchTheme } from './digits-context.svelte';
 	import { SIGMA_MAX, SIGMA_MIN } from '$lib/data/brush';
+	import { plateAnchor, plateLabel } from '$lib/data/plates';
 	import {
 		DEFAULT_SIGMA,
 		DIM,
@@ -183,7 +184,7 @@
 		}
 	}
 
-	// keep the verdict honest while Plate III trains on, and read the seeded
+	// keep the verdict honest while the classifier plate trains on, and read the seeded
 	// digit as soon as there is an engine to read it with
 	$effect(() => {
 		void lab.version;
@@ -247,7 +248,7 @@
 			const halo = inkHalo(px);
 			const masked = new Float32Array(DIM);
 			for (let i = 0; i < DIM; i++) masked[i] = saliency[i] * halo[i];
-			layers.push(divergingImage(masked, 0, hexRgb(tk.warm), hexRgb(tk.accent), 0.9));
+			layers.push(divergingImage(masked, 0, hexRgb(tk.accent), hexRgb(tk.warm), 0.9));
 		}
 		blit(el, layers, 224);
 	}
@@ -303,9 +304,9 @@
 		if (!g) return;
 		const { ctx, W, H } = g;
 		const tk = readTokens(el);
-		// same rule as the evidence square beside it: warm argues for, blue against
-		const pos = hexRgb(tk.warm);
-		const neg = hexRgb(tk.accent);
+		// the book-wide rule for signed values: ultramarine up, vermilion down
+		const pos = hexRgb(tk.accent);
+		const neg = hexRgb(tk.warm);
 		const lim = Math.max(1e-6, ...(vals ?? [1]).map(Math.abs));
 		const y0 = H / 2;
 
@@ -384,9 +385,10 @@
 		<p class="m-0 font-serif text-[15px] text-ink-2 italic">
 			The pad borrows the classifier's weights —
 			<a
-				href="#plate-classifier"
+				href="#{plateAnchor('classifier')}"
 				class="underline underline-offset-2"
-				style="text-decoration-color: var(--accent);">train the classifier in Plate III</a
+				style="text-decoration-color: var(--accent);"
+				>train the classifier in {plateLabel('digits', 'classifier')}</a
 			> first, then come back and draw.
 		</p>
 	</div>
@@ -458,8 +460,8 @@
 				<div class="mb-1.5 flex h-4 items-baseline gap-2.5">
 					<span class="eyebrow">the evidence</span>
 					<span class="flex items-center gap-1 text-[10.5px] text-ink-3">
-						<i class="dot" style="background: var(--warm);"></i>for
-						<i class="dot ml-1" style="background: var(--accent);"></i>against
+						<i class="dot" style="background: var(--accent);"></i>for
+						<i class="dot ml-1" style="background: var(--warm);"></i>against
 					</span>
 				</div>
 				<canvas
@@ -563,7 +565,7 @@
 		outline: none;
 	}
 	.vrange:focus-visible::-webkit-slider-thumb {
-		box-shadow: 0 0 0 4px color-mix(in srgb, var(--ink-3) 25%, transparent);
+		box-shadow: var(--focus-ring);
 	}
 
 	/* the clear button: a quiet square that only appears over the pad */

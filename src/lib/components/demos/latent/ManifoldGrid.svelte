@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Plate III — the manifold. No data at all: a uniform 21×21 grid of latent
+	// The manifold. No data at all: a uniform 21×21 grid of latent
 	// addresses across the sheet the map is drawn on, each one decoded into a
 	// digit tile and butted into a single sheet. Re-decoded every other trained
 	// chunk, so it firms up live. Past a width-2 waist the grid covers one slice
@@ -12,6 +12,7 @@
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Slider from '$lib/components/ui/Slider.svelte';
 	import { inview } from '$lib/components/ui/inview';
+	import { plateLabel } from '$lib/data/plates';
 	import { lab } from './latent-context.svelte';
 	import {
 		DIM,
@@ -24,11 +25,10 @@
 	} from './common';
 
 	interface Props {
-		n: number;
 		title: string;
 		caption: string;
 	}
-	let { n, title, caption }: Props = $props();
+	let { title, caption }: Props = $props();
 
 	/** Odd, so the sheet has a true middle cell — which is where the cursor
 	 * starts, so the two read-out tiles are never blank. */
@@ -327,7 +327,7 @@
 	});
 </script>
 
-<Plate {n} {title} {caption}>
+<Plate id="manifold" live {title} {caption}>
 	{#snippet status()}
 		{#if lab.phase === 'ready'}
 			<span>step {lab.step}</span>
@@ -366,7 +366,9 @@
 		{#if lab.phase !== 'ready'}
 			<div class="flex h-[280px] flex-col items-center justify-center gap-1">
 				<span class="eyebrow">
-					{lab.phase === 'error' ? 'the engine stalled' : 'warming up the same network as plate I…'}
+					{lab.phase === 'error'
+						? 'the engine stalled'
+						: `warming up the same network as ${plateLabel('latent', 'squeeze').toLowerCase()}…`}
 				</span>
 				{#if lab.phase === 'error'}
 					<span class="mb-2 text-[12.5px] text-bad">{lab.errorMsg}</span>

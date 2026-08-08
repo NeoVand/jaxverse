@@ -1,7 +1,7 @@
 <script lang="ts">
-	// Plate V — one forward pass, opened up. Five stages down the page, joined by
+	// One forward pass, opened up. Five stages down the page, joined by
 	// hairline flow lines. Shapes and captions are architecture; every NUMBER is
-	// read live from the model trained in Plate III: real attention rows
+	// read live from the model trained in the scribe: real attention rows
 	// (softmax(QKᵀ/√d + mask)) and the real next-token distribution. The
 	// temperature control re-softmaxes the stored logit row client-side — the
 	// model is never asked again, which is exactly what temperature is.
@@ -145,7 +145,8 @@
 {/snippet}
 
 <Plate
-	n={5}
+	id="walkthrough"
+	live
 	title="One forward pass, opened up"
 	caption="The five stages a token travels through on its way to a prediction. The shapes are this model's real architecture; the attention rows and the final distribution are real numbers, read from the weights you trained above — not an illustration of a transformer, but a reading of one. Because the vocabulary is word-pieces, the attention grid is words reading words: look for a verb attending to its subject, or a name being carried forward. Stages two through four form one block, and this model stacks two of them; frontier models stack the same block roughly a hundred deep, with vectors thousands of numbers wide, and nothing else about the picture changes."
 >
@@ -487,7 +488,7 @@
 	.input:focus {
 		outline: none;
 		border-color: var(--accent);
-		box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+		box-shadow: var(--focus-ring);
 	}
 	.stage {
 		border: 1px solid var(--line-soft);

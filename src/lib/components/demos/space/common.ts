@@ -196,28 +196,4 @@ export function planeCubePolygon(
 }
 
 /** Design tokens resolved at draw time so canvases follow theme flips. */
-export function readTokens(el: Element) {
-	const s = getComputedStyle(el);
-	const v = (name: string, fallback: string) => s.getPropertyValue(name).trim() || fallback;
-	return {
-		paper: v('--paper', '#faf9f5'),
-		surface: v('--surface', '#ffffff'),
-		ink: v('--ink', '#1d1c18'),
-		ink2: v('--ink-2', '#605d54'),
-		ink3: v('--ink-3', '#a3a094'),
-		line: v('--line', '#e5e2d8'),
-		lineSoft: v('--line-soft', '#efede4'),
-		accent: v('--accent', '#2b45d8'),
-		warm: v('--warm', '#d3541f'),
-		good: v('--good', '#22774d'),
-		bad: v('--bad', '#bb3a2b')
-	};
-}
-
-export type Tokens = ReturnType<typeof readTokens>;
-
-/** Parse #rrggbb → [r,g,b]; tolerates whitespace. */
-export function hexRgb(hex: string): [number, number, number] {
-	const h = hex.replace('#', '').trim();
-	return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-}
+export { readTokens, hexRgb, type Rgb, type Tokens } from '$lib/viz/tokens.svelte';

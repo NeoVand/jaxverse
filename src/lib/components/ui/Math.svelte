@@ -11,9 +11,11 @@
 
 	let { tex, display = false }: Props = $props();
 
-	// \htmlClass is allowed so equations can color-code their terms with the
-	// site's own tokens: eq-a (accent), eq-w (warm), eq-b (teal bias),
-	// eq-g (good), eq-m (muted).
+	// \htmlClass is allowed so equations can speak in the book's color
+	// constitution — eq-model / eq-model-2 / eq-model-3 for learned parameters,
+	// eq-world for whatever the world supplied, eq-op for fixed machinery,
+	// eq-knob for hyperparameters, eq-out for the answer, eq-mute for what is
+	// ignored. The classes are defined and documented in layout.css.
 	const html = $derived(
 		katex.renderToString(tex, {
 			displayMode: display,

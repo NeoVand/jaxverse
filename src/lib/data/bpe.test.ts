@@ -4,7 +4,7 @@ import { BpeTrainer } from '$lib/components/demos/language/bpe-live';
 import { makeVocabulary, wordStarts } from './bpe';
 
 /** The shipped snapshot and the live trainer must elect the same vocabulary:
- * the scribe's default vocabulary is sold to the reader as the one Plate II
+ * the scribe's default vocabulary is sold to the reader as the one the tokenizer plate
  * grows, so any drift between scripts/build-tokenizer.mjs and BpeTrainer is a
  * lie in the prose, not just a mismatch. */
 

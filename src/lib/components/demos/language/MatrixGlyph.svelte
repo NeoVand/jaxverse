@@ -1,8 +1,10 @@
 <script lang="ts">
 	// A weight matrix as a texture: deterministic value noise on a canvas, drawn
-	// once at token colors. It stands for a matrix's SHAPE, never its contents —
-	// the label carries the truth, and the caption says so. Static by design, so
-	// reduced-motion needs no special case.
+	// at token colors. It stands for a matrix's SHAPE, never its contents — the
+	// label carries the truth, and the caption says so. Static apart from theme
+	// changes, so reduced-motion needs no special case.
+	import { hexRgb, themePulse, token, watchTheme } from '$lib/viz/tokens.svelte';
+
 	interface Props {
 		rows: number;
 		cols: number;
@@ -19,24 +21,14 @@
 
 	let canvas = $state<HTMLCanvasElement | undefined>();
 
-	function hexRgb(hex: string): [number, number, number] {
-		const s = hex.trim().replace('#', '');
-		const n =
-			s.length === 3
-				? s
-						.split('')
-						.map((c) => c + c)
-						.join('')
-				: s;
-		const v = parseInt(n, 16);
-		return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
-	}
+	watchTheme();
 
 	// cell grid caps out so a [96×384] block stays legible as texture
 	const gx = $derived(Math.min(cols, 26));
 	const gy = $derived(Math.min(rows, 18));
 
 	$effect(() => {
+		void themePulse.tick;
 		const c = canvas;
 		if (!c) return;
 		const gxx = gx;
@@ -52,9 +44,8 @@
 		if (!ctx) return;
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 		ctx.clearRect(0, 0, W, H);
-		const style = getComputedStyle(c);
 		const key = tone === 'accent' ? '--accent' : tone === 'warm' ? '--warm' : '--ink';
-		const [r, g, b] = hexRgb(style.getPropertyValue(key) || '#000');
+		const [r, g, b] = hexRgb(token(c, key));
 		const cw = W / gxx;
 		const ch = H / gyy;
 		for (let j = 0; j < gyy; j++) {

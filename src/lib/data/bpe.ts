@@ -1,4 +1,4 @@
-// Byte-pair encoding shared by the live trainer (Plate II), the shipped
+// Byte-pair encoding shared by the live trainer (the tokenizer plate), the shipped
 // snapshot the scribe reads by default, and the encoders both hand the model.
 //
 // The one rule that makes the vocabulary readable: a merge may never straddle

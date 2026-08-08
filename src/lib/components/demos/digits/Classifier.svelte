@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Plate III — the classifier. Train and test ride in one buffer: 8,000 train
+	// The classifier. Train and test ride in one buffer: 8,000 train
 	// rows first, then the 2,000 test rows as the held-out tail (valFraction
 	// 0.2), so the worker's eval() is honest test-set accuracy and the test
 	// rows are never sampled by a training batch. Boots on scroll (inview);
@@ -25,11 +25,10 @@
 	import { sparkPath } from '$lib/viz/spark';
 
 	interface Props {
-		n?: number;
 		title: string;
 		caption?: string;
 	}
-	let { n, title, caption }: Props = $props();
+	let { title, caption }: Props = $props();
 
 	const STRIP = 16; // two rows of eight, each with room for its own belief
 	const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -361,7 +360,7 @@
 	});
 </script>
 
-<Plate {n} {title} {caption}>
+<Plate id="classifier" live {title} {caption}>
 	{#snippet status()}
 		{#if lab.phase === 'ready'}
 			<span>step {lab.step}</span>

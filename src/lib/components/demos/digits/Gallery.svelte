@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Plate I — the dataset itself, before any model touches it. Auto-loads on
+	// The dataset itself, before any model touches it. Auto-loads on
 	// scroll; data only, no engine. loadMnist caches the in-flight promise
 	// module-wide, so the classifier below reuses this same download.
 	import { Shuffle } from 'lucide-svelte';

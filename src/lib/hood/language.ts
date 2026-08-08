@@ -1,4 +1,5 @@
 import type { HoodChapter } from './types';
+import { plateLabel } from '$lib/data/plates';
 
 export const language: HoodChapter = {
 	slug: 'language',
@@ -36,7 +37,7 @@ export const language: HoodChapter = {
 				},
 				{
 					title: 'Training and sampling without a stutter',
-					body: `The worker alternates: a few gradient steps, then — when the page asks — a sampling pass with the same weights, temperature applied to the logits before the draw. Loss curve and specimen text come back over the RPC as separate streams, which is why sampling a paragraph no longer freezes the curve. The tokenizer the scribe reads through is the same BPE the plate grows live, word-boundary merges and all (<code>src/lib/data/bpe.ts</code>); train it yourself in Plate II or fall back to the 300-merge snapshot the book ships.`
+					body: `The worker alternates: a few gradient steps, then — when the page asks — a sampling pass with the same weights, temperature applied to the logits before the draw. Loss curve and specimen text come back over the RPC as separate streams, which is why sampling a paragraph no longer freezes the curve. The tokenizer the scribe reads through is the same BPE the plate grows live, word-boundary merges and all (<code>src/lib/data/bpe.ts</code>); train it yourself in ${plateLabel('language', 'tokenizer')} or fall back to the 300-merge snapshot the book ships.`
 				}
 			],
 			ui: [

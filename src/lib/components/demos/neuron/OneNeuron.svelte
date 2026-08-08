@@ -61,16 +61,17 @@
 </script>
 
 <Plate
-	n={1}
+	id="neuron"
+	live
 	title="One neuron"
-	caption="The neuron as a circuit and as a curve. Pick an activation, then move the sliders: the vermilion weight w sets the bend's steepness, the teal bias b slides it along x, and the ultramarine amplitude v stretches its height — the disk around σ always plots the very curve being bent. Hover the plot to push one x through the circuit and watch it come out as a."
+	caption="The neuron as a circuit and as a curve. Pick an activation, then move the sliders: the ultramarine weight w sets the bend's steepness, the violet bias b slides it along x, and the blue-cyan amplitude v stretches its height — the teal disk around σ always plots the very curve being bent. Hover the plot to push one x through the circuit and watch it come out as a, in green."
 >
 	{#snippet status()}
 		<span>
-			a = <span style="color: var(--accent);">{fmt(v, 2)}</span> · {act.code}(<span
-				style="color: var(--warm);">{fmt(w, 1)}</span
+			a = <span style="color: var(--cat-6);">{fmt(v, 2)}</span> · {act.code}(<span
+				style="color: var(--accent);">{fmt(w, 1)}</span
 			>x {b < 0 ? '−' : '+'}
-			<span style="color: var(--cat-2);">{Math.abs(b).toFixed(2)}</span>)
+			<span style="color: var(--cat-8);">{Math.abs(b).toFixed(2)}</span>)
 		</span>
 	{/snippet}
 
@@ -155,7 +156,7 @@
 						x2={pw - PADX}
 						y1={yPix(ay)}
 						y2={yPix(ay)}
-						stroke="var(--accent)"
+						stroke="var(--good)"
 						stroke-width="1"
 						stroke-dasharray="3 4"
 						opacity="0.3"
@@ -167,7 +168,7 @@
 					<path
 						d={curvePath}
 						fill="none"
-						stroke="var(--accent)"
+						stroke="var(--good)"
 						stroke-width="2"
 						stroke-linejoin="round"
 						stroke-linecap="round"
@@ -201,13 +202,13 @@
 						cx={xPix(probe.x)}
 						cy={yPix(Math.max(-YMAX, Math.min(YMAX, probe.a)))}
 						r="3.4"
-						fill="var(--accent)"
+						fill="var(--good)"
 						stroke="var(--paper)"
 						stroke-width="1.4"
 					/>
 					<text x={pw - PADX - 2} y={PADT + 10} text-anchor="end" class="num" font-size="10.5">
 						<tspan fill="var(--ink-2)">x {minus(probe.x.toFixed(2))}</tspan>
-						<tspan dx="6" fill="var(--accent)">a {minus(probe.a.toFixed(2))}</tspan>
+						<tspan dx="6" fill="var(--good)">a {minus(probe.a.toFixed(2))}</tspan>
 					</text>
 				{/if}
 
@@ -238,7 +239,7 @@
 			min={-6}
 			max={6}
 			step={0.1}
-			tone="warm"
+			tone="model"
 			format={(x) => fmt(x, 1)}
 		/>
 		<Slider
@@ -247,7 +248,7 @@
 			min={-3}
 			max={3}
 			step={0.05}
-			tone="teal"
+			tone="model-2"
 			format={(x) => fmt(x, 2)}
 		/>
 		<Slider
@@ -256,7 +257,7 @@
 			min={-2}
 			max={2}
 			step={0.05}
-			tone="accent"
+			tone="model-3"
 			format={(x) => fmt(x, 2)}
 		/>
 	</div>

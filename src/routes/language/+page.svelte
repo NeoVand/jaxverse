@@ -3,7 +3,6 @@
 	import { resolve } from '$app/paths';
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
-	import Wide from '$lib/components/ui/Wide.svelte';
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
 	import AttentionDiagram from '$lib/components/demos/language/AttentionDiagram.svelte';
@@ -34,9 +33,7 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<NextTokenGame />
-	</Wide>
+	<NextTokenGame />
 
 	<Prose>
 		<p>
@@ -58,9 +55,7 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<SkipGramDiagram />
-	</Wide>
+	<SkipGramDiagram />
 
 	<Prose>
 		<p>
@@ -72,29 +67,28 @@
 		</p>
 		<Math
 			display
-			tex={'\\mathcal{L} \\;=\\; -\\log \\htmlClass{eq-b}{\\sigma}\\big(\\htmlClass{eq-a}{v}^{\\top}\\htmlClass{eq-w}{u_{+}}\\big) \\;-\\; \\sum_{k=1}^{5} \\log\\Big(1 - \\htmlClass{eq-b}{\\sigma}\\big(\\htmlClass{eq-a}{v}^{\\top}\\htmlClass{eq-m}{u^{-}_{k}}\\big)\\Big)'}
+			tex={'\\mathcal{L} \\;=\\; -\\log \\htmlClass{eq-op}{\\sigma}\\big(\\htmlClass{eq-model}{v}^{\\top}\\htmlClass{eq-world}{u_{+}}\\big) \\;-\\; \\sum_{k=1}^{5} \\log\\Big(1 - \\htmlClass{eq-op}{\\sigma}\\big(\\htmlClass{eq-model}{v}^{\\top}\\htmlClass{eq-mute}{u^{-}_{k}}\\big)\\Big)'}
 		/>
 		<p>
-			Read it term by term. <Math tex={'\\htmlClass{eq-a}{v}'} /> is the centre word's row of the table
-			— the dense vector everything here is about — and
-			<Math tex={'\\htmlClass{eq-w}{u_{+}}'} /> belongs to the neighbor actually seen beside it. The sigmoid
-			<Math tex={'\\htmlClass{eq-b}{\\sigma}'} /> turns their dot product into a verdict between 0 and
+			Read it term by term. <Math tex={'\\htmlClass{eq-model}{v}'} /> is the centre word's row of the
+			table — the dense vector everything here is about — and
+			<Math tex={'\\htmlClass{eq-world}{u_{+}}'} /> belongs to the neighbor actually seen beside it. The
+			sigmoid
+			<Math tex={'\\htmlClass{eq-op}{\\sigma}'} /> turns their dot product into a verdict between 0 and
 			1 — <em>did these two really co-occur?</em> — and
-			<Math tex={'-\\log \\htmlClass{eq-b}{\\sigma}'} /> is the surprise at the truth, large exactly when
-			the verdict on a real pair was low. The sum plays prosecutor: five words
-			<Math tex={'\\htmlClass{eq-m}{u^{-}_{k}}'} /> drawn at random, each punished for scoring. Nothing
+			<Math tex={'-\\log \\htmlClass{eq-op}{\\sigma}'} /> is the surprise at the truth, large exactly
+			when the verdict on a real pair was low. The sum plays prosecutor: five words
+			<Math tex={'\\htmlClass{eq-mute}{u^{-}_{k}}'} /> drawn at random, each punished for scoring. Nothing
 			else appears in <Math tex={'\\mathcal{L}'} />, so the only way down is to move the vectors —
-			pull <Math tex={'\\htmlClass{eq-a}{v}'} /> toward
-			<Math tex={'\\htmlClass{eq-w}{u_{+}}'} />, push it off the five impostors. Geometry is not a
-			by-product of this objective; it is the objective. An untrained sigmoid shrugs
+			pull <Math tex={'\\htmlClass{eq-model}{v}'} /> toward
+			<Math tex={'\\htmlClass{eq-world}{u_{+}}'} />, push it off the five impostors. Geometry is not
+			a by-product of this objective; it is the objective. An untrained sigmoid shrugs
 			<Math tex="\ln 2" /> at each of the six verdicts, so the plate's loss meter starts near 4.2 and
 			falls as the space takes shape.
 		</p>
 	</Prose>
 
-	<Wide>
-		<WordVectors />
-	</Wide>
+	<WordVectors />
 
 	<Prose>
 		<p>
@@ -128,9 +122,7 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<TokenTree />
-	</Wide>
+	<TokenTree />
 
 	<Prose>
 		<p>
@@ -144,23 +136,19 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<Tokenizer />
-	</Wide>
+	<Tokenizer />
 
 	<Prose>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			The game itself
-		</h2>
+		<h2 class="h2">The game itself</h2>
 		<p>
 			Now the machine. A model that plays left to right, predicting each token from everything
 			before it, is called <em>autoregressive</em>. The design gives up nothing, because
 			probability's chain rule factors any sequence exactly:
 		</p>
-		<Math display tex={'P(x_1, x_2, \\ldots, x_T) \\;=\\; \\prod_{t=1}^{T} P(x_t \\mid x_{<t})'} />
+		<Math
+			display
+			tex={'\\htmlClass{eq-out}{P}(x_1, x_2, \\ldots, x_T) \\;=\\; \\prod_{t=1}^{T} \\htmlClass{eq-out}{P}(x_t \\mid x_{<t})'}
+		/>
 		<p>
 			The left side is the thing we actually want — a probability for whole sentences, paragraphs,
 			books. The right side is one small question, <em>what comes next?</em>, asked once per
@@ -181,7 +169,7 @@
 		</p>
 		<Math
 			display
-			tex={'\\htmlClass{eq-a}{\\mathcal{L}} \\;=\\; -\\,\\frac{1}{T} \\sum_{t=1}^{T} \\log P(x_t \\mid x_{<t})'}
+			tex={'\\mathcal{L} \\;=\\; -\\,\\frac{1}{T} \\sum_{t=1}^{T} \\log \\htmlClass{eq-out}{P}(\\htmlClass{eq-world}{x_t} \\mid \\htmlClass{eq-world}{x_{<t}})'}
 		/>
 		<p>
 			measured in <em>nats</em>, the natural-log unit of surprise. Learn to read that number like a
@@ -203,19 +191,12 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<Scribe />
-	</Wide>
+	<Scribe />
 
 	<UnderTheHood slug="language" block="transformer" />
 
 	<Prose>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			From noise to grammar
-		</h2>
+		<h2 class="h2">From noise to grammar</h2>
 		<p>
 			If you let the scribe run, you watched an order of acquisition that nobody programmed. Word
 			shapes first, then real words in plausible company, then clauses whose subject and verb mostly
@@ -264,19 +245,12 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<Inspector />
-	</Wide>
+	<Inspector />
 
 	<UnderTheHood slug="language" block="attention" />
 
 	<Prose>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			Inside one guess
-		</h2>
+		<h2 class="h2">Inside one guess</h2>
 		<p>
 			So far the model has been a box that eats context and emits a distribution. Open it. The
 			scribe is a <em>transformer</em>, the architecture behind essentially every model in this
@@ -285,9 +259,7 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<TransformerMap />
-	</Wide>
+	<TransformerMap />
 
 	<Prose>
 		<p>
@@ -303,37 +275,40 @@
 		</p>
 		<Math
 			display
-			tex={'\\mathrm{attention}(\\htmlClass{eq-a}{Q}, \\htmlClass{eq-w}{K}, \\htmlClass{eq-c}{V}) \\;=\\; \\htmlClass{eq-b}{\\operatorname{softmax}}\\!\\left(\\frac{\\htmlClass{eq-a}{Q}\\,\\htmlClass{eq-w}{K}^{\\top}}{\\sqrt{d_k}} + \\htmlClass{eq-m}{M}\\right)\\htmlClass{eq-c}{V}'}
+			tex={'\\mathrm{attention}(\\htmlClass{eq-model}{Q}, \\htmlClass{eq-model-2}{K}, \\htmlClass{eq-model-3}{V}) \\;=\\; \\htmlClass{eq-op}{\\operatorname{softmax}}\\!\\left(\\frac{\\htmlClass{eq-model}{Q}\\,\\htmlClass{eq-model-2}{K}^{\\top}}{\\sqrt{d_k}} + \\htmlClass{eq-mute}{M}\\right)\\htmlClass{eq-model-3}{V}'}
 		/>
 	</Prose>
 
-	<Wide>
-		<AttentionDiagram />
-	</Wide>
+	<AttentionDiagram />
 
 	<Prose>
 		<p>
-			Read it inside out. <Math tex={'\\htmlClass{eq-a}{Q}\\,\\htmlClass{eq-w}{K}^{\\top}'} /> dots every
-			query against every key — <em>how well does what I'm looking for match what you offer?</em> —
-			one number per pair of positions, a whole table of raw affinities at once. The
+			Read it inside out. <Math
+				tex={'\\htmlClass{eq-model}{Q}\\,\\htmlClass{eq-model-2}{K}^{\\top}'}
+			/> dots every query against every key —
+			<em>how well does what I'm looking for match what you offer?</em>
+			— one number per pair of positions, a whole table of raw affinities at once. The
 			<Math tex={'\\sqrt{d_k}'} /> underneath is quiet but load-bearing: dot products of longer vectors
 			are larger by accident of dimension, and dividing by
 			<Math tex={'\\sqrt{24}'} /> here keeps the softmax from saturating into all-or-nothing before training
-			has said anything. <Math tex={'\\htmlClass{eq-m}{M}'} /> is the mask — zero at and below the diagonal,
+			has said anything. <Math tex={'\\htmlClass{eq-mute}{M}'} /> is the mask — zero at and below the
+			diagonal,
 			<Math tex="-\infty" /> above it — the game's one rule, <em>no reading the future</em>,
 			enforced as arithmetic: <Math tex={'e^{-\\infty} = 0'} />, so a future token gets exactly
 			nothing, not merely little. Then
-			<Math tex={'\\htmlClass{eq-b}{\\operatorname{softmax}}'} /> — the same machine that turned scores
+			<Math tex={'\\htmlClass{eq-op}{\\operatorname{softmax}}'} /> — the same machine that turned scores
 			into beliefs in <a href={resolve('/digits')}>Chapter 3</a> — runs along each row and turns it
 			into a budget of exactly 1.0. And multiplying by
-			<Math tex={'\\htmlClass{eq-c}{V}'} /> spends the budget: each token's output is a weighted blend
-			of what earlier tokens offered to pass along.
+			<Math tex={'\\htmlClass{eq-model-3}{V}'} /> spends the budget: each token's output is a weighted
+			blend of what earlier tokens offered to pass along.
 		</p>
 		<p>
 			Two things about this line repay staring. It is the only place in the whole architecture where
 			tokens touch — everywhere else each position is processed alone. And it contains no
 			parameters: everything learnable lives in the three lenses
-			<Math tex={'W_{\\htmlClass{eq-a}{Q}}, W_{\\htmlClass{eq-w}{K}}, W_{\\htmlClass{eq-c}{V}}'} />
+			<Math
+				tex={'W_{\\htmlClass{eq-model}{Q}}, W_{\\htmlClass{eq-model-2}{K}}, W_{\\htmlClass{eq-model-3}{V}}'}
+			/>
 			that manufacture the queries, keys and values, so what training changes is not <em>how</em>
 			attention works but <em>what each token asks for and offers</em>. The scribe runs this line
 			four times per block — four <em>heads</em>, each in its own 24 dimensions, each free to learn
@@ -350,21 +325,15 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<Walkthrough />
-	</Wide>
+	<Walkthrough />
 
 	<Prose>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			The same game, a billionfold
-		</h2>
+		<h2 class="h2">The same game, a billionfold</h2>
 		<p>
 			Everything in this chapter scales without changing shape. Take the scribe's loss, its update
-			rule <Math tex={'\\theta \\leftarrow \\theta - \\gamma \\nabla_\\theta \\mathcal{L}'} />, the
-			five stages you just walked; multiply the parameters by a few million, the corpus by a
+			rule <Math
+				tex={'\\htmlClass{eq-model}{\\theta} \\leftarrow \\htmlClass{eq-model}{\\theta} - \\htmlClass{eq-knob}{\\gamma} \\htmlClass{eq-world}{\\nabla_\\theta \\mathcal{L}}'}
+			/>, the five stages you just walked; multiply the parameters by a few million, the corpus by a
 			billion, and the training run by months on thousands of GPUs — and you have the large language
 			models everyone talks to. They descend the same cross-entropy on the same next-token game, and
 			their loss charts look like yours with more zeros on the axis. What you trained here is not a

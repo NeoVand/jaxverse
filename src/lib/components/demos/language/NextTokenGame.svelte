@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Plate from '$lib/components/ui/Plate.svelte';
 	// The chapter's game, drawn once before any machinery: cover the next word
 	// and guess. Two prompts, two very different beliefs — one nearly certain,
 	// one spread over a dictionary. Static by design; the plates below play
@@ -23,10 +24,14 @@
 	const hardMax = Math.max(...HARD);
 </script>
 
-<figure class="my-8">
+<Plate
+	id="game"
+	title="Guess the covered word"
+	caption="The game, before any machinery: guess the covered word. A guess is a whole belief — a probability for every word you know — and how sharply it peaks is how easy the puzzle was."
+>
 	<svg
 		viewBox="0 0 620 158"
-		class="mx-auto block w-full max-w-[720px]"
+		class="mx-auto block w-full max-w-[900px]"
 		role="img"
 		aria-label="The next-token game: two sentences each missing their last word. For 'the little dog wagged his', the belief over candidates is nearly all on 'tail' — low surprise. For 'my favorite word is', the belief is spread thin over many words — high surprise."
 	>
@@ -140,14 +145,7 @@
 			</marker>
 		</defs>
 	</svg>
-	<figcaption
-		class="mx-auto mt-2 max-w-[560px] text-center font-serif text-[13.5px] text-ink-2 italic"
-		style="font-variation-settings: 'opsz' 13;"
-	>
-		The game, before any machinery: guess the covered word. A guess is a whole belief — a
-		probability for every word you know — and how sharply it peaks is how easy the puzzle was.
-	</figcaption>
-</figure>
+</Plate>
 
 <style>
 	.sentence {

@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Plate I — the squeeze. Owns the shared engine's lifecycle: auto-loads it
+	// The squeeze. Owns the shared engine's lifecycle: auto-loads it
 	// when scrolled near, trains it in chunks, and shows the only feedback the
 	// model ever gets — eight held-out digits against their reconstructions.
 	import { onDestroy } from 'svelte';
@@ -12,11 +12,10 @@
 	import { sparkPath, sparkSpan } from '$lib/viz/spark';
 
 	interface Props {
-		n: number;
 		title: string;
 		caption: string;
 	}
-	let { n, title, caption }: Props = $props();
+	let { title, caption }: Props = $props();
 
 	const N_STRIP = 8;
 
@@ -135,7 +134,7 @@
 	});
 </script>
 
-<Plate {n} {title} {caption}>
+<Plate id="squeeze" live {title} {caption}>
 	{#snippet status()}
 		{#if lab.phase === 'ready'}
 			<span>step {lab.step}</span>

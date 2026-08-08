@@ -29,11 +29,11 @@
 
 	interface Props {
 		variant: 'guided' | 'free';
-		n?: number;
+		id: string;
 		title: string;
 		caption?: string;
 	}
-	let { variant, n, title, caption }: Props = $props();
+	let { variant, id, title, caption }: Props = $props();
 
 	// ── configuration state ──
 	// variant never changes after mount — reading it for initial values is deliberate
@@ -665,7 +665,7 @@
 	}
 </script>
 
-<Plate {n} {title} {caption}>
+<Plate {id} live {title} {caption}>
 	{#snippet status()}
 		{#if phase === 'ready'}
 			<span>step {step}</span>

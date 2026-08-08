@@ -1,4 +1,5 @@
 import type { HoodChapter } from './types';
+import { plateLabel } from '$lib/data/plates';
 
 export const digits: HoodChapter = {
 	slug: 'digits',
@@ -38,7 +39,7 @@ loss = np.mean(np.sum(logp.mul(y), -1).neg()); // −log p_y, averaged`
 				},
 				{
 					title: 'One engine, four plates',
-					body: `<code>digits-context.svelte.ts</code> holds the single <code>MlpEngine</code> at module scope, with Svelte 5 <code>$state</code> fields for step, loss, and accuracy. The classifier owns training; DrawPad and Inside just call <code>predict</code>, <code>activations</code>, and <code>inputgrad</code> against whatever the weights currently are. That is why your drawn 4 gets smarter while Plate III trains above it.`
+					body: `<code>digits-context.svelte.ts</code> holds the single <code>MlpEngine</code> at module scope, with Svelte 5 <code>$state</code> fields for step, loss, and accuracy. The classifier owns training; DrawPad and Inside just call <code>predict</code>, <code>activations</code>, and <code>inputgrad</code> against whatever the weights currently are. That is why your drawn 4 gets smarter while ${plateLabel('digits', 'classifier')} trains above it.`
 				}
 			]
 		},

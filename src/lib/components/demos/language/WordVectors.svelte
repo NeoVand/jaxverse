@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Plate I — words become vectors. Skip-gram with negative sampling, trained
+	// Words become vectors. Skip-gram with negative sampling, trained
 	// live on the story corpus, on the main thread (embeddings.ts). The stage
 	// is a PCA shadow of the 16-D space that reorganizes as training runs —
 	// flat, or a slowly turning 3-D cloud you can grab and spin; the rail
@@ -417,7 +417,7 @@
 		const cs = getComputedStyle(cv);
 		const ink = cs.getPropertyValue('--ink').trim() || '#222';
 		const ink3 = cs.getPropertyValue('--ink-3').trim() || '#999';
-		const accent = cs.getPropertyValue('--accent').trim() || '#65d';
+		const accent = cs.getPropertyValue('--accent').trim() || '#2b45d8';
 		const serif = cs.getPropertyValue('--font-serif').trim() || 'serif';
 		const nbSet = neighborSet;
 
@@ -496,7 +496,8 @@
 </script>
 
 <Plate
-	n={1}
+	id="vectors"
+	live
 	title="Words become vectors"
 	caption="A PCA shadow of a 16-dimensional space — the top 600 words of this book's story corpus, redrawn as skip-gram training runs on your CPU. Words used alike drift together: animals with animals, names with names, he beside she. The cloud turns on its own; drag to steer it, or flatten it to the 2-D shadow, and use the slider to decide how much of the vocabulary the stage draws. Hover any label or pick from the menu to re-rank the neighbour list, which is computed in the full space by cosine similarity."
 >
@@ -647,7 +648,7 @@
 										width="7"
 										height={Math.max(1, h)}
 										rx="1"
-										fill={v >= 0 ? 'var(--warm)' : 'var(--accent)'}
+										fill={v >= 0 ? 'var(--accent)' : 'var(--warm)'}
 										opacity="0.85"
 									/>
 								{/each}
@@ -786,7 +787,7 @@
 	.input:focus {
 		outline: none;
 		border-color: var(--accent);
-		box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+		box-shadow: var(--focus-ring);
 	}
 	.input-sm {
 		width: 6.5rem;
@@ -798,6 +799,7 @@
 	}
 	.input-bad:focus {
 		border-color: var(--bad);
-		box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 14%, transparent);
+		--focus-tone: var(--bad);
+		box-shadow: var(--focus-ring);
 	}
 </style>

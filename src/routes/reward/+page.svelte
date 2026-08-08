@@ -3,7 +3,6 @@
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
-	import Wide from '$lib/components/ui/Wide.svelte';
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import DoublePendulum from '$lib/components/demos/reward/DoublePendulum.svelte';
 	import Gridworld from '$lib/components/demos/reward/Gridworld.svelte';
@@ -18,14 +17,17 @@
 			models of Chapters 4 and 5 found their answers hidden inside the data itself. This chapter
 			removes the answer entirely. An <em>agent</em> lives inside an <em>environment</em>: at each
 			moment it observes a <em>state</em>
-			<Math tex="s" />, chooses an <em>action</em>
-			<Math tex="a" />, and the world replies with a new state and a single number <Math tex="r" /> —
-			the <em>reward</em>. That number is the entire curriculum. Nobody demonstrates the right move.
-			Nobody marks the wrong one. The world only ever says <em>more</em> or <em>less</em>.
+			<Math tex={'\\htmlClass{eq-world}{s}'} />, chooses an <em>action</em>
+			<Math tex={'\\htmlClass{eq-world}{a}'} />, and the world replies with a new state and a single
+			number <Math tex={'\\htmlClass{eq-world}{r}'} /> — the <em>reward</em>. That number is the
+			entire curriculum. Nobody demonstrates the right move. Nobody marks the wrong one. The world
+			only ever says <em>more</em> or <em>less</em>.
 		</p>
+	</Prose>
 
-		<RlLoopDiagram />
+	<RlLoopDiagram />
 
+	<Prose>
 		<p>
 			The trouble is the timing. Suppose balancing a pole takes two hundred little pushes and the
 			score arrives only as the run ends — you lasted this long, nothing more. Which of the two
@@ -37,12 +39,12 @@
 		</p>
 		<p>
 			What the agent learns is a <em>policy</em>: a rule <Math
-				tex={'\\htmlClass{eq-a}{\\pi_\\theta}(a \\mid s)'}
+				tex={'\\htmlClass{eq-model}{\\pi_\\theta}(a \\mid s)'}
 			/> giving, in every state, a probability for every action — with parameters <Math
-				tex="\theta"
+				tex={'\\htmlClass{eq-model}{\\theta}'}
 			/> we can tune. The objective is plain to state: make the <em>return</em> — the total reward
 			of a whole episode — large on average, <Math
-				tex={'J(\\theta) = \\mathbb{E}\\,[\\text{return}]'}
+				tex={'J(\\htmlClass{eq-model}{\\theta}) = \\mathbb{E}\\,[\\text{return}]'}
 			/>. But the world between the parameters and the reward is physics and dice; you cannot
 			differentiate through it. The escape is one of the loveliest results in the field, the
 			<em>policy gradient theorem</em>, whose simplest form is an algorithm called
@@ -50,30 +52,31 @@
 		</p>
 		<Math
 			display
-			tex={'\\nabla_\\theta\\, J(\\theta) \\;=\\; \\mathbb{E}\\Big[\\; \\htmlClass{eq-w}{G_t}\\;\\nabla_\\theta \\log \\htmlClass{eq-a}{\\pi_\\theta}(a_t \\mid s_t) \\;\\Big]'}
+			tex={'\\nabla_{\\htmlClass{eq-model}{\\theta}}\\, J(\\htmlClass{eq-model}{\\theta}) \\;=\\; \\mathbb{E}\\Big[\\; \\htmlClass{eq-world}{G_t}\\;\\nabla_{\\htmlClass{eq-model}{\\theta}} \\log \\htmlClass{eq-model}{\\pi_\\theta}(\\htmlClass{eq-world}{a_t} \\mid \\htmlClass{eq-world}{s_t}) \\;\\Big]'}
 		/>
 		<p>
 			Read it plainly: <em
 				>make the actions that preceded high return more probable, in proportion to that return.</em
 			>
 			No model of the world, no derivative of the physics — only the policy's own log-probabilities, which
-			we can differentiate, weighted by the return <Math tex={'\\htmlClass{eq-w}{G_t}'} /> that actually
+			we can differentiate, weighted by the return <Math tex={'\\htmlClass{eq-world}{G_t}'} /> that actually
 			happened. And the update is the same little rule as ever — parameters, plus a step along a gradient
 			— walking uphill this time, because <Math tex="J" /> is something to maximize.
 		</p>
 		<p>
 			The return itself needs one refinement. To split a late score among early actions, we credit
 			each moment with everything that followed it, shrunk by a <em>discount</em>
-			<Math tex="\gamma" /> per step of delay:
+			<Math tex={'\\htmlClass{eq-knob}{\\gamma}'} /> per step of delay:
 		</p>
 		<Math
 			display
-			tex={'G_t \\;=\\; r_t + \\gamma\\, r_{t+1} + \\gamma^2 r_{t+2} + \\cdots \\;=\\; \\sum_{k=0}^{\\infty} \\gamma^k\\, r_{t+k}'}
+			tex={'\\htmlClass{eq-world}{G_t} \\;=\\; \\htmlClass{eq-world}{r_t} + \\htmlClass{eq-knob}{\\gamma}\\, \\htmlClass{eq-world}{r_{t+1}} + \\htmlClass{eq-knob}{\\gamma}^2 \\htmlClass{eq-world}{r_{t+2}} + \\cdots \\;=\\; \\sum_{k=0}^{\\infty} \\htmlClass{eq-knob}{\\gamma}^k\\, \\htmlClass{eq-world}{r_{t+k}}'}
 		/>
 		<p>
 			so an action is answerable for its whole future, near consequences weighing more than distant
-			ones. One housekeeping note: <Math tex="\gamma" /> is the discount here, not the learning rate —
-			reinforcement learning claimed the letter first, so this chapter's sliders say
+			ones. One housekeeping note: <Math tex={'\\htmlClass{eq-knob}{\\gamma}'} /> is the discount here,
+			not the learning rate — reinforcement learning claimed the letter first, so this chapter's sliders
+			say
 			<em>learning rate</em> in words.
 		</p>
 		<p>
@@ -109,19 +112,12 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<DoublePendulum />
-	</Wide>
+	<DoublePendulum />
 
 	<UnderTheHood slug="reward" block="pendulum" />
 
 	<Prose>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			Reading the recovery
-		</h2>
+		<h2 class="h2">Reading the recovery</h2>
 		<p>
 			What changed between the flailing policy and the one that climbs? A hundred and sixty-five
 			numbers — the weights on thirty-three gauges for five pushes — nudged by REINFORCE after every
@@ -162,19 +158,12 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<Gridworld />
-	</Wide>
+	<Gridworld />
 
 	<UnderTheHood slug="reward" block="reinforce" />
 
 	<Prose>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			Reading the river
-		</h2>
+		<h2 class="h2">Reading the river</h2>
 		<p>
 			Watch the arrows in the first seconds: nearly uniform, four faint directions in every cell.
 			That haze <em>is</em> exploration — the same explore-exploit bargain the pendulum struck,
@@ -197,19 +186,14 @@
 		</p>
 		<p>
 			And the credit question from the opening has its answer. The nineteenth step of a fifty-step
-			episode is paid <Math tex={'G_{19}'} /> — everything that happened after it, discounted — minus
-			the baseline for the cell it stood in, so its update reads:
+			episode is paid <Math tex={'\\htmlClass{eq-world}{G_{19}}'} /> — everything that happened after
+			it, discounted — minus the baseline for the cell it stood in, so its update reads:
 			<em>from here, this choice went better than usual</em>. Early steps get credit for late
 			treasure; steps before a pit get the blame; and "usual" is judged cell by cell, which is why
 			the wash under the value chip is itself a little map of hope.
 		</p>
 
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			The same move, one more time
-		</h2>
+		<h2 class="h2">The same move, one more time</h2>
 		<p>
 			The table of arrows you trained is not a toy version of a policy. It <em>is</em> a policy — the
 			same mathematical object the phrase always means — and nothing in REINFORCE ever looked inside it.

@@ -1,14 +1,15 @@
 <script lang="ts">
-	// Plate V — inside the machine. Two instruments on the shared engine,
+	// Inside the machine. Two instruments on the shared engine,
 	// deliberately the same height: an explorer over every learned layer (each
 	// unit traced back into a 28 × 28 image) and a confusion matrix over the
 	// full 2,000-row test set, whose cells open a popover of real mistakes.
 	// Refreshes are throttled and only run while the plate is on screen, so the
-	// training loop in Plate III keeps its rhythm.
+	// training loop in the classifier plate keeps its rhythm.
 	import { onDestroy } from 'svelte';
 	import type { LayerWeights } from '$lib/nn/engine';
 	import { lab, themePulse, watchTheme } from './digits-context.svelte';
 	import { DIM, argmax, blit, divergingImage, hexRgb, inkImage, readTokens } from './common';
+	import { plateAnchor, plateLabel } from '$lib/data/plates';
 
 	const MAX_TILES = 36; // 6 × 6 — stands as tall as the matrix beside it
 	const HID_COLS = 6;
@@ -265,7 +266,7 @@
 			const cols = t.cols;
 			const vals = new Float32Array(DIM);
 			for (let i = 0; i < DIM; i++) vals[i] = src[i * cols + k];
-			blit(el, [divergingImage(vals, 0, hexRgb(tk.warm), hexRgb(tk.accent), 0.95)], 64);
+			blit(el, [divergingImage(vals, 0, hexRgb(tk.accent), hexRgb(tk.warm), 0.95)], 64);
 		};
 	}
 
@@ -289,9 +290,10 @@
 			<p class="m-0 font-serif text-[15px] text-ink-2 italic">
 				There is nothing inside yet —
 				<a
-					href="#plate-classifier"
+					href="#{plateAnchor('classifier')}"
 					class="underline underline-offset-2"
-					style="text-decoration-color: var(--accent);">train the classifier in Plate III</a
+					style="text-decoration-color: var(--accent);"
+					>train the classifier in {plateLabel('digits', 'classifier')}</a
 				> and this plate will open the machine up.
 			</p>
 		</div>

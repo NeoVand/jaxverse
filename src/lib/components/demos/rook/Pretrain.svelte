@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Plate I — pretraining, with a time machine. Four saved checkpoints from
+	// Pretraining, with a time machine. Four saved checkpoints from
 	// the real 2,600-step run, a live train button for readers who want to feel
 	// the loss move, and the chapter's honest metric: how often does a model
 	// that was only ever asked to predict-the-next-token play a LEGAL move?
@@ -124,7 +124,8 @@
 </script>
 
 <Plate
-	n={1}
+	id="pretrain"
+	live
 	title="Pretraining — predict the next move"
 	caption="The model is only ever playing predict-the-next-token, exactly as in Chapter 5 — nothing in its loss says “chess”. Legality is emerging as a side effect: the gauge asks, at 32 positions drawn from real games, whether Rook's top-choice next move is legal there — rewind to step 0 and watch it climb. Each sampled game is photographed at three moments; ✕ marks where the judge stopped believing it."
 >

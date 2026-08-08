@@ -1,6 +1,6 @@
 /**
  * The activation catalog — one source of truth for every σ this chapter
- * draws: Plate I's switcher, Plate II's field guide, and the neuron circuit
+ * draws: the one-neuron plate's switcher, the activation atlas's field guide, and the neuron circuit
  * all read from here, so a curve, its formula, and its story never drift.
  *
  * Derivatives are closed-form where they are one line, numeric (central
@@ -24,7 +24,7 @@ export interface ActivationSpec {
 	note: string;
 	fn(z: number): number;
 	dfn(z: number): number;
-	/** Horizontal asymptotes of σ itself (Plate I draws them at v·level). */
+	/** Horizontal asymptotes of σ itself (the one-neuron plate draws them at v·level). */
 	levels?: number[];
 }
 
@@ -142,7 +142,7 @@ export const ACTIVATIONS: ActivationSpec[] = [
 	}
 ];
 
-/** Plate I's switcher: the usual suspects plus the two the LMs use, with the
+/** the one-neuron plate's switcher: the usual suspects plus the two the LMs use, with the
  *  chapter's own starting point first. */
 export const PLATE_CHIPS: ActivationId[] = ['tanh', 'sigmoid', 'relu', 'lrelu', 'gelu', 'silu'];
 

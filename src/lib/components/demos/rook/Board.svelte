@@ -7,8 +7,8 @@
 </script>
 
 <script lang="ts">
-	// The chapter's interactive chess board, extracted from Plate II so the
-	// arena (Plate V) can reuse it. chess.js isn't reactive — every derivation
+	// The chapter's interactive chess board, extracted from the play-it plate so the
+	// arena (the arena) can reuse it. chess.js isn't reactive — every derivation
 	// keys off the `fen` mirror the owner maintains. The `arrows` overlay is
 	// how the arena draws each stage's chosen move on one shared position;
 	// coinciding arrows are fanned apart so agreement stays visible.

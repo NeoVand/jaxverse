@@ -1,9 +1,9 @@
 <script lang="ts">
-	// The neuron as a circuit, drawn in the page's signal colors: the vermilion
+	// The neuron as a circuit, drawn in the three learned slots: the ultramarine
 	// edge carries the weight w (thickness ∝ |w|, dashed when negative), the
-	// teal edge carries the bias b, and the ultramarine path is the live
-	// signal — through Σ, through σ (whose disk plots the actual activation
-	// currently selected), scaled by the amplitude v, out as a. When the
+	// violet edge carries the bias b, and the blue-cyan edge carries the
+	// amplitude v. Between them runs the signal — through Σ, through the teal σ
+	// (whose disk plots the actual activation currently selected), out as a. When the
 	// reader probes the plot, the sampled x and the produced a flow through
 	// here too, with a dot riding the little curve inside σ.
 	import type { ActivationSpec } from './activations';
@@ -87,7 +87,7 @@
 	viewBox="0 0 380 240"
 	class="block w-full max-w-[460px]"
 	role="img"
-	aria-label="Diagram of one neuron: the input x is scaled by the weight w (vermilion), the bias b (teal) is added at the sum node, the result passes through the activation {act.label}, is scaled by the amplitude v, and comes out as a"
+	aria-label="Diagram of one neuron: the input x is scaled by the weight w (ultramarine), the bias b (violet) is added at the sum node, the result passes through the activation {act.label}, is scaled by the amplitude v (blue-cyan), and comes out as a"
 >
 	<defs>
 		<marker
@@ -99,7 +99,7 @@
 			markerHeight="6.5"
 			orient="auto-start-reverse"
 		>
-			<path d="M0.5 0.5L7.5 4L0.5 7.5Z" fill="var(--warm)" />
+			<path d="M0.5 0.5L7.5 4L0.5 7.5Z" fill="var(--accent)" />
 		</marker>
 		<marker
 			id="nd-arrow-b"
@@ -110,10 +110,10 @@
 			markerHeight="6.5"
 			orient="auto-start-reverse"
 		>
-			<path d="M0.5 0.5L7.5 4L0.5 7.5Z" fill="var(--cat-2)" />
+			<path d="M0.5 0.5L7.5 4L0.5 7.5Z" fill="var(--cat-8)" />
 		</marker>
 		<marker
-			id="nd-arrow-a"
+			id="nd-arrow-sig"
 			viewBox="0 0 8 8"
 			refX="7"
 			refY="4"
@@ -121,7 +121,18 @@
 			markerHeight="6.5"
 			orient="auto-start-reverse"
 		>
-			<path d="M0.5 0.5L7.5 4L0.5 7.5Z" fill="var(--accent)" />
+			<path d="M0.5 0.5L7.5 4L0.5 7.5Z" fill="var(--ink-2)" />
+		</marker>
+		<marker
+			id="nd-arrow-v"
+			viewBox="0 0 8 8"
+			refX="7"
+			refY="4"
+			markerWidth="6.5"
+			markerHeight="6.5"
+			orient="auto-start-reverse"
+		>
+			<path d="M0.5 0.5L7.5 4L0.5 7.5Z" fill="var(--cat-6)" />
 		</marker>
 		<clipPath id="nd-sigma-clip">
 			<circle cx={SIG.x} cy={SIG.y} r={SIG.r - 2.5} />
@@ -134,7 +145,7 @@
 		y1={wEdge.y1}
 		x2={wEdge.x2}
 		y2={wEdge.y2}
-		stroke="var(--warm)"
+		stroke="var(--accent)"
 		stroke-width={wWidth}
 		stroke-dasharray={dash(w)}
 		marker-end="url(#nd-arrow-w)"
@@ -144,7 +155,7 @@
 		y1={bEdge.y1}
 		x2={bEdge.x2}
 		y2={bEdge.y2}
-		stroke="var(--cat-2)"
+		stroke="var(--cat-8)"
 		stroke-width={bWidth}
 		stroke-dasharray={dash(b)}
 		marker-end="url(#nd-arrow-b)"
@@ -154,19 +165,19 @@
 		y1={SUM.y}
 		x2={SIG.x - SIG.r - 4.5}
 		y2={SIG.y}
-		stroke="var(--accent)"
+		stroke="var(--ink-2)"
 		stroke-width="1.6"
-		marker-end="url(#nd-arrow-a)"
+		marker-end="url(#nd-arrow-sig)"
 	/>
 	<line
 		x1={SIG.x + SIG.r}
 		y1={SIG.y}
 		x2={OUT_X - 4.5}
 		y2={SIG.y}
-		stroke="var(--accent)"
+		stroke="var(--cat-6)"
 		stroke-width={vWidth}
 		stroke-dasharray={dash(v)}
-		marker-end="url(#nd-arrow-a)"
+		marker-end="url(#nd-arrow-v)"
 	/>
 
 	<!-- ── nodes ── -->
@@ -257,19 +268,13 @@
 			stroke="var(--line)"
 			stroke-width="1"
 		/>
-		<path
-			d={inner.d}
-			fill="none"
-			stroke="var(--accent)"
-			stroke-width="1.9"
-			stroke-linecap="round"
-		/>
+		<path d={inner.d} fill="none" stroke="var(--cat-2)" stroke-width="1.9" stroke-linecap="round" />
 		{#if probeDot}
 			<circle
 				cx={probeDot.x}
 				cy={probeDot.y}
 				r="3"
-				fill="var(--accent)"
+				fill="var(--cat-2)"
 				stroke="var(--surface-2)"
 				stroke-width="1.2"
 			/>
@@ -289,7 +294,7 @@
 		style="font-family: var(--font-serif); font-style: italic;">a</text
 	>
 	{#if probe}
-		<text x={OUT_X + 8} y={SIG.y + 24} class="num" font-size="10" fill="var(--accent)"
+		<text x={OUT_X + 8} y={SIG.y + 24} class="num" font-size="10" fill="var(--good)"
 			>{minus(probe.a.toFixed(2))}</text
 		>
 	{/if}
@@ -298,25 +303,25 @@
 	<text x={112} y={78} text-anchor="middle">
 		<tspan
 			font-size="14.5"
-			fill="var(--warm)"
+			fill="var(--accent)"
 			style="font-family: var(--font-serif); font-style: italic;">w</tspan
 		>
-		<tspan dx="3" class="num" font-size="10.5" fill="var(--warm)">{minus(w.toFixed(1))}</tspan>
+		<tspan dx="3" class="num" font-size="10.5" fill="var(--accent)">{minus(w.toFixed(1))}</tspan>
 	</text>
 	<text x={112} y={168} text-anchor="middle">
 		<tspan
 			font-size="14.5"
-			fill="var(--cat-2)"
+			fill="var(--cat-8)"
 			style="font-family: var(--font-serif); font-style: italic;">b</tspan
 		>
-		<tspan dx="3" class="num" font-size="10.5" fill="var(--cat-2)">{minus(b.toFixed(2))}</tspan>
+		<tspan dx="3" class="num" font-size="10.5" fill="var(--cat-8)">{minus(b.toFixed(2))}</tspan>
 	</text>
 	<text x={SIG.x + SIG.r + 18} y={SIG.y - 12} text-anchor="middle">
 		<tspan
 			font-size="14.5"
-			fill="var(--accent)"
+			fill="var(--cat-6)"
 			style="font-family: var(--font-serif); font-style: italic;">v</tspan
 		>
-		<tspan dx="3" class="num" font-size="10.5" fill="var(--accent)">{minus(v.toFixed(2))}</tspan>
+		<tspan dx="3" class="num" font-size="10.5" fill="var(--cat-6)">{minus(v.toFixed(2))}</tspan>
 	</text>
 </svg>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Plate from '$lib/components/ui/Plate.svelte';
 	// The canonical loop, drawn once: the agent acts; the environment answers
 	// with a new state and a number. Every algorithm in this chapter lives
 	// inside these two arrows. Two dots circulate (action out, feedback back)
@@ -8,10 +9,14 @@
 	const OBS_PATH = 'M 170 148 C 82 148 82 42 170 42';
 </script>
 
-<figure class="my-8">
+<Plate
+	id="loop"
+	title="The loop"
+	caption="The whole setting, in two arrows: act, then be told how it went — nothing else crosses the line."
+>
 	<svg
 		viewBox="0 0 480 190"
-		class="mx-auto block w-full max-w-[440px]"
+		class="mx-auto block w-full max-w-[550px]"
 		role="img"
 		aria-label="The reinforcement learning loop: the agent sends an action to the environment; the environment returns the next state and a reward to the agent."
 	>
@@ -87,13 +92,7 @@
 			style="offset-path: path('{OBS_PATH}');"
 		/>
 	</svg>
-	<figcaption
-		class="mx-auto mt-1 max-w-[440px] text-center font-serif text-[13.5px] text-ink-2 italic"
-		style="font-variation-settings: 'opsz' 13;"
-	>
-		The whole setting, in two arrows: act, then be told how it went — nothing else crosses the line.
-	</figcaption>
-</figure>
+</Plate>
 
 <style>
 	.box-label {

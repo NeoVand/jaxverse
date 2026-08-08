@@ -3,7 +3,10 @@
 	import { chapters, type ChapterSlug } from '$lib/data/chapters';
 	import { progress } from '$lib/data/progress.svelte';
 	import HeroField from '$lib/components/ui/HeroField.svelte';
+	import Plate from '$lib/components/ui/Plate.svelte';
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
+	import { setChapter } from '$lib/data/plates';
+	import { OPTIMIZER_LEGEND } from '$lib/optim/optimizers';
 	import {
 		ArrowRight,
 		BookOpen,
@@ -16,6 +19,10 @@
 		Spline,
 		Type
 	} from 'lucide-svelte';
+
+	// The frontispiece is a plate too, so the reader meets the grammar before
+	// the first chapter uses it.
+	setChapter(() => 'home');
 
 	// One glyph per chapter — presentation only, so the mapping lives here.
 	const glyphs: Record<ChapterSlug, typeof Mountain> = {
@@ -81,7 +88,7 @@
 </svelte:head>
 
 <!-- ── hero ── -->
-<section class="mx-auto max-w-2xl px-5 pt-20 pb-8 sm:pt-28">
+<section class="rail-prose pt-20 pb-8 sm:pt-28">
 	<p class="eyebrow mb-6">An interactive book, computed as you read</p>
 	<h1
 		class="font-serif tracking-tight text-balance"
@@ -96,29 +103,27 @@
 		Every model in this book is real, and every one of them trains here, in your browser — from a
 		single neuron bending a line to a language model learning chess.
 	</p>
+</section>
 
-	<div class="mt-4">
-		<HeroField height={300} />
-	</div>
-	<p
-		class="mt-2.5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[12px] text-ink-3"
-	>
-		<span class="inline-flex items-center gap-1.5">
-			<span class="inline-block h-2 w-2 rounded-full" style="background: var(--ink-3);"></span>
-			gradient descent
-		</span>
-		<span class="inline-flex items-center gap-1.5">
-			<span class="inline-block h-2 w-2 rounded-full" style="background: var(--accent);"></span>
-			with momentum
-		</span>
-		<span class="inline-flex items-center gap-1.5">
-			<span class="inline-block h-2 w-2 rounded-full" style="background: var(--warm);"></span>
-			Adam
-		</span>
-		<span class="font-serif italic">— live now; click the map to drop them somewhere new</span>
+<Plate
+	id="field"
+	title="The loss landscape, live"
+	live
+	caption="Three optimizers descending the same surface, right now, on your machine. Click anywhere on the map to drop them somewhere new and watch the routes diverge — the whole of Chapter 0 is in this picture."
+>
+	<HeroField height={300} />
+	<p class="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 px-4 text-[12px] text-ink-3">
+		{#each OPTIMIZER_LEGEND as o (o.id)}
+			<span class="inline-flex items-center gap-1.5">
+				<span class="inline-block h-2 w-2 rounded-full" style="background: var({o.token});"></span>
+				{o.label}
+			</span>
+		{/each}
 	</p>
+</Plate>
 
-	<div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+<section class="rail-prose pb-8">
+	<div class="flex flex-wrap items-center justify-center gap-3">
 		<a
 			href={resolve('/descent')}
 			class="btn-solid inline-flex items-center gap-2 rounded-md px-5 py-2.5 text-[11.5px] font-medium tracking-[0.1em] uppercase"
@@ -152,7 +157,7 @@
 </section>
 
 <!-- ── manifesto ── -->
-<section class="chapter-prose mx-auto max-w-2xl px-5 py-8">
+<section class="chapter-prose rail-prose py-8">
 	<p>
 		Machine learning has a reputation for mystery it doesn’t deserve. Under every headline model —
 		the ones that talk, draw, and play — sits one modest idea: build a smooth, adjustable function,
@@ -174,17 +179,17 @@
 </section>
 
 <!-- ── the hidden course ── -->
-<section class="mx-auto max-w-2xl px-5 pt-8">
-	<h2 class="eyebrow">A second book, for the builders</h2>
+<section class="rail-prose pt-8">
+	<h2 class="h2 h2-flush">A second book, for the builders</h2>
 </section>
 <!-- a real block, not a mock-up: it opens on the code behind the hero map -->
 <UnderTheHood slug="home" block="hero" />
-<section class="mx-auto max-w-2xl px-5 pb-8">
+<section class="rail-prose pb-8">
 	<p class="chapter-prose">
 		Beneath every plate that trains something sits a quiet line like the one above — and the one
-		above works: open it for the machinery behind the map at the top of this page. Every block
-		holds the real jax-js code from this repository, annotated, with the stagecraft on its own
-		tab. Followed chapter by chapter, the blocks add up to a short course in
+		above works: open it for the machinery behind the map at the top of this page. Every block holds
+		the real jax-js code from this repository, annotated, with the stagecraft on its own tab.
+		Followed chapter by chapter, the blocks add up to a short course in
 		<a href="https://jax-js.com" rel="external">jax-js</a> itself: pytrees,
 		<code>valueAndGrad</code>, <code>jit</code>, devices, workers, a whole transformer. Each chapter
 		also ends with a downloadable lab — a standalone npm project that runs the same model with
@@ -194,7 +199,7 @@
 
 <!-- ── contents ── -->
 <section id="contents" class="mx-auto max-w-3xl px-5 py-14">
-	<h2 class="eyebrow mb-8">Contents — the descent</h2>
+	<h2 class="h2 h2-flush mb-8">Contents — the descent</h2>
 
 	<div class="relative" bind:this={railBox}>
 		<!-- the rail: one thread through every chapter, a soft glow drifting down it -->

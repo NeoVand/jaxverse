@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Plate IV — search by drawing. The reader's own stroke goes through the
+	// Search by drawing. The reader's own stroke goes through the
 	// encoder, and the two thousand held-out digits are sorted by how near they
 	// land: once in the waist's few numbers, once in the raw 784 pixels. Both
 	// searches read the same centred ink, so the difference between the rows is
@@ -10,6 +10,7 @@
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Gauge from '$lib/components/ui/Gauge.svelte';
 	import { inview } from '$lib/components/ui/inview';
+	import { plateLabel } from '$lib/data/plates';
 	import {
 		DEFAULT_SIGMA,
 		SIGMA_MAX,
@@ -22,11 +23,10 @@
 	import { DIM, SIDE, TileStrip, readTokens, setupCanvas } from './common';
 
 	interface Props {
-		n: number;
 		title: string;
 		caption: string;
 	}
-	let { n, title, caption }: Props = $props();
+	let { title, caption }: Props = $props();
 
 	const PAD = 224; // pad CSS size — 8 css px per 28-grid pixel
 	const SHOW = 8; // neighbours printed per row
@@ -472,7 +472,7 @@
 	] as const;
 </script>
 
-<Plate {n} {title} {caption}>
+<Plate id="neighbors" live {title} {caption}>
 	{#snippet status()}
 		{#if lab.phase === 'ready'}
 			<span>step {lab.step}</span>
@@ -507,7 +507,9 @@
 		{#if lab.phase !== 'ready'}
 			<div class="flex h-[280px] flex-col items-center justify-center gap-1">
 				<span class="eyebrow">
-					{lab.phase === 'error' ? 'the engine stalled' : 'warming up the same network as plate I…'}
+					{lab.phase === 'error'
+						? 'the engine stalled'
+						: `warming up the same network as ${plateLabel('latent', 'squeeze').toLowerCase()}…`}
 				</span>
 				{#if lab.phase === 'error'}
 					<span class="mb-2 text-[12.5px] text-bad">{lab.errorMsg}</span>
@@ -795,6 +797,6 @@
 		outline: none;
 	}
 	.vrange:focus-visible::-webkit-slider-thumb {
-		box-shadow: 0 0 0 4px color-mix(in srgb, var(--ink-3) 25%, transparent);
+		box-shadow: var(--focus-ring);
 	}
 </style>

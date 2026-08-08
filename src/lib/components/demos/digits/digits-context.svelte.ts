@@ -1,4 +1,4 @@
-// The shared bench for chapter 3: Plate III (the classifier) owns and trains
+// The shared bench for chapter 3: the classifier plate (the classifier) owns and trains
 // one MlpEngine; Plates IV and V borrow the same weights through this module.
 // Module-level on purpose — the plates live on one page and must see one model.
 
@@ -14,7 +14,7 @@ class DigitsLab {
 	/** Decoded dataset — plain field too; large, and read only on demand. */
 	mnist: MnistData | null = null;
 
-	/** Architecture, owned by Plate III and read by the plates downstream. */
+	/** Architecture, owned by the classifier plate and read by the plates downstream. */
 	depth = $state(2);
 	width = $state(128);
 	activation = $state<Activation>('relu');
@@ -55,24 +55,4 @@ export const lab = new DigitsLab();
 
 // Canvas colors are read from CSS at draw time; bumping `tick` on theme flips
 // makes draw effects re-run, so static tiles never keep stale ink.
-class ThemePulse {
-	tick = $state(0);
-}
-
-export const themePulse = new ThemePulse();
-
-let watching = false;
-
-/** Idempotent; safe to call from every plate (no-op during prerender). */
-export function watchTheme(): void {
-	if (watching || typeof window === 'undefined') return;
-	watching = true;
-	const bump = () => {
-		themePulse.tick += 1;
-	};
-	matchMedia('(prefers-color-scheme: dark)').addEventListener('change', bump);
-	new MutationObserver(bump).observe(document.documentElement, {
-		attributes: true,
-		attributeFilter: ['class']
-	});
-}
+export { themePulse, watchTheme } from '$lib/viz/tokens.svelte';

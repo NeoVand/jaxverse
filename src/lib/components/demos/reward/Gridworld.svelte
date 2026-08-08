@@ -1,5 +1,6 @@
 <script lang="ts">
-	// Plate II — the gridworld. A tabular softmax policy learns by REINFORCE
+	import { readTokens } from '$lib/viz/tokens.svelte';
+	// The gridworld. A tabular softmax policy learns by REINFORCE
 	// with return-to-go and a per-state baseline, hundreds of episodes a
 	// second, all on the main thread. The canvas shows the world, the policy
 	// (four arrows per cell), the value estimate (a wash), and the current
@@ -196,21 +197,7 @@
 	});
 
 	// ── drawing ──
-	function tokens(el: Element) {
-		const s = getComputedStyle(el);
-		const v = (name: string, fb: string) => s.getPropertyValue(name).trim() || fb;
-		return {
-			paper: v('--paper', '#faf9f5'),
-			ink: v('--ink', '#1d1c18'),
-			ink2: v('--ink-2', '#605d54'),
-			ink3: v('--ink-3', '#a3a094'),
-			line: v('--line', '#e5e2d8'),
-			accent: v('--accent', '#2b45d8'),
-			warm: v('--warm', '#d3541f'),
-			good: v('--good', '#22774d'),
-			bad: v('--bad', '#bb3a2b')
-		};
-	}
+	const tokens = readTokens;
 
 	function geom(w: number, h: number) {
 		const pad = 10;
@@ -241,7 +228,8 @@
 		const cx = (s: number) => left(s % world.w) + cell / 2;
 		const cy = (s: number) => top((s / world.w) | 0) + cell / 2;
 
-		// value wash — the baseline estimate, paper → accent
+		// value wash — the baseline estimate, the second learned slot, so it never
+		// competes with the ultramarine policy arrows drawn on top of it
 		if (showValue) {
 			let lo = Infinity;
 			let hi = -Infinity;
@@ -251,7 +239,7 @@
 				if (baseline[s] > hi) hi = baseline[s];
 			}
 			if (hi - lo > 1e-6) {
-				ctx.fillStyle = tk.accent;
+				ctx.fillStyle = tk.cats[8];
 				for (let s = 0; s < baseline.length; s++) {
 					if (world.walls.has(s)) continue;
 					ctx.globalAlpha = 0.3 * ((baseline[s] - lo) / (hi - lo));
@@ -490,7 +478,8 @@
 </script>
 
 <Plate
-	n={2}
+	id="gridworld"
+	live
 	title="The gridworld"
 	caption="No ε dial anywhere: the early policy is nearly uniform, and that is the exploration — arrows sharpen only as one route proves better than usual. Flip on edit and reshape the world mid-training: wall off the river, move the treasure, and watch the arrows unlearn, then re-carve."
 >
@@ -548,6 +537,7 @@
 				<div class="ml-auto w-40 min-w-36">
 					<Slider
 						label="learning rate"
+						tone="knob"
 						bind:value={lr}
 						min={0.05}
 						max={0.5}

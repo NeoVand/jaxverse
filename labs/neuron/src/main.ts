@@ -70,13 +70,17 @@ function forward(p: any, x: any) {
 const lossFn = (p: any, x: any, y: any) => np.mean(np.square(forward(p, x).sub(y)));
 
 // ── drawing ──────────────────────────────────────────────────────────────────
+/** Read a token off the page, so the canvas follows light and dark like the book. */
+const token = (name: string, fallback: string) =>
+	getComputedStyle(stage).getPropertyValue(name).trim() || fallback;
+
 function draw(pred: Float32Array) {
 	const { width: W, height: Hh } = stage;
 	ctx.clearRect(0, 0, W, Hh);
 	const px = (x: number) => ((x + 1) / 2) * W;
 	const py = (y: number) => Hh / 2 - y * (Hh / 2.6);
 	ctx.setLineDash([4, 4]);
-	ctx.strokeStyle = '#a3a094';
+	ctx.strokeStyle = token('--ink-3', '#a3a094');
 	ctx.beginPath();
 	for (let i = 0; i < N; i++) {
 		const [X, Y] = [px(xs[i]), py(target(xs[i]))];
@@ -85,7 +89,7 @@ function draw(pred: Float32Array) {
 	}
 	ctx.stroke();
 	ctx.setLineDash([]);
-	ctx.strokeStyle = '#2b45d8';
+	ctx.strokeStyle = token('--accent', '#2b45d8');
 	ctx.lineWidth = 2;
 	ctx.beginPath();
 	for (let i = 0; i < N; i++) {

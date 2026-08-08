@@ -1,7 +1,8 @@
 <script lang="ts">
+	import Plate from '$lib/components/ui/Plate.svelte';
 	// The hourglass, drawn once and held still: a digit goes in, the layers
 	// narrow to a two-number waist, and a mirror-image stack tries to repaint
-	// the digit from those two numbers alone. Static by design — the plates
+	// The plates
 	// below animate; this is the shape the reader keeps in mind while they do.
 
 	const CY = 88; // the spine every layer is centred on
@@ -39,10 +40,14 @@
 		'M 20 74 C 26 64, 46 66, 44 78 C 43 86, 34 88, 30 88 C 40 87, 48 92, 46 102 C 44 112, 26 113, 19 106';
 </script>
 
-<figure class="my-8">
+<Plate
+	id="autoencoder"
+	title="The hourglass"
+	caption="Two ordinary stacks of layers, joined at a waist too narrow to cheat through. Nothing in the picture knows what a 3 is; the only pressure on it is that the digit on the right should look like the digit on the left, and the only route between them is those two numbers — which arrive with a little noise on them, for reasons the next paragraphs make good on."
+>
 	<svg
 		viewBox="0 0 520 182"
-		class="mx-auto block w-full max-w-[660px]"
+		class="mx-auto block w-full max-w-[825px]"
 		role="img"
 		aria-label="An autoencoder as an hourglass. A 784-pixel digit enters on the left, passes through layers of 784, 256 and 64 units that narrow to a bottleneck of two numbers, and a mirror-image decoder of 64, 256 and 784 units repaints the digit on the right. The bottleneck is variational: the encoder proposes a Gaussian, the decoder is handed a sample of it, and that Gaussian is kept near the standard normal. The loss is the distance between the digit that went in and the one that came out."
 	>
@@ -188,16 +193,7 @@
 		<text x="364" y="149" text-anchor="middle" class="label">decoder D</text>
 		<text x="364" y="161" text-anchor="middle" class="cap dim">repaint</text>
 	</svg>
-	<figcaption
-		class="mx-auto mt-2 max-w-[560px] text-center font-serif text-[13.5px] text-ink-2 italic"
-		style="font-variation-settings: 'opsz' 13;"
-	>
-		Two ordinary stacks of layers, joined at a waist too narrow to cheat through. Nothing in the
-		picture knows what a 3 is; the only pressure on it is that the digit on the right should look
-		like the digit on the left, and the only route between them is those two numbers — which arrive
-		with a little noise on them, for reasons the next paragraphs make good on.
-	</figcaption>
-</figure>
+</Plate>
 
 <style>
 	.label {

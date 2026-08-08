@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Plate III — supervised fine-tuning, honestly: the SAME weights, a better
+	// Supervised fine-tuning, honestly: the SAME weights, a better
 	// corpus (2,381 greedy-material games), the same update rule. The headline
 	// curve is taste (capture rate of sampled games); the quiet curve is the
 	// price (val loss on the ORIGINAL random-play corpus, drifting up).
@@ -8,6 +8,7 @@
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import { progress } from '$lib/data/progress.svelte';
+	import { plateLabel } from '$lib/data/plates';
 	import { lab, LR_SFT } from './rook-context.svelte';
 	import {
 		replayGames,
@@ -129,7 +130,7 @@
 			lab.stage = 'fine-tuned';
 			await evalNow(g);
 		}
-		// photograph the paused weights — the arena (Plate V) fields this student
+		// photograph the paused weights — the arena (the arena) fields this student
 		if (g === lab.gen && lab.stage === 'fine-tuned') await lab.captureStage('fine-tuned');
 		lab.endLoop(g);
 		running = false;
@@ -172,7 +173,8 @@
 </script>
 
 <Plate
-	n={3}
+	id="sft"
+	live
 	title="Fine-tuning — the same weights, a better diet"
 	caption="Nothing about the machine changed — same parameters, same loss, same update rule — only the corpus. Style follows the diet: within a hundred-odd steps the capture rate of Rook's own games climbs from 8% toward the greedy corpus's 38%, while the quiet numbers show the price — rising loss on the abandoned random-play corpus. Stop while you are ahead: over-tuning keeps buying style and starts paying with competence."
 >
@@ -298,7 +300,8 @@
 										aria-label="Validation loss on the original corpus"
 										role="img"
 									>
-										<path d={sparkPath} fill="none" stroke="var(--ink-3)" stroke-width="1.3" />
+										<!-- a held-out loss, so it takes the book's held-out color -->
+										<path d={sparkPath} fill="none" stroke="var(--warm)" stroke-width="1.3" />
 									</svg>
 								{/if}
 								{#if valDrift}
@@ -321,8 +324,10 @@
 								href="#rook-play"
 								class="num inline-flex items-center gap-1.5 text-[11.5px] text-ink-2 underline decoration-dotted underline-offset-4 hover:text-ink"
 							>
-								<ArrowUp size={11} aria-hidden="true" /> play the fine-tuned Rook — Plate II always plays
-								the current weights
+								<ArrowUp size={11} aria-hidden="true" /> play the fine-tuned Rook — {plateLabel(
+									'rook',
+									'play'
+								)} always plays the current weights
 							</a>
 						{/if}
 					</div>

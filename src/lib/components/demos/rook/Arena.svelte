@@ -1,7 +1,7 @@
 <script lang="ts">
-	// Plate V — the arena. One position, every stage of Rook asked at once:
+	// The arena. One position, every stage of Rook asked at once:
 	// the frozen pretraining waypoint, the fine-tuned snapshot (photographed
-	// when Plate III pauses), and the reinforced snapshot (Plate IV). Each
+	// when the fine-tuning plate pauses), and the reinforced snapshot (the RLVR plate). Each
 	// answers with its full next-move distribution; the board shows every
 	// decision as a colored arrow, and the stage you picked actually replies.
 	// There is only one engine, so lab.compareStages swaps weights in place
@@ -11,6 +11,7 @@
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import { inview } from '$lib/components/ui/inview';
+	import { plateLabel } from '$lib/data/plates';
 	import { lab, type ArenaStage } from './rook-context.svelte';
 	import { analyzeRow, loadChess, type ChessGame, type RowVerdict } from './chess-eval';
 	import Board, { type BoardArrow } from './Board.svelte';
@@ -26,14 +27,14 @@
 		{
 			id: 'fine-tuned',
 			label: 'fine-tuned',
-			color: 'var(--warm)',
-			hint: 'pause the fine-tuning in Plate III to field it'
+			color: 'var(--cat-8)',
+			hint: `pause the fine-tuning in ${plateLabel('rook', 'sft')} to field it`
 		},
 		{
 			id: 'reinforced',
 			label: 'RLVR',
 			color: 'var(--good)',
-			hint: 'pause the RLVR run in Plate IV to field it'
+			hint: `pause the RLVR run in ${plateLabel('rook', 'rlvr')} to field it`
 		}
 	];
 
@@ -214,9 +215,10 @@
 </script>
 
 <Plate
-	n={5}
+	id="arena"
+	live
 	title="The arena — every stage, same position"
-	caption="Same board, three students. After each of your moves, every fielded Rook is asked for its next-move beliefs — the weights are swapped in place on the one engine, questioned, and restored — and each decision lands on the board as an arrow: blue pretrained, amber fine-tuned, green RLVR. The columns keep score honestly: legal mass climbs stage by stage, and the fine-tuned Rook starts hunting your pieces. The stage you pick under “plays Black” is the one that actually answers."
+	caption="Same board, three students. After each of your moves, every fielded Rook is asked for its next-move beliefs — the weights are swapped in place on the one engine, questioned, and restored — and each decision lands on the board as an arrow: blue pretrained, violet fine-tuned, green RLVR. The columns keep score honestly: legal mass climbs stage by stage, and the fine-tuned Rook starts hunting your pieces. The stage you pick under “plays Black” is the one that actually answers."
 >
 	{#snippet status()}
 		{#if lab.phase === 'ready'}

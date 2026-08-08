@@ -112,7 +112,7 @@ class RookLab {
 			this.gameStarts = starts;
 			this.probeSet = buildProbeSet(data.tokens, starts, 32);
 			// Start from the last pretraining waypoint so Play/SFT/RLVR are alive
-			// immediately; Plate I's time machine can still rewind to step 0.
+			// immediately; the pretraining plate's time machine can still rewind to step 0.
 			const wp = manifest.waypoints[manifest.waypoints.length - 1];
 			const flat = await loadRookWaypoint(wp.file, manifest);
 			const engine = new WorkerEngine({

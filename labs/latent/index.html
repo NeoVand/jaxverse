@@ -5,24 +5,47 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>Lab 4 · The Hidden Map</title>
 		<style>
+			/* the same tokens, the same structure, and the same override order as
+			   the book itself, so a lab drawn on a canvas can read its colors
+			   instead of baking them */
 			:root {
 				color-scheme: light dark;
+				--paper: #faf9f5;
+				--ink: #1d1c18;
+				--ink-3: #a3a094;
+				--line: #e5e2d8;
+				--accent: #2b45d8;
+				--warm: #d3541f;
+			}
+			@media (prefers-color-scheme: dark) {
+				:root:not(.light) {
+					color-scheme: dark;
+					--paper: #141310;
+					--ink: #e9e6dc;
+					--ink-3: #6c695e;
+					--line: #2e2c24;
+					--accent: #93a3ff;
+					--warm: #ff8e57;
+				}
+			}
+			:root.dark {
+				color-scheme: dark;
+				--paper: #141310;
+				--ink: #e9e6dc;
+				--ink-3: #6c695e;
+				--line: #2e2c24;
+				--accent: #93a3ff;
+				--warm: #ff8e57;
 			}
 			body {
 				margin: 0 auto;
 				max-width: 72ch;
 				padding: 2rem 1.25rem 4rem;
-				background: #faf9f5;
-				color: #1d1c18;
+				background: var(--paper);
+				color: var(--ink);
 				font-family: ui-monospace, 'SF Mono', Menlo, monospace;
 				font-size: 13px;
 				line-height: 1.55;
-			}
-			@media (prefers-color-scheme: dark) {
-				body {
-					background: #141310;
-					color: #e9e6dc;
-				}
 			}
 			h1 {
 				font-size: 15px;
@@ -39,7 +62,7 @@
 			canvas {
 				width: 100%;
 				image-rendering: pixelated;
-				border: 1px solid rgba(128, 128, 128, 0.3);
+				border: 1px solid var(--line);
 				border-radius: 6px;
 			}
 			a {

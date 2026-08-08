@@ -1,7 +1,6 @@
 <script lang="ts">
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
-	import Wide from '$lib/components/ui/Wide.svelte';
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
 	import SpaceLab from '$lib/components/demos/space/SpaceLab.svelte';
@@ -25,21 +24,26 @@
 			crease left behind.
 		</p>
 		<p>Look at what one layer actually computes:</p>
-		<Math display tex="h \;=\; \sigma(W x + b)" />
+		<Math
+			display
+			tex={'h \\;=\\; \\htmlClass{eq-op}{\\sigma}\\big(\\htmlClass{eq-model}{W} \\htmlClass{eq-world}{x} + \\htmlClass{eq-model-2}{b}\\big)'}
+		/>
 		<p>
-			The affine part <Math tex="Wx + b" /> rotates, stretches, and shifts the plane. Then the bend
-			<Math tex="\sigma" /> warps each coordinate — the classic
-			<Math tex="\tanh" /> squashes it smoothly toward the interval
+			The affine part
+			<Math tex={'\\htmlClass{eq-model}{W}\\htmlClass{eq-world}{x} + \\htmlClass{eq-model-2}{b}'} /> rotates,
+			stretches, and shifts the plane. Then the bend
+			<Math tex={'\\htmlClass{eq-op}{\\sigma}'} /> warps each coordinate — the classic
+			<Math tex={'\\htmlClass{eq-op}{\\tanh}'} /> squashes it smoothly toward the interval
 			<Math tex="(-1, 1)" />, though it pays for that gentleness in training time; the plates below
 			open with gelu, which bends nearly as smoothly and learns in a fraction of the steps. Nothing
-			here can cut, tear, or glue. When <Math tex="W" /> is invertible and the bend is smoothly invertible,
-			as tanh is, the layer is a <em>homeomorphism</em> — a continuous deformation with a continuous inverse,
-			the kind of move you could perform with a sheet of soft rubber. A deep network is a chain of such
-			moves, finished by one boring linear classifier:
+			here can cut, tear, or glue. When <Math tex={'\\htmlClass{eq-model}{W}'} /> is invertible and the
+			bend is smoothly invertible, as tanh is, the layer is a <em>homeomorphism</em> — a continuous deformation
+			with a continuous inverse, the kind of move you could perform with a sheet of soft rubber. A deep
+			network is a chain of such moves, finished by one boring linear classifier:
 		</p>
 		<Math
 			display
-			tex={'f(x) \\;=\\; \\underbrace{\\text{linear cut}}_{\\text{trivial}} \\;\\circ\\; \\underbrace{\\sigma(W_L \\cdot) \\circ \\cdots \\circ \\sigma(W_1 \\cdot)}_{\\text{the deformation}}\\;(x)'}
+			tex={'f(\\htmlClass{eq-world}{x}) \\;=\\; \\underbrace{\\text{linear cut}}_{\\text{trivial}} \\;\\circ\\; \\underbrace{\\htmlClass{eq-op}{\\sigma}(\\htmlClass{eq-model}{W_L} \\cdot) \\circ \\cdots \\circ \\htmlClass{eq-op}{\\sigma}(\\htmlClass{eq-model}{W_1} \\cdot)}_{\\text{the deformation}}\\;(\\htmlClass{eq-world}{x})'}
 		/>
 		<p>
 			So the entire intelligence of the machine lives in the deformation. The final layer can only
@@ -48,24 +52,17 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<SpaceLab
-			variant="guided"
-			n={1}
-			title="The experiment — rings, and a network two numbers wide"
-			caption="Left: the data as it is, with the network's current verdict washed behind it. Middle: the same points — the same grid — after the network's deformation, and the one straight cut the final layer makes. Right: the network itself, live — every edge is one weight. Train, and watch it strain: a ring inside a ring cannot be pulled apart without leaving the plane. Then flip hidden from 2-D to 3-D and watch the same cut succeed. Hover the middle view and press unfold to replay the deformation."
-		/>
-	</Wide>
+	<SpaceLab
+		variant="guided"
+		id="rings"
+		title="The experiment — rings, and a network two numbers wide"
+		caption="Left: the data as it is, with the network's current verdict washed behind it. Middle: the same points — the same grid — after the network's deformation, and the one straight cut the final layer makes. Right: the network itself, live — every edge is one weight. Train, and watch it strain: a ring inside a ring cannot be pulled apart without leaving the plane. Then flip hidden from 2-D to 3-D and watch the same cut succeed. Hover the middle view and press unfold to replay the deformation."
+	/>
 
 	<UnderTheHood slug="space" block="device" />
 
 	<Prose>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			Why it failed, and what fixed it
-		</h2>
+		<h2 class="h2">Why it failed, and what fixed it</h2>
 		<p>
 			With two hidden units, the network's inner world is itself a plane, and you watched it try
 			every rubber-sheet move it has. It cannot win, and the reason is <em>topology</em>, not
@@ -98,24 +95,17 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<SpaceLab
-			variant="free"
-			n={2}
-			title="The playground — pick your tangle"
-			caption="Seven tangles, easiest to hardest, under the plot — spirals are the classic stress test. Watch the hidden view: tanh bends space in soft waves; relu folds it along straight creases; gelu and silu fold with the crease sanded smooth. Hover the hidden view and press unfold to replay the deformation. Widths beyond three are shown as a PCA shadow — the true untangling happens in more dimensions than a screen has."
-		/>
-	</Wide>
+	<SpaceLab
+		variant="free"
+		id="tangles"
+		title="The playground — pick your tangle"
+		caption="Seven tangles, easiest to hardest, under the plot — spirals are the classic stress test. Watch the hidden view: tanh bends space in soft waves; relu folds it along straight creases; gelu and silu fold with the crease sanded smooth. Hover the hidden view and press unfold to replay the deformation. Widths beyond three are shown as a PCA shadow — the true untangling happens in more dimensions than a screen has."
+	/>
 
 	<UnderTheHood slug="space" block="middle" />
 
 	<Prose>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			The representation is the product
-		</h2>
+		<h2 class="h2">The representation is the product</h2>
 		<p>
 			Click any point on the left and find its ghost on the right: the same datum, renamed by the
 			network. That renaming is the product. We call the hidden layer's coordinates a

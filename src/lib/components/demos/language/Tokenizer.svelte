@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Plate II — grow a vocabulary. Real BPE over the real corpus (bpe-live.ts):
+	// Grow a vocabulary. Real BPE over the real corpus (bpe-live.ts):
 	// the browser counts every adjacent pair in 1.5M characters, fuses the
 	// winner, repeats. Each merge reports its own wall-clock ms, which is the
 	// honest answer to "is this prerecorded?". Runs of 300, extendable
@@ -207,7 +207,8 @@
 {/snippet}
 
 <Plate
-	n={2}
+	id="tokenizer"
+	live
 	title="Grow a vocabulary"
 	caption="Byte-pair encoding, running for real: the vocabulary is not designed, it is voted for by the corpus, one most-frequent pair at a time. th, ␣the, ing — watch English assemble itself by frequency, and note that a token never spans two words. Nothing here is prerecorded; every count comes from scanning your own copy of the corpus, and the millisecond figure is how long that scan took on this machine. Compression is the score — each merge shortens the corpus by one token per fusion it makes — and the first three hundred merges are exactly the vocabulary the scribe below reads, so keep merging and send it a longer one if you want to see what changes."
 >

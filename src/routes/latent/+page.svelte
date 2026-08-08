@@ -1,7 +1,6 @@
 <script lang="ts">
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
-	import Wide from '$lib/components/ui/Wide.svelte';
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
 	import Squeeze from '$lib/components/demos/latent/Squeeze.svelte';
@@ -26,33 +25,36 @@
 			Here is the bet the whole chapter rides on: you understand a thing to the degree that you can
 			rebuild it. Not name it — rebuild it, all 784 pixels of it. An <em>autoencoder</em> is that
 			bet built as a machine in two halves. The <em>encoder</em>
-			<Math tex={'E : \\mathbb{R}^{784} \\to \\mathbb{R}^{2}'} /> squeezes each digit down to two numbers.
-			The <em>decoder</em>
-			<Math tex={'D : \\mathbb{R}^{2} \\to \\mathbb{R}^{784}'} /> takes those two numbers and tries to
-			repaint the digit they came from. Between the halves sits the <em>bottleneck</em> — the width-2
-			waist of an hourglass — and every digit must pass through it. The waist is the only place in this
-			book where a layer carries no non-linearity at all: nothing is bent there, because the whole point
-			of the place is to be a plain coordinate system.
+			<Math tex={'\\htmlClass{eq-model}{E} : \\mathbb{R}^{784} \\to \\mathbb{R}^{2}'} /> squeezes each
+			digit down to two numbers. The <em>decoder</em>
+			<Math tex={'\\htmlClass{eq-model-2}{D} : \\mathbb{R}^{2} \\to \\mathbb{R}^{784}'} /> takes those
+			two numbers and tries to repaint the digit they came from. Between the halves sits the
+			<em>bottleneck</em> — the width-2 waist of an hourglass — and every digit must pass through it.
+			The waist is the only place in this book where a layer carries no non-linearity at all: nothing
+			is bent there, because the whole point of the place is to be a plain coordinate system.
 		</p>
 	</Prose>
 
-	<Wide>
-		<AutoencoderDiagram />
-	</Wide>
+	<AutoencoderDiagram />
 
 	<Prose>
 		<p>
 			Training needs nothing this book has not already built. The loss is the distance between each
 			digit and its own <em>reconstruction</em>,
 		</p>
-		<Math display tex={'\\mathcal{L} \\;=\\; \\bigl\\lVert\\, x - D(E(x)) \\,\\bigr\\rVert^{2},'} />
+		<Math
+			display
+			tex={'\\mathcal{L} \\;=\\; \\bigl\\lVert\\, \\htmlClass{eq-world}{x} - \\htmlClass{eq-model-2}{D}(\\htmlClass{eq-model}{E}(\\htmlClass{eq-world}{x})) \\,\\bigr\\rVert^{2},'}
+		/>
 		<p>
 			and gradient descent falls downhill on it as always. Read the formula twice and notice what is
-			missing: there is no <Math tex="y" /> anywhere. The data grades itself —
-			<Math tex="x" /> is both the question and the answer key. Then notice what the bottleneck is for.
-			Allowed 784 numbers in the middle, the network could pass its input straight through and learn nothing.
-			Allowed two, copying is impossible. The only way to reconstruct well is to keep what matters about
-			a digit and discard the rest — and “what matters” is precisely the thing nobody told it.
+			missing: there is no <Math tex={'\\htmlClass{eq-world}{y}'} /> anywhere. The data grades itself
+			—
+			<Math tex={'\\htmlClass{eq-world}{x}'} /> is both the question and the answer key. Then notice what
+			the bottleneck is for. Allowed 784 numbers in the middle, the network could pass its input straight
+			through and learn nothing. Allowed two, copying is impossible. The only way to reconstruct well
+			is to keep what matters about a digit and discard the rest — and “what matters” is precisely the
+			thing nobody told it.
 		</p>
 		<p>
 			One clause is still missing, and it is the clause that makes the map worth drawing. As
@@ -60,17 +62,18 @@
 			equally happy with a tidy disc around the origin and with a sprawl that reaches out to a
 			coordinate of forty, continents of dead space in between, growing for as long as you train. So
 			we ask for one more thing. Instead of a point, the encoder proposes a small Gaussian cloud per
-			digit — a centre <Math tex="\mu(x)" /> and a spread <Math tex="\sigma(x)" /> — the decoder is handed
+			digit — a centre <Math tex={'\\htmlClass{eq-model}{\\mu}(\\htmlClass{eq-world}{x})'} /> and a spread
+			<Math tex={'\\htmlClass{eq-model}{\\sigma}(\\htmlClass{eq-world}{x})'} /> — the decoder is handed
 			a sample of it,
 		</p>
 		<Math
 			display
-			tex={'z \\;=\\; \\mu(x) + \\sigma(x)\\,\\varepsilon, \\qquad \\varepsilon \\sim \\mathcal{N}(0, I),'}
+			tex={'\\htmlClass{eq-out}{z} \\;=\\; \\htmlClass{eq-model}{\\mu}(\\htmlClass{eq-world}{x}) + \\htmlClass{eq-model}{\\sigma}(\\htmlClass{eq-world}{x})\\,\\varepsilon, \\qquad \\varepsilon \\sim \\mathcal{N}(0, I),'}
 		/>
 		<p>and the loss charges rent on how far that proposal drifts from the plain unit Gaussian:</p>
 		<Math
 			display
-			tex={'\\mathcal{L} \\;=\\; \\underbrace{\\bigl\\lVert\\, x - D(z) \\,\\bigr\\rVert^{2}}_{\\text{rebuild it}} \\;+\\; \\beta \\underbrace{\\mathrm{KL}\\bigl(\\, \\mathcal{N}(\\mu, \\sigma^{2}) \\,\\|\\, \\mathcal{N}(0, 1) \\,\\bigr)}_{\\text{and stay put}}.'}
+			tex={'\\mathcal{L} \\;=\\; \\underbrace{\\bigl\\lVert\\, \\htmlClass{eq-world}{x} - \\htmlClass{eq-model-2}{D}(\\htmlClass{eq-out}{z}) \\,\\bigr\\rVert^{2}}_{\\text{rebuild it}} \\;+\\; \\htmlClass{eq-knob}{\\beta} \\underbrace{\\htmlClass{eq-op}{\\mathrm{KL}}\\bigl(\\, \\mathcal{N}(\\htmlClass{eq-model}{\\mu}, \\htmlClass{eq-model}{\\sigma}^{2}) \\,\\|\\, \\mathcal{N}(0, 1) \\,\\bigr)}_{\\text{and stay put}}.'}
 		/>
 		<p>
 			That is a <em>variational</em> autoencoder, and the two changes buy two different things. The
@@ -79,36 +82,30 @@
 			table full of gaps. The rent means the map stays where you left it — centred on the origin, a
 			couple of units across, no drift and no sprawl — which is why every plate below can frame the
 			whole thing at once and keep it framed while it trains. Each digit is drawn at the centre <Math
-				tex="\mu(x)"
+				tex={'\\htmlClass{eq-model}{\\mu}(\\htmlClass{eq-world}{x})'}
 			/> of its own proposal; the noise is a training-time device.
 		</p>
 	</Prose>
 
-	<Wide>
-		<Squeeze
-			n={1}
-			title="The squeeze — ten thousand digits through a narrow waist"
-			caption="Eight held-out digits, and beneath them the network's current rebuild of each from the bottleneck alone. The gap between the rows is the loss — reconstruction is the entire training signal, and no label appears anywhere in it. Below the rows sits the shape of the hourglass: how many numbers the waist holds, how many layers squeeze down to it, and which non-linearity bends them. Any change re-rolls the weights and re-forms every map on this page."
-		/>
-	</Wide>
+	<Squeeze
+		title="The squeeze — ten thousand digits through a narrow waist"
+		caption="Eight held-out digits, and beneath them the network's current rebuild of each from the bottleneck alone. The gap between the rows is the loss — reconstruction is the entire training signal, and no label appears anywhere in it. Below the rows sits the shape of the hourglass: how many numbers the waist holds, how many layers squeeze down to it, and which non-linearity bends them. Any change re-rolls the weights and re-forms every map on this page."
+	/>
 
 	<UnderTheHood slug="latent" block="waist" />
 
 	<Prose>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			The latent space
-		</h2>
+		<h2 class="h2">The latent space</h2>
 		<p>
 			While it trains, consider the pinch point. Halfway through the network each digit exists as
-			exactly two numbers, <Math tex="z = E(x)" /> — a 392-fold compression, and the only thing the decoder
-			is ever shown. Whatever survives the squeeze is, by construction, everything the reconstruction
-			needs: loop or no loop, slant, stroke weight, openness. Ten thousand digits become ten thousand
-			points on a flat sheet. That sheet is called the <em>latent space</em> — the network's private map
-			— and because this one happens to be two-dimensional, we can look at the whole of it at once. (Widen
-			the waist to three numbers and the sheet becomes a small globe you can turn.)
+			exactly two numbers, <Math
+				tex={'\\htmlClass{eq-out}{z} = \\htmlClass{eq-model}{E}(\\htmlClass{eq-world}{x})'}
+			/> — a 392-fold compression, and the only thing the decoder is ever shown. Whatever survives the
+			squeeze is, by construction, everything the reconstruction needs: loop or no loop, slant, stroke
+			weight, openness. Ten thousand digits become ten thousand points on a flat sheet. That sheet is
+			called the <em>latent space</em> — the network's private map — and because this one happens to be
+			two-dimensional, we can look at the whole of it at once. (Widen the waist to three numbers and the
+			sheet becomes a small globe you can turn.)
 		</p>
 		<p>
 			Notice also what the rebuilt row looks like when it stops improving: soft. Train it for an
@@ -136,21 +133,13 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<LatentMap
-			n={2}
-			title="The map — where the encoder put everything"
-			caption="Left: two thousand held-out digits placed by the encoder alone, drawn as points or as printed thumbnails — one per occupied cell of a sheet whose fineness you choose. Colorize works over either, and with it on, every 3 has found the other 3s though labels were used only for the tints, after the fact. Right: the decoder repaints whatever point your cursor visits, and the walk crosses the country between two digits on foot."
-		/>
-	</Wide>
+	<LatentMap
+		title="The map — where the encoder put everything"
+		caption="Left: two thousand held-out digits placed by the encoder alone, drawn as points or as printed thumbnails — one per occupied cell of a sheet whose fineness you choose. Colorize works over either, and with it on, every 3 has found the other 3s though labels were used only for the tints, after the fact. Right: the decoder repaints whatever point your cursor visits, and the walk crosses the country between two digits on foot."
+	/>
 
 	<Prose>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			Kind, as a by-product of thrift
-		</h2>
+		<h2 class="h2">Kind, as a by-product of thrift</h2>
 		<p>
 			They do not fall like confetti. The model was never told what a seven is, and there on the map
 			is the country of sevens — because reconstructing sevens well <em>requires</em> gathering
@@ -175,13 +164,10 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<ManifoldGrid
-			n={3}
-			title="The manifold — the decoder's answer everywhere"
-			caption="The decoder run everywhere at once: a 21 × 21 grid of addresses laid over the latent square and decoded tile by tile, live as training moves. Every tile is a digit that does not exist — the machine's guess at what belongs at an address no example ever claimed. The cursor's cell is enlarged at right, above the nearest real held-out digit and the distance between them: how far invention sits from memory. Past a two-number waist the sheet is one slice through the space, and the slider chooses which."
-		/>
-	</Wide>
+	<ManifoldGrid
+		title="The manifold — the decoder's answer everywhere"
+		caption="The decoder run everywhere at once: a 21 × 21 grid of addresses laid over the latent square and decoded tile by tile, live as training moves. Every tile is a digit that does not exist — the machine's guess at what belongs at an address no example ever claimed. The cursor's cell is enlarged at right, above the nearest real held-out digit and the distance between them: how far invention sits from memory. Past a two-number waist the sheet is one slice through the space, and the slider chooses which."
+	/>
 
 	<UnderTheHood slug="latent" block="halves" />
 
@@ -193,29 +179,26 @@
 			units. Work outward and that distance grows — the prior keeps the digits packed near the
 			origin, so the edges and corners of this square are addresses no real digit ever came near.
 			The decoder answers there anyway, sharp-edged and committed, because
-			<Math tex="D" /> is a smooth function that must produce 784 pixels for every point of the plane,
-			though it was trained only where the data lives. You are looking at the seed of
+			<Math tex={'\\htmlClass{eq-model-2}{D}'} /> is a smooth function that must produce 784 pixels for
+			every point of the plane, though it was trained only where the data lives. You are looking at the
+			seed of
 			<em>generative</em> models: pick a latent point, decode it, and you have manufactured a thing that
 			never existed. You are also looking at their oldest defect. A confident answer from a place the
 			data never touched is, in the larger systems this book is walking toward, called a hallucination.
 			Same machinery, same geometry.
 		</p>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			From map to embedding
-		</h2>
+		<h2 class="h2">From map to embedding</h2>
 		<p>
 			So far we have read the map as a picture. It has a second life as a tool, and this is the one
-			the industry actually runs on. Stop thinking of <Math tex="z" /> as a location on a sheet and start
-			thinking of it as a short list of numbers attached to a thing — an <em>embedding</em>. The
-			encoder is now a machine that turns anything of its type into a vector, and once your things
-			are vectors, “which of these is most like that one?” stops being a philosophical question and
-			becomes arithmetic: embed everything once, keep the vectors, and answer a query by finding the
-			nearest ones. That is <em>similarity search</em>, and it is how a photo library finds the
-			other pictures of your dog, how a store recommends the next item, how duplicate documents get
-			caught, and how a language model is handed the right three paragraphs before it answers you.
+			the industry actually runs on. Stop thinking of <Math tex={'\\htmlClass{eq-out}{z}'} /> as a location
+			on a sheet and start thinking of it as a short list of numbers attached to a thing — an
+			<em>embedding</em>. The encoder is now a machine that turns anything of its type into a
+			vector, and once your things are vectors, “which of these is most like that one?” stops being
+			a philosophical question and becomes arithmetic: embed everything once, keep the vectors, and
+			answer a query by finding the nearest ones. That is <em>similarity search</em>, and it is how
+			a photo library finds the other pictures of your dog, how a store recommends the next item,
+			how duplicate documents get caught, and how a language model is handed the right three
+			paragraphs before it answers you.
 		</p>
 		<p>
 			The plate below hands you the query end of that machine. Draw a digit — your handwriting, not
@@ -239,7 +222,7 @@
 		</p>
 		<Math
 			display
-			tex={'\\cos(u, v) \\;=\\; \\frac{u \\cdot v}{\\lVert u \\rVert\\, \\lVert v \\rVert} \\;\\in\\; [-1, 1].'}
+			tex={'\\htmlClass{eq-op}{\\cos}(u, v) \\;=\\; \\frac{u \\cdot v}{\\lVert u \\rVert\\, \\lVert v \\rVert} \\;\\in\\; [-1, 1].'}
 		/>
 		<p>
 			<em>Cosine similarity</em> is 1 when two vectors point the same way, 0 when they are at right angles,
@@ -251,13 +234,10 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<Neighbors
-			n={4}
-			title="Search by drawing — your stroke, and the digits nearest it"
-			caption="Draw on the pad and the same two thousand held-out digits are sorted twice: by distance between embeddings, and by distance between raw images, under whichever metric you pick. Both searches read the same centred ink, and the small square shows your stroke after its round trip through the waist — what the map actually kept of it. Borrow a real digit to start from, click any neighbour to draw on it, and the meters at the bottom keep score over forty-eight held-out queries, where chance is one in ten."
-		/>
-	</Wide>
+	<Neighbors
+		title="Search by drawing — your stroke, and the digits nearest it"
+		caption="Draw on the pad and the same two thousand held-out digits are sorted twice: by distance between embeddings, and by distance between raw images, under whichever metric you pick. Both searches read the same centred ink, and the small square shows your stroke after its round trip through the waist — what the map actually kept of it. Borrow a real digit to start from, click any neighbour to draw on it, and the meters at the bottom keep score over forty-eight held-out queries, where chance is one in ten."
+	/>
 
 	<Prose>
 		<p>

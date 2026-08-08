@@ -2,8 +2,8 @@
 	import { onDestroy } from 'svelte';
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
-	import Wide from '$lib/components/ui/Wide.svelte';
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
+	import PlateRef from '$lib/components/ui/PlateRef.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
 	import Pretrain from '$lib/components/demos/rook/Pretrain.svelte';
 	import PlayRook from '$lib/components/demos/rook/PlayRook.svelte';
@@ -67,9 +67,7 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<Pretrain />
-	</Wide>
+	<Pretrain />
 
 	<UnderTheHood slug="rook" block="engine" />
 
@@ -92,17 +90,10 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<PlayRook />
-	</Wide>
+	<PlayRook />
 
 	<Prose>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			Better data, same machine
-		</h2>
+		<h2 class="h2">Better data, same machine</h2>
 		<p>
 			To see why the second act exists, look at what the first one actually produces. A pretrained
 			model is a <em>completion machine</em>: ask a raw base model a question and it may answer — or
@@ -131,12 +122,13 @@
 		</div>
 		<p>
 			Mechanically, nothing changes: the same weights, the same cross-entropy, the same update
-			<Math tex={'\\theta \\leftarrow \\theta - \\gamma \\nabla \\mathcal{L}'} /> — only the corpus is
-			now chosen on purpose. For Rook the mapping is direct. The “instruction” is the game so far; the
-			“good response” is what a competent player did next. Where a frontier lab curates tens of thousands
-			of demonstrations, we curate 2,381 games played by a greedy little bot that grabs material whenever
-			it can. Its style is loud: 38% of its moves are captures, against about 8% in random play, and one
-			game in twenty ends in checkmate.
+			<Math
+				tex={'\\htmlClass{eq-model}{\\theta} \\leftarrow \\htmlClass{eq-model}{\\theta} - \\htmlClass{eq-knob}{\\gamma} \\htmlClass{eq-world}{\\nabla \\mathcal{L}}'}
+			/> — only the corpus is now chosen on purpose. For Rook the mapping is direct. The “instruction”
+			is the game so far; the “good response” is what a competent player did next. Where a frontier lab
+			curates tens of thousands of demonstrations, we curate 2,381 games played by a greedy little bot
+			that grabs material whenever it can. Its style is loud: 38% of its moves are captures, against about
+			8% in random play, and one game in twenty ends in checkmate.
 		</p>
 		<p>
 			One paragraph of honesty before the button. Fine-tuning shifts <em>style</em>, and it charges
@@ -144,26 +136,19 @@
 			surprising to the model, and its validation loss there quietly rises. That drift is not a
 			malfunction — it is what specialization looks like from the old distribution's point of view.
 			It is also why fine-tuning is run at a smaller step size than pretraining (we ease
-			<Math tex="\gamma" /> from 1.2·10⁻³ down to 3·10⁻⁴): nudge the weights and the style shifts; blast
-			them and the old competence goes too. The plate below measures both sides of the trade, because
-			a curve that only shows the win is an advertisement, not an experiment.
+			<Math tex={'\\htmlClass{eq-knob}{\\gamma}'} /> from 1.2·10⁻³ down to 3·10⁻⁴): nudge the weights
+			and the style shifts; blast them and the old competence goes too. The plate below measures both
+			sides of the trade, because a curve that only shows the win is an advertisement, not an experiment.
 		</p>
 	</Prose>
 
-	<Wide>
-		<Sft />
-	</Wide>
+	<Sft />
 
 	<Prose>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			A judge instead of examples
-		</h2>
+		<h2 class="h2">A judge instead of examples</h2>
 		<p>
-			Before moving on, scroll back and play your fine-tuned student — Plate II always drives the
-			current weights, and you will feel the difference: it comes for your pieces now.
+			Before moving on, scroll back and play your fine-tuned student — <PlateRef id="play" /> always drives
+			the current weights, and you will feel the difference: it comes for your pieces now.
 		</p>
 		<p>
 			The last act needs no examples at all. It needs a judge. Here is one full iteration of RLVR,
@@ -175,14 +160,14 @@
 		</p>
 		<Math
 			display
-			tex={'r_i \\;=\\; \\frac{\\ell_i}{n_i} \\;+\\; \\tfrac{1}{2}\\,\\big[\\,\\ell_i = n_i\\,\\big]'}
+			tex={'\\htmlClass{eq-world}{r_i} \\;=\\; \\frac{\\htmlClass{eq-world}{\\ell_i}}{\\htmlClass{eq-world}{n_i}} \\;+\\; \\tfrac{1}{2}\\,\\big[\\,\\htmlClass{eq-world}{\\ell_i} = \\htmlClass{eq-world}{n_i}\\,\\big]'}
 		/>
 		<p>
-			where <Math tex="\ell_i" /> counts the consecutive legal plies before the first illegal one, <Math
-				tex="n_i"
-			/> counts the plies attempted, and the bracket pays a half-point bonus only when the whole rollout
-			survives the judge. Play twelve clean plies out of fourteen and you score well; break on ply two
-			and you score badly; stay perfect and you are paid extra.
+			where <Math tex={'\\htmlClass{eq-world}{\\ell_i}'} /> counts the consecutive legal plies before
+			the first illegal one, <Math tex={'\\htmlClass{eq-world}{n_i}'} /> counts the plies attempted, and
+			the bracket pays a half-point bonus only when the whole rollout survives the judge. Play twelve
+			clean plies out of fourteen and you score well; break on ply two and you score badly; stay perfect
+			and you are paid extra.
 		</p>
 		<p>
 			Raw rewards are not used directly. Within the group of eight, each reward is compared to the
@@ -190,7 +175,7 @@
 		</p>
 		<Math
 			display
-			tex={'\\hat{A}_i \\;=\\; \\frac{r_i - \\operatorname{mean}(r_1,\\ldots,r_G)}{\\operatorname{std}(r_1,\\ldots,r_G)}'}
+			tex={'\\hat{A}_i \\;=\\; \\frac{\\htmlClass{eq-world}{r_i} - \\htmlClass{eq-op}{\\operatorname{mean}}(\\htmlClass{eq-world}{r_1},\\ldots,\\htmlClass{eq-world}{r_G})}{\\htmlClass{eq-op}{\\operatorname{std}}(\\htmlClass{eq-world}{r_1},\\ldots,\\htmlClass{eq-world}{r_G})}'}
 		/>
 		<p>
 			This <Math tex={'\\hat{A}_i'} /> is the <em>advantage</em>: how much better or worse rollout
@@ -203,7 +188,7 @@
 		<p>The update is REINFORCE, exactly as the policy-gradient chapter promised it would be:</p>
 		<Math
 			display
-			tex={'\\nabla_\\theta J \\;\\approx\\; \\sum_{i=1}^{G} \\hat{A}_i \\;\\nabla_\\theta \\log \\pi_\\theta(\\text{rollout}_i)'}
+			tex={'\\nabla_{\\htmlClass{eq-model}{\\theta}} J \\;\\approx\\; \\sum_{i=1}^{G} \\hat{A}_i \\;\\nabla_{\\htmlClass{eq-model}{\\theta}} \\log \\htmlClass{eq-model}{\\pi_\\theta}(\\text{rollout}_i)'}
 		/>
 		<p>
 			— raise the log-probability of every token in the above-average rollouts, lower it for the
@@ -215,19 +200,12 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<Rlvr />
-	</Wide>
+	<Rlvr />
 
 	<UnderTheHood slug="rook" block="rlvr" />
 
 	<Prose>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			Line them up
-		</h2>
+		<h2 class="h2">Line them up</h2>
 		<p>
 			You have now made three different chess players out of one set of weights, and the honest way
 			to compare them is not a curve — it is a decision. The page has been quietly photographing
@@ -241,19 +219,12 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<Arena />
-	</Wide>
+	<Arena />
 
 	<UnderTheHood slug="rook" block="arena" />
 
 	<Prose>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			Where the judge works today
-		</h2>
+		<h2 class="h2">Where the judge works today</h2>
 		<p>
 			The loop you just ran is not a toy version of something else — it is the something else, at
 			reduced scale. When today's models are trained to write code, the verifier is a bank of unit
@@ -276,11 +247,10 @@
 		</p>
 		<p>
 			And notice how the three stages fit: reinforcement could not have started from noise — a group
-			of rollouts that are all hopeless earns identical rewards, and as Plate IV showed, a group of
-			equals has no gradient. Pretraining built enough competence for the judge to have something to
-			grade; fine-tuning aimed it; only then could verified reward pull it the rest of the way. Each
-			act feeds the next. That ordering is not a convention — it is the reason the pipeline has this
-			shape.
+			of rollouts that are all hopeless earns identical rewards, and as <PlateRef id="rlvr" /> showed,
+			a group of equals has no gradient. Pretraining built enough competence for the judge to have something
+			to grade; fine-tuning aimed it; only then could verified reward pull it the rest of the way. Each
+			act feeds the next. That ordering is not a convention — it is the reason the pipeline has this shape.
 		</p>
 		<p>
 			Step back and look at what you ran. One set of weights was pretrained on everything available,

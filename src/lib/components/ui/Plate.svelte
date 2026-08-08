@@ -1,12 +1,22 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { getChapter, plateAnchor, plateNumber, roman } from '$lib/data/plates';
 
-	// Demos are presented as numbered plates, like figures in an old textbook:
-	// a hairline frame, a roman numeral, a caption that earns its place.
+	// Every figure in this book is a plate, and every plate is a band: the page
+	// steps onto slightly different paper, edge to edge between two hairlines,
+	// and the figure sits on the plate rail inside it. No frame, no corners —
+	// the change of material is the frame.
+	//
+	// The numeral is never typed at the call site. It comes from the plate's
+	// position in $lib/data/plates, so the sequence and every sentence that
+	// points into it stay honest when a figure is added or moved.
 	interface Props {
-		n?: number;
+		/** Registry id — its position decides the numeral. */
+		id: string;
 		title: string;
 		caption?: string;
+		/** Marks a plate that computes: it earns a live dot in the header. */
+		live?: boolean;
 		/** Right side of the header — status text, live indicators. */
 		status?: Snippet;
 		/** Far right of the header — the demo's transport (Train/Pause/Reset…). */
@@ -14,59 +24,42 @@
 		children: Snippet;
 	}
 
-	let { n, title, caption, status, actions, children }: Props = $props();
+	let { id, title, caption, live = false, status, actions, children }: Props = $props();
 
-	function roman(x: number): string {
-		const table: Array<[number, string]> = [
-			[10, 'X'],
-			[9, 'IX'],
-			[5, 'V'],
-			[4, 'IV'],
-			[1, 'I']
-		];
-		let out = '';
-		let v = x;
-		for (const [k, s] of table)
-			while (v >= k) {
-				out += s;
-				v -= k;
-			}
-		return out;
-	}
+	const chapter = getChapter();
+	const n = $derived(plateNumber(chapter(), id));
 </script>
 
-<figure class="my-10 overflow-hidden rounded-lg border border-line bg-surface">
-	<figcaption
-		class="flex min-h-10 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-line-soft px-4 py-2"
-	>
-		<span class="flex items-baseline gap-2.5">
-			{#if n !== undefined}
-				<span class="eyebrow" style="color: var(--warm);">Plate {roman(n)}</span>
+<div class="band" id={plateAnchor(id)}>
+	<figure class="rail">
+		<div class="plate-head">
+			<span class="flex items-baseline gap-2.5">
+				{#if n !== undefined}
+					<span class="eyebrow plate-label">Plate {roman(n)}</span>
+				{/if}
+				<span class="plate-title">{title}</span>
+				{#if live}
+					<span class="plate-live" title="trains in your browser" aria-label="live"></span>
+				{/if}
+			</span>
+			{#if status || actions}
+				<span class="flex flex-wrap items-center gap-x-3 gap-y-1">
+					{#if status}
+						<span class="num flex items-center gap-2 text-[11px] text-ink-3"
+							>{@render status()}</span
+						>
+					{/if}
+					{#if actions}
+						<span class="flex items-center gap-1.5">{@render actions()}</span>
+					{/if}
+				</span>
 			{/if}
-			<span class="font-serif text-[15px] italic" style="font-variation-settings: 'opsz' 14;">
-				{title}
-			</span>
-		</span>
-		{#if status || actions}
-			<span class="flex flex-wrap items-center gap-x-3 gap-y-1">
-				{#if status}
-					<span class="num flex items-center gap-2 text-[11px] text-ink-3">{@render status()}</span>
-				{/if}
-				{#if actions}
-					<span class="flex items-center gap-1.5">{@render actions()}</span>
-				{/if}
-			</span>
+		</div>
+
+		{@render children()}
+
+		{#if caption}
+			<figcaption class="plate-caption">{caption}</figcaption>
 		{/if}
-	</figcaption>
-
-	{@render children()}
-
-	{#if caption}
-		<p
-			class="border-t border-line-soft px-4 py-2.5 font-serif text-[13.5px] text-ink-2 italic"
-			style="font-variation-settings: 'opsz' 13;"
-		>
-			{caption}
-		</p>
-	{/if}
-</figure>
+	</figure>
+</div>

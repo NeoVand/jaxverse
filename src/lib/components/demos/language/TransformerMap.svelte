@@ -1,8 +1,9 @@
 <script lang="ts">
+	import Plate from '$lib/components/ui/Plate.svelte';
 	// The transformer, drawn once as a map: tokens travel left to right as
 	// lanes, attention is the only place lanes touch, and the tail end reuses
 	// the scores → softmax → belief grammar of the digits chapter's pipeline.
-	// The five numbered stations match the prose and Plate V's five stages.
+	// The five numbered stations match the prose and the walkthrough's five stages.
 	// Static by design; the walkthrough below runs it with real numbers.
 
 	const TOKENS = ['once', '␣upon', '␣a', '␣time'];
@@ -48,10 +49,14 @@
 	const BAR = 5.5;
 </script>
 
-<figure class="my-8">
+<Plate
+	id="transformer"
+	title="The transformer as a map"
+	caption="The whole machine as a map. Each token rides its own lane; attention is the only place lanes touch, and the curves only ever point backwards. Every lane ends in a guess — the map follows the last one, whose belief names the next token."
+>
 	<svg
 		viewBox="0 0 660 214"
-		class="mx-auto block w-full max-w-[760px]"
+		class="mx-auto block w-full max-w-[950px]"
 		role="img"
 		aria-label="The transformer as a map. Four tokens — once, upon, a, time — each become a vector plus a position, then travel left to right through a block where attention lets each token read the earlier ones and an MLP lets each think alone. The block repeats. The last token's vector becomes one score per vocabulary token, a softmax turns the scores into a belief, and the tallest bar is the prediction: the token 'there'."
 	>
@@ -131,9 +136,10 @@
 					stroke-width="1.2"
 				/>
 			{/if}
-			<!-- q·k·v: three colored projections per lane — the same ultramarine /
-			     vermilion / amber the attention diagram above gives Q, K and V -->
-			{#each ['var(--accent)', 'var(--warm)', 'var(--cat-1)'] as c, ci (c)}
+			<!-- q·k·v: three colored projections per lane. All three are learned,
+			     so they take the three learned slots — ultramarine, violet,
+			     blue-cyan — exactly as the attention diagram gives Q, K and V -->
+			{#each ['var(--accent)', 'var(--cat-8)', 'var(--cat-6)'] as c, ci (c)}
 				<rect
 					x={QKV_X - 4.5}
 					y={y - 9.5 + ci * 6.5}
@@ -203,7 +209,7 @@
 				width={BAR}
 				height={Math.max(1, h)}
 				rx="1"
-				fill={z >= 0 ? 'var(--warm)' : 'var(--accent)'}
+				fill={z >= 0 ? 'var(--accent)' : 'var(--warm)'}
 				opacity="0.85"
 			/>
 		{/each}
@@ -265,22 +271,14 @@
 		<text x={P_X + 3 * SLOT + BAR} y={P_BASE - 58} text-anchor="middle" class="verdict">␣there</text
 		>
 
-		<!-- ── the five stations, numbered as in the prose and Plate V ── -->
+		<!-- ── the five stations, numbered as in the prose and the walkthrough ── -->
 		{#each [{ x: 68, t: 'token + position' }, { x: QKV_X, t: 'q·k·v' }, { x: (A0 + A1) / 2, t: 'attention' }, { x: (MLP.x0 + MLP.x1) / 2, t: 'mlp' }, { x: 505, t: 'scores → belief' }] as s, i (i)}
-			<circle cx={s.x} cy="196" r="7" fill="none" stroke="var(--warm)" stroke-width="1" />
+			<circle cx={s.x} cy="196" r="7" fill="none" stroke="var(--ink-3)" stroke-width="1" />
 			<text x={s.x} y="199.5" text-anchor="middle" class="num-lbl">{i + 1}</text>
 			<text x={s.x} y="212" text-anchor="middle" class="cap dim">{s.t}</text>
 		{/each}
 	</svg>
-	<figcaption
-		class="mx-auto mt-2 max-w-[600px] text-center font-serif text-[13.5px] text-ink-2 italic"
-		style="font-variation-settings: 'opsz' 13;"
-	>
-		The whole machine as a map. Each token rides its own lane; attention is the only place lanes
-		touch, and the curves only ever point backwards. Every lane ends in a guess — the map follows
-		the last one, whose belief names the next token.
-	</figcaption>
-</figure>
+</Plate>
 
 <style>
 	.tok {
@@ -314,10 +312,11 @@
 		font-weight: 600;
 		fill: var(--cat-2);
 	}
+	/* station numbers are chrome, not a semantic color */
 	.num-lbl {
 		font-family: var(--font-mono);
 		font-size: 9px;
 		font-weight: 600;
-		fill: var(--warm);
+		fill: var(--ink-3);
 	}
 </style>

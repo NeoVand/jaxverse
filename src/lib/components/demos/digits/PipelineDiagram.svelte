@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Plate from '$lib/components/ui/Plate.svelte';
 	// The classifier's shape, drawn once: pixels in, ten scores out, softmax
 	// turning those scores into a belief. Static by design — it is the map the
 	// reader keeps in mind while the live plates below do the work.
@@ -25,10 +26,14 @@
 	const P_BASE = 84; // the floor the probabilities stand on
 </script>
 
-<figure class="my-8">
+<Plate
+	id="pipeline"
+	title="The shape of the classifier"
+	caption="The whole machine in one line. Everything left of the softmax is the network you have already built twice; everything right of it is a probability distribution over the ten answers, and the tallest bar is what the model says."
+>
 	<svg
 		viewBox="0 0 578 124"
-		class="mx-auto block w-full max-w-[720px]"
+		class="mx-auto block w-full max-w-[900px]"
 		role="img"
 		aria-label="The classifier as a pipeline: a 28 by 28 image becomes 784 numbers, the network turns them into ten scores of any size, and the softmax turns those into ten probabilities that sum to one. The largest probability is the verdict."
 	>
@@ -140,7 +145,7 @@
 				width={BAR}
 				height={Math.max(1, h)}
 				rx="1"
-				fill={z >= 0 ? 'var(--warm)' : 'var(--accent)'}
+				fill={z >= 0 ? 'var(--accent)' : 'var(--warm)'}
 				opacity="0.85"
 			/>
 		{/each}
@@ -203,15 +208,7 @@
 		<text x={P_X + 40} y="115" text-anchor="middle" class="cap dim">they sum to one</text>
 		<text x={P_X + 7 * SLOT + BAR / 2} y={P_BASE - 44} text-anchor="middle" class="verdict">7</text>
 	</svg>
-	<figcaption
-		class="mx-auto mt-2 max-w-[560px] text-center font-serif text-[13.5px] text-ink-2 italic"
-		style="font-variation-settings: 'opsz' 13;"
-	>
-		The whole machine in one line. Everything left of the softmax is the network you have already
-		built twice; everything right of it is a probability distribution over the ten answers, and the
-		tallest bar is what the model says.
-	</figcaption>
-</figure>
+</Plate>
 
 <style>
 	.label {

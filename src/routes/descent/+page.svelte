@@ -5,7 +5,6 @@
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
-	import Wide from '$lib/components/ui/Wide.svelte';
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import { progress } from '$lib/data/progress.svelte';
 </script>
@@ -15,11 +14,11 @@
 		<p>
 			Strip any learning machine down — the ones that read handwriting, the ones that talk — and you
 			find a function with knobs. The knobs are numbers called <em>parameters</em>, written
-			<Math tex="\theta" />, and turning them changes what the function computes. Feed it an
-			example, compare what it produced with what you wanted, and you can score the disagreement
-			with a single number. That number is the <em>loss</em>, written
-			<Math tex={'\\mathcal{L}(\\theta)'} /> — the machine's whole report card, one value that says how
-			wrong its current knobs are.
+			<Math tex={'\\htmlClass{eq-model}{\\theta}'} />, and turning them changes what the function
+			computes. Feed it an example, compare what it produced with what you wanted, and you can score
+			the disagreement with a single number. That number is the <em>loss</em>, written
+			<Math tex={'\\mathcal{L}(\\htmlClass{eq-model}{\\theta})'} /> — the machine's whole report card,
+			one value that says how wrong its current knobs are.
 		</p>
 		<p>
 			Framed this way, learning stops being a mystery and becomes a landscape. Give every knob its
@@ -30,17 +29,17 @@
 		</p>
 		<Math
 			display
-			tex={'\\theta_{t+1} \\;=\\; \\theta_t \\;-\\; \\htmlClass{eq-a}{\\gamma}\\,\\htmlClass{eq-w}{\\nabla \\mathcal{L}(\\theta_t)}'}
+			tex={'\\htmlClass{eq-model}{\\theta_{t+1}} \\;=\\; \\htmlClass{eq-model}{\\theta_t} \\;-\\; \\htmlClass{eq-knob}{\\gamma}\\,\\htmlClass{eq-world}{\\nabla \\mathcal{L}(\\theta_t)}'}
 		/>
 		<p>
 			Read it term by term. The <em>gradient</em>
-			<Math tex={'\\htmlClass{eq-w}{\\nabla \\mathcal{L}(\\theta_t)}'} /> is a list with one entry per
-			knob: nudge this knob up, it says, and the loss rises by this much. Taken together the entries point
-			in the direction of steepest ascent — the quickest way to make things worse — which is exactly why
-			the rule subtracts them. The <em>learning rate</em>
-			<Math tex={'\\htmlClass{eq-a}{\\gamma}'} /> sets the stride: how far to trust each reading of the
-			slope before stopping to feel the ground again. Direction from the warm term, ambition from the
-			blue one; there is nothing else in the rule.
+			<Math tex={'\\htmlClass{eq-world}{\\nabla \\mathcal{L}(\\theta_t)}'} /> is a list with one entry
+			per knob: nudge this knob up, it says, and the loss rises by this much. Taken together the entries
+			point in the direction of steepest ascent — the quickest way to make things worse — which is exactly
+			why the rule subtracts them. The <em>learning rate</em>
+			<Math tex={'\\htmlClass{eq-knob}{\\gamma}'} /> sets the stride: how far to trust each reading of
+			the slope before stopping to feel the ground again. Direction from the warm term, ambition from
+			the blue one; there is nothing else in the rule.
 		</p>
 		<p>
 			All of it rests on one requirement, and that requirement is the quiet thesis of this whole
@@ -53,12 +52,7 @@
 			beneath its feet can find its way down a landscape it will never see.
 		</p>
 
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			Five walkers, one landscape
-		</h2>
+		<h2 class="h2">Five walkers, one landscape</h2>
 		<p>
 			Below is a real loss surface, drawn the way a hiker would draw it: contour lines join settings
 			of equal loss, and the shaded pools mark the basins. Five walkers run the update rule on it,
@@ -68,24 +62,17 @@
 			Click anywhere on the map to drop all of them there at once, and flip the view to 3-D to see
 			the terrain the contours are describing. One dial drives all five: each walker's stride is
 			pre-scaled to its temperament, because the raw-gradient pair barely move at a <Math
-				tex={'\\htmlClass{eq-a}{\\gamma}'}
+				tex={'\\htmlClass{eq-knob}{\\gamma}'}
 			/> the adaptive pair finds comfortable.
 		</p>
 	</Prose>
 
-	<Wide>
-		<OptimizerRace onraced={() => progress.reach('descent:done')} />
-	</Wide>
+	<OptimizerRace onraced={() => progress.reach('descent:done')} />
 
 	<UnderTheHood slug="descent" block="gradient" />
 
 	<Prose>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			Reading the race
-		</h2>
+		<h2 class="h2">Reading the race</h2>
 		<p>
 			Choose the ravine and the temperaments separate within seconds. Its walls are steep and its
 			floor is nearly flat, so the gradient points almost entirely <em>across</em> the trench: SGD zigzags
@@ -100,60 +87,51 @@
 			along the ravine's flat floor where SGD crawls. The opt-in pair are variations on it. AdamW
 			adds <em>weight decay</em>, a constant gentle pull toward small parameters — watch it settle
 			deliberately short of where Adam does. Lion discards magnitude altogether and steps a fixed
-			<Math tex={'\\htmlClass{eq-a}{\\gamma}'} /> along the sign of its momentum, which makes it quick
+			<Math tex={'\\htmlClass{eq-knob}{\\gamma}'} /> along the sign of its momentum, which makes it quick
 			off the mark and restless at the bottom, dancing in place forever.
 		</p>
 		<p>
-			Now break it. Raise <Math tex={'\\htmlClass{eq-a}{\\gamma}'} /> and watch Adam begin to ring across
-			the basin instead of settling into it; raise it further and SGD and momentum are flung off the map
-			entirely — the ledger under the field reads <em>diverged</em>, and it means precisely what it
-			says: the step outran the valley it was measuring. Notice whose knob that was. Nobody learned <Math
-				tex="\gamma"
-			/>; you chose it. It is a <em>hyperparameter</em> — a knob about the knobs — and it matters enough
-			to deserve a landscape with nothing else in it.
+			Now break it. Raise <Math tex={'\\htmlClass{eq-knob}{\\gamma}'} /> and watch Adam begin to ring
+			across the basin instead of settling into it; raise it further and SGD and momentum are flung off
+			the map entirely — the ledger under the field reads <em>diverged</em>, and it means precisely
+			what it says: the step outran the valley it was measuring. Notice whose knob that was. Nobody
+			learned <Math tex={'\\htmlClass{eq-knob}{\\gamma}'} />; you chose it. It is a
+			<em>hyperparameter</em> — a knob about the knobs — and it matters enough to deserve a landscape
+			with nothing else in it.
 		</p>
 
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			One dimension, three fates
-		</h2>
+		<h2 class="h2">One dimension, three fates</h2>
 		<p>
-			On the parabola <Math tex={'\\mathcal{L}(\\theta) = \\theta^2'} /> the gradient is
-			<Math tex="2\theta" />, and the update rule collapses into a single multiplication:
+			On the parabola <Math
+				tex={'\\mathcal{L}(\\htmlClass{eq-model}{\\theta}) = \\htmlClass{eq-model}{\\theta}^2'}
+			/> the gradient is <Math tex={'\\htmlClass{eq-world}{2\\theta}'} />, and the update rule
+			collapses into a single multiplication:
 		</p>
 		<Math
 			display
-			tex={'\\theta_{t+1} \\;=\\; \\theta_t - \\htmlClass{eq-a}{\\gamma}\\cdot 2\\theta_t \\;=\\; \\bigl(1 - 2\\htmlClass{eq-a}{\\gamma}\\bigr)\\,\\theta_t'}
+			tex={'\\htmlClass{eq-model}{\\theta_{t+1}} \\;=\\; \\htmlClass{eq-model}{\\theta_t} - \\htmlClass{eq-knob}{\\gamma}\\cdot \\htmlClass{eq-world}{2\\theta_t} \\;=\\; \\bigl(1 - 2\\htmlClass{eq-knob}{\\gamma}\\bigr)\\,\\htmlClass{eq-model}{\\theta_t}'}
 		/>
 		<p>
-			Every step multiplies <Math tex="\theta" /> by the same factor, so the walker's fate hangs on whether
-			<Math tex={'\\lvert 1 - 2\\htmlClass{eq-a}{\\gamma} \\rvert'} /> is smaller than one. Keep <Math
-				tex={'\\htmlClass{eq-a}{\\gamma}'}
+			Every step multiplies <Math tex={'\\htmlClass{eq-model}{\\theta}'} /> by the same factor, so the
+			walker's fate hangs on whether
+			<Math tex={'\\lvert 1 - 2\\htmlClass{eq-knob}{\\gamma} \\rvert'} /> is smaller than one. Keep <Math
+				tex={'\\htmlClass{eq-knob}{\\gamma}'}
 			/> below 0.5 and the factor is a gentle fraction: the ball slides down its own side of the bowl.
 			At 0.5 the factor is zero — the bottom, in one step. Past 0.5 each step overshoots the minimum and
 			lands on the far side, still lower than before; past 1.0 the factor outgrows one, and every bounce
 			carries the ball higher than the last. Feel all three with the dial, then try the other two curves:
-			a double well, where a bold <Math tex={'\\htmlClass{eq-a}{\\gamma}'} /> hops the ball between two
-			valleys, and <Math tex="\lvert\theta\rvert" />, whose kink never lets the steps shrink — a
-			first taste of why smoothness was the price of admission.
+			a double well, where a bold <Math tex={'\\htmlClass{eq-knob}{\\gamma}'} /> hops the ball between
+			two valleys, and <Math tex={'\\lvert\\htmlClass{eq-model}{\\theta}\\rvert'} />, whose kink
+			never lets the steps shrink — a first taste of why smoothness was the price of admission.
 		</p>
 	</Prose>
 
-	<Wide>
-		<StepSize />
-	</Wide>
+	<StepSize />
 
 	<UnderTheHood slug="descent" block="jax" />
 
 	<Prose>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			The picture is honest
-		</h2>
+		<h2 class="h2">The picture is honest</h2>
 		<p>
 			A fair objection: real models do not have two knobs. The first network you will train has a
 			few hundred; the language model at the end of this book has hundreds of thousands; the models

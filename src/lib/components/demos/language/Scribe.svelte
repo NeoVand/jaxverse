@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Plate III — the scribe learns to write. Left column: the descent from
+	// The scribe learns to write. Left column: the descent from
 	// ln 69 nats against the dashed loss of knowing nothing, plus the controls
 	// that ask it questions. Right column: the desk — the newest sample large,
 	// its predecessors archived in two columns beneath at reduced opacity. The
@@ -81,7 +81,8 @@
 </script>
 
 <Plate
-	n={3}
+	id="scribe"
+	live
 	title="Watch it learn to write"
 	caption="After every burst of forty steps the desk re-asks the same prompt at the same temperature, so the only thing that changes between samples is the weights. One token is a word-piece from the vocabulary grown two plates up, which is why sentence-shaped grammar arrives within a couple of thousand steps; switch to single characters and the same schedule runs slower, with spelling visibly invented along the way. Bits per character sits beside the loss because it is the only unit in which the two vocabularies can be compared. Ask your own question any time: temperature rescales confidence before each draw, 0.2 playing the favourite and 1.4 gambling."
 >
@@ -415,7 +416,7 @@
 	.input:focus {
 		outline: none;
 		border-color: var(--accent);
-		box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+		box-shadow: var(--focus-ring);
 	}
 	/* newest sample settles onto the desk; reduced-motion zeroes this globally */
 	.sample-card {

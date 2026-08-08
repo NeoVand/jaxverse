@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Plate IV — RLVR, for real. Each iteration: sample G=8 continuations of a
+	// RLVR, for real. Each iteration: sample G=8 continuations of a
 	// real opening in lockstep, let chess.js grade every rollout, standardize
 	// the rewards inside the group (GRPO's baseline trick), and apply a true
 	// REINFORCE update on the generated tokens only. No demonstrations
@@ -9,6 +9,7 @@
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import { progress } from '$lib/data/progress.svelte';
+	import { plateLabel } from '$lib/data/plates';
 	import { lab, LR_RL } from './rook-context.svelte';
 	import { pickPrefix, scoreRollout, type BoardSnap, type RolloutPly } from './chess-eval';
 	import { polyline, scale } from './chart';
@@ -77,7 +78,7 @@
 			// let the inspector paint between iterations
 			if (breathMs > 0) await new Promise((r) => setTimeout(r, breathMs));
 		}
-		// photograph the paused weights — the arena (Plate V) fields this student
+		// photograph the paused weights — the arena (the arena) fields this student
 		if (g === lab.gen && lab.stage === 'reinforced') await lab.captureStage('reinforced');
 		lab.endLoop(g);
 		running = false;
@@ -206,7 +207,8 @@
 </script>
 
 <Plate
-	n={4}
+	id="rlvr"
+	live
 	title="RLVR — reinforcement from a judge"
 	caption="No example ever said “this move is good”. A verifier said “this rollout held up longer”, the group's average set the bar, and the gradient did the rest. Each rollout's card shows the board where the judge stopped it — or the position it held to the end. This loop — sample, verify, standardize, reinforce — is a small, honest cousin of how frontier models learn to reason."
 >
@@ -265,21 +267,21 @@
 									fill="var(--ink-3)">{t.v.toFixed(1)}</text
 								>
 							{/each}
-							<path d={chart.meanPath} fill="none" stroke="var(--accent)" stroke-width="1.6" />
+							<path d={chart.meanPath} fill="none" stroke="var(--warm)" stroke-width="1.6" />
 							{#if legalPts.length > 1}
-								<path d={chart.legalPath} fill="none" stroke="var(--warm)" stroke-width="1.4" />
+								<path d={chart.legalPath} fill="none" stroke="var(--accent)" stroke-width="1.4" />
 							{/if}
 							{#each chart.legalDots as p, i (i)}
-								<circle cx={p.px} cy={p.py} r="2.6" fill="var(--warm)" />
+								<circle cx={p.px} cy={p.py} r="2.6" fill="var(--accent)" />
 							{/each}
 							<text x={PAD.l} y={H - 6} class="num" font-size="10" fill="var(--ink-3)"
 								>iterations →</text
 							>
 						</svg>
 						<p class="num mt-1 text-[11px] text-ink-3">
-							<span style="color: var(--accent);">●</span> mean reward of the group (max 1.5) ·
-							<span style="color: var(--warm);">●</span> legal-move probe (32 real positions), every 5
-							iterations
+							<span style="color: var(--warm);">●</span> mean reward of the group (max 1.5) ·
+							<span style="color: var(--accent);">●</span> legal-move probe (32 real positions), every
+							5 iterations
 						</p>
 					{:else}
 						<div class="flex h-40 items-center justify-center">
@@ -310,8 +312,10 @@
 							href="#rook-play"
 							class="mt-1 inline-flex items-center gap-1.5 text-[11.5px] underline decoration-dotted underline-offset-4 hover:text-ink"
 						>
-							<ArrowUp size={11} aria-hidden="true" /> play the reinforced Rook — Plate II always plays
-							the current weights
+							<ArrowUp size={11} aria-hidden="true" /> play the reinforced Rook — {plateLabel(
+								'rook',
+								'play'
+							)} always plays the current weights
 						</a>
 					{/if}
 				</div>

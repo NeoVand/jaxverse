@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Plate from '$lib/components/ui/Plate.svelte';
 	// Self-attention, drawn once and held still: four token vectors become
 	// queries, keys and values through three learned lenses; every query is
 	// scored against every key; the mask strikes out the future; a softmax
@@ -28,8 +29,8 @@
 	// ── the three lenses and their outputs ──
 	const LENSES = [
 		{ key: 'q', name: 'Q', cy: 52, color: 'var(--accent)', seed: 11 },
-		{ key: 'k', name: 'K', cy: 106, color: 'var(--warm)', seed: 12 },
-		{ key: 'v', name: 'V', cy: 160, color: 'var(--cat-1)', seed: 13 }
+		{ key: 'k', name: 'K', cy: 106, color: 'var(--cat-8)', seed: 12 },
+		{ key: 'v', name: 'V', cy: 160, color: 'var(--cat-6)', seed: 13 }
 	];
 	const WM = { x: 150, w: 36, h: 32, cols: 6, rows: 5 }; // a weight matrix
 	const PM = { x: 214, w: 34, cols: 3 }; // a projected Q/K/V (4 rows, one per token)
@@ -49,16 +50,20 @@
 	const ZVALS = [0.7, 0.35, 0.85, 0.5];
 </script>
 
-<figure class="my-8">
+<Plate
+	id="attention"
+	title="Self-attention, held still"
+	caption="Follow the rose outline. The last token asks with its query row, is scored against every key, has its future struck out by the mask, receives a budget of exactly 1 from the softmax — and spends it on a blend of the values. That blend is all attention ever outputs."
+>
 	<svg
 		viewBox="0 0 660 222"
-		class="mx-auto block w-full max-w-[760px]"
+		class="mx-auto block w-full max-w-[950px]"
 		role="img"
-		aria-label="Self-attention in one picture. Left: four tokens — once, upon, a, time — each a vector of numbers. Three learned weight matrices project every token three ways: into a query (ultramarine), a key (vermilion) and a value (amber). Centre: a four-by-four score table with query strips along its rows and key strips along its columns, so each cell is the dot product of one query with one key, scaled by the square root of the key dimension; every cell above the diagonal is struck out with negative infinity — the mask, no reading the future — and a softmax turns each surviving row into a budget that sums to one. Right: the last token's budget row is multiplied against the value vectors, producing its context vector z — a weighted blend of what earlier tokens passed along. A rose outline follows the last token through every stage."
+		aria-label="Self-attention in one picture. Left: four tokens — once, upon, a, time — each a vector of numbers. Three learned weight matrices project every token three ways: into a query (ultramarine), a key (violet) and a value (blue-cyan). Centre: a four-by-four score table with query strips along its rows and key strips along its columns, so each cell is the dot product of one query with one key, scaled by the square root of the key dimension; every cell above the diagonal is struck out with negative infinity — the mask, no reading the future — and a softmax turns each surviving row into a budget that sums to one. Right: the last token's budget row is multiplied against the value vectors, producing its context vector z — a weighted blend of what earlier tokens passed along. A rose outline follows the last token through every stage."
 	>
 		<defs>
 			<!-- one arrowhead per wire color, so heads never contradict their lines -->
-			{#each [{ id: 'at-arrow', c: 'var(--ink-3)' }, { id: 'at-arrow-q', c: 'var(--accent)' }, { id: 'at-arrow-k', c: 'var(--warm)' }, { id: 'at-arrow-v', c: 'var(--cat-1)' }, { id: 'at-arrow-r', c: 'var(--cat-3)' }] as m (m.id)}
+			{#each [{ id: 'at-arrow', c: 'var(--ink-3)' }, { id: 'at-arrow-q', c: 'var(--accent)' }, { id: 'at-arrow-k', c: 'var(--cat-8)' }, { id: 'at-arrow-v', c: 'var(--cat-6)' }, { id: 'at-arrow-r', c: 'var(--cat-3)' }] as m (m.id)}
 				<marker
 					id={m.id}
 					viewBox="0 0 8 8"
@@ -192,7 +197,7 @@
 		<path
 			d="M {PM.x + PM.w + 4} 106 C 270 106, 274 109, {G1.x - 10} 109"
 			fill="none"
-			stroke="var(--warm)"
+			stroke="var(--cat-8)"
 			stroke-width="1"
 			opacity="0.75"
 			marker-end="url(#at-arrow-k)"
@@ -215,7 +220,7 @@
 				width={CELL - 5}
 				height="3.5"
 				rx="1.2"
-				fill="var(--warm)"
+				fill="var(--cat-8)"
 				opacity="0.8"
 			/>
 		{/each}
@@ -278,7 +283,7 @@
 			stroke-width="1"
 		/>
 		<text x={G1.x + 2 * CELL} y="126" text-anchor="middle" class="label">
-			scores · <tspan fill="var(--accent)">Q</tspan><tspan fill="var(--warm)">Kᵀ</tspan>/√dₖ
+			scores · <tspan fill="var(--accent)">Q</tspan><tspan fill="var(--cat-8)">Kᵀ</tspan>/√dₖ
 		</text>
 
 		<!-- softmax, row by row -->
@@ -367,7 +372,7 @@
 		<path
 			d="M {PM.x + PM.w + 4} 160 C 330 200, 450 186, {BLEND.x - 7} {BLEND.y + 5}"
 			fill="none"
-			stroke="var(--cat-1)"
+			stroke="var(--cat-6)"
 			stroke-width="1"
 			opacity="0.75"
 			marker-end="url(#at-arrow-v)"
@@ -392,7 +397,7 @@
 				width={ZC.w}
 				height="11"
 				rx="1.5"
-				fill="var(--cat-1)"
+				fill="var(--cat-6)"
 				opacity={0.25 + v * 0.65}
 			/>
 		{/each}
@@ -412,23 +417,15 @@
 
 		<!-- the equation, written the way the prose dissects it -->
 		<text x="330" y="214" text-anchor="middle" class="eq">
-			attention(<tspan fill="var(--accent)">Q</tspan>, <tspan fill="var(--warm)">K</tspan>,
-			<tspan fill="var(--cat-1)">V</tspan>) = <tspan fill="var(--cat-2)">softmax</tspan>(<tspan
+			attention(<tspan fill="var(--accent)">Q</tspan>, <tspan fill="var(--cat-8)">K</tspan>,
+			<tspan fill="var(--cat-6)">V</tspan>) = <tspan fill="var(--cat-2)">softmax</tspan>(<tspan
 				fill="var(--accent)">Q</tspan
-			><tspan fill="var(--warm)">Kᵀ</tspan>/√dₖ + <tspan class="dim">M</tspan>)·<tspan
-				fill="var(--cat-1)">V</tspan
+			><tspan fill="var(--cat-8)">Kᵀ</tspan>/√dₖ + <tspan class="dim">M</tspan>)·<tspan
+				fill="var(--cat-6)">V</tspan
 			>
 		</text>
 	</svg>
-	<figcaption
-		class="mx-auto mt-2 max-w-[600px] text-center font-serif text-[13.5px] text-ink-2 italic"
-		style="font-variation-settings: 'opsz' 13;"
-	>
-		Follow the rose outline. The last token asks with its query row, is scored against every key,
-		has its future struck out by the mask, receives a budget of exactly 1 from the softmax — and
-		spends it on a blend of the values. That blend is all attention ever outputs.
-	</figcaption>
-</figure>
+</Plate>
 
 <style>
 	.tok {

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Plate from '$lib/components/ui/Plate.svelte';
+	import { plateLabel } from '$lib/data/plates';
 	// aliased: the script below needs the global Math object
 	import MathTex from '$lib/components/ui/Math.svelte';
 	import { ACTIVATIONS, type ActivationId } from './activations';
@@ -7,7 +8,7 @@
 	// The field guide: every activation drawn on the SAME axes — one unit is
 	// the same distance everywhere, so ReLU's ramp is exactly 45° and the
 	// difference between GELU and SiLU is honest, not an artifact of scaling.
-	// Solid ultramarine: σ. Dashed vermilion: σ′ — the gate every gradient
+	// Solid teal: σ. Dashed vermilion: σ′ — the gate every gradient
 	// must pass through on the way back. Hover a tile to read exact values.
 	const W = 240;
 	const H = 120;
@@ -46,14 +47,15 @@
 </script>
 
 <Plate
-	n={2}
+	id="atlas"
+	live
 	title="A field guide to activations"
-	caption="Nine bends on identical axes, one unit square everywhere. The solid ultramarine curve is the activation σ; the dashed vermilion curve is its derivative σ′ — the gate every gradient must pass through on the way back down. Read the flat stretches of σ′ as places learning goes quiet: saturation on the classics, the dead zone on relu, and the small negative slope the modern trio keeps alive. Hover any tile for exact values; six of these are live in Plate I."
+	caption={`Nine bends on identical axes, one unit square everywhere. The solid teal curve is the activation σ; the dashed vermilion curve is its derivative σ′ — the gate every gradient must pass through on the way back down. Read the flat stretches of σ′ as places learning goes quiet: saturation on the classics, the dead zone on relu, and the small negative slope the modern trio keeps alive. Hover any tile for exact values; six of these are live in ${plateLabel('neuron', 'neuron')}.`}
 >
 	{#snippet status()}
 		<span class="inline-flex items-center gap-1.5">
 			<svg width="18" height="8" aria-hidden="true"
-				><line x1="1" y1="4" x2="17" y2="4" stroke="var(--accent)" stroke-width="2" /></svg
+				><line x1="1" y1="4" x2="17" y2="4" stroke="var(--cat-2)" stroke-width="2" /></svg
 			>
 			σ(z)
 		</span>
@@ -82,7 +84,7 @@
 					{#if p}
 						<span class="num text-[10px]">
 							<span style="color: var(--ink-3);">z {minus(p.z.toFixed(1))}</span>
-							<span class="ml-1.5" style="color: var(--accent);"
+							<span class="ml-1.5" style="color: var(--cat-2);"
 								>σ {minus(t.fn(p.z).toFixed(2))}</span
 							>
 							<span class="ml-1.5" style="color: var(--warm);"
@@ -134,7 +136,7 @@
 						<path
 							d={t.d}
 							fill="none"
-							stroke="var(--accent)"
+							stroke="var(--cat-2)"
 							stroke-width="1.9"
 							stroke-linejoin="round"
 							stroke-linecap="round"
@@ -161,7 +163,7 @@
 								cx={xP(p.z)}
 								cy={yP(t.fn(p.z))}
 								r="3"
-								fill="var(--accent)"
+								fill="var(--cat-2)"
 								stroke="var(--surface)"
 								stroke-width="1.2"
 							/>

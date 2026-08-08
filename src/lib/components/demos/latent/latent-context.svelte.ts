@@ -1,8 +1,8 @@
 // The chapter's one autoencoder, shared page-wide. Every plate offers the same
-// transport in its own header, and the bottleneck-width toggle lives on Plate I
+// transport in its own header, and the bottleneck-width toggle lives on the squeeze plate
 // ("the squeeze"); all three read the same weights live. Consumers re-derive
 // their pixels from `tick`, which bumps once per trained chunk — the plates stay
-// in sync without knowing about each other. Plate I disposes the lab when the
+// in sync without knowing about each other. the squeeze plate disposes the lab when the
 // page unmounts.
 
 import { MlpEngine } from '$lib/nn/mlp-engine';
@@ -198,7 +198,7 @@ class LatentLab {
 			// beta = 1/784 is the textbook β = 1 in this engine's mean-mse units.
 			// A wide waist gets a lighter fee: there the cloud is only ever seen
 			// through a projection, so the prior is buying less, and the codes are
-			// worth more to Plate IV when they keep a little more of the digit.
+			// worth more to the neighbours plate when they keep a little more of the digit.
 			vae: { at: latentLayerFor(this.depth), beta: (this.latentDim <= 3 ? 1 : 0.3) / DIM },
 			// the rectified family tolerates a brisker step than tanh ever did,
 			// and this plate is watched rather than left running. The deep ladder

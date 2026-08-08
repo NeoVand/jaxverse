@@ -13,13 +13,20 @@
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
-:root {
+/* `.theme-light` / `.theme-dark` re-declare a palette on a subtree, so the
+   proof sheet at /smoke can put both themes side by side on one screen.
+   Nothing in the book itself uses them. */
+:root,
+.theme-light {
 	/* surfaces */
 	--paper: #faf9f5;
 	--surface: #ffffff;
 	--surface-2: #f3f1ea;
 	--line: #e5e2d8;
 	--line-soft: #efede4;
+
+	/* the figure surface — one step off the paper, recessed in light */
+	--band: #f6f4ec;
 
 	/* ink */
 	--ink: #1d1c18;
@@ -44,15 +51,32 @@
 	--cat-3: #c14b6e;
 	--cat-4: #6a6ae0;
 	--cat-5: #8b7413;
-	--cat-6: #2c88b8;
+	--cat-6: #23789f;
 	--cat-7: #b8542f;
-	--cat-8: #7862c4;
+	--cat-8: #8a55c0;
 	--cat-9: #4d8a37;
 
 	/* type */
 	--font-serif: 'Newsreader Variable', 'Iowan Old Style', Georgia, serif;
 	--font-sans: 'Inter Variable', system-ui, -apple-system, sans-serif;
 	--font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', monospace;
+
+	/* the two rails every page aligns to, and the air between figures */
+	--prose-w: 42rem;
+	--plate-w: 72rem;
+	--band-gap: 3.5rem;
+	--band-pad: 1.5rem;
+
+	/* one radius scale: hairline chips, controls, panels */
+	--r-1: 3px;
+	--r-2: 6px;
+	--r-3: 10px;
+
+	/* one focus language for the whole book: the same halo at the same radius
+	   and the same strength, tinted by whatever the control already means —
+	   a slider borrows its own hue, everything else borrows the accent */
+	--focus-tone: var(--accent);
+	--focus-ring: 0 0 0 3px color-mix(in srgb, var(--focus-tone) 22%, transparent);
 
 	/* chrome */
 	--glass: color-mix(in srgb, var(--paper) 78%, transparent);
@@ -69,6 +93,8 @@
 		--surface-2: #232119;
 		--line: #2e2c24;
 		--line-soft: #23211b;
+
+		--band: #1a1915;
 
 		--ink: #e9e6dc;
 		--ink-2: #a29e91;
@@ -89,9 +115,9 @@
 		--cat-3: #e07d9c;
 		--cat-4: #9d9df1;
 		--cat-5: #bfa937;
-		--cat-6: #5fb3dd;
+		--cat-6: #4fb0e6;
 		--cat-7: #e08a63;
-		--cat-8: #a893ea;
+		--cat-8: #c58ae8;
 		--cat-9: #7fb865;
 
 		--glass: color-mix(in srgb, var(--paper) 72%, transparent);
@@ -99,12 +125,15 @@
 	}
 }
 
-:root.dark {
+:root.dark,
+.theme-dark {
 	--paper: #141310;
 	--surface: #1b1a16;
 	--surface-2: #232119;
 	--line: #2e2c24;
 	--line-soft: #23211b;
+
+	--band: #1a1915;
 
 	--ink: #e9e6dc;
 	--ink-2: #a29e91;
@@ -125,9 +154,9 @@
 	--cat-3: #e07d9c;
 	--cat-4: #9d9df1;
 	--cat-5: #bfa937;
-	--cat-6: #5fb3dd;
+	--cat-6: #4fb0e6;
 	--cat-7: #e08a63;
-	--cat-8: #a893ea;
+	--cat-8: #c58ae8;
 	--cat-9: #7fb865;
 
 	--glass: color-mix(in srgb, var(--paper) 72%, transparent);
@@ -137,6 +166,7 @@
 /* expose tokens to Tailwind utilities: bg-paper, text-ink-2, border-line, … */
 @theme inline {
 	--color-paper: var(--paper);
+	--color-band: var(--band);
 	--color-surface: var(--surface);
 	--color-surface-2: var(--surface-2);
 	--color-line: var(--line);
@@ -145,11 +175,22 @@
 	--color-ink-2: var(--ink-2);
 	--color-ink-3: var(--ink-3);
 	--color-accent: var(--accent);
+	--color-accent-strong: var(--accent-strong);
 	--color-accent-soft: var(--accent-soft);
 	--color-warm: var(--warm);
 	--color-warm-soft: var(--warm-soft);
 	--color-good: var(--good);
 	--color-bad: var(--bad);
+	--color-cat-0: var(--cat-0);
+	--color-cat-1: var(--cat-1);
+	--color-cat-2: var(--cat-2);
+	--color-cat-3: var(--cat-3);
+	--color-cat-4: var(--cat-4);
+	--color-cat-5: var(--cat-5);
+	--color-cat-6: var(--cat-6);
+	--color-cat-7: var(--cat-7);
+	--color-cat-8: var(--cat-8);
+	--color-cat-9: var(--cat-9);
 	--font-serif: var(--font-serif);
 	--font-sans: var(--font-sans);
 	--font-mono: var(--font-mono);
@@ -226,6 +267,126 @@ body {
 	border: 1px solid var(--line-soft);
 	border-radius: 4px;
 	padding: 0.08em 0.35em;
+}
+
+/* The one section heading in the book. Every chapter, the home page and the
+   epilogue use this; nothing sets its size or weight inline. */
+.h2 {
+	margin-top: 3.5rem;
+	margin-bottom: 0.5rem;
+	font-family: var(--font-serif);
+	font-size: 1.6rem;
+	line-height: 1.2;
+	letter-spacing: -0.015em;
+	font-weight: 520;
+	font-variation-settings: 'opsz' 28;
+	color: var(--ink);
+}
+
+/* Same heading where a section already supplies the air above it. */
+.h2-flush {
+	margin-top: 0;
+}
+
+/* ── the band: the book's one figure surface ──────────────────────────────
+   A figure is not a card. It is a full-bleed change of material: the page
+   steps onto slightly different paper between two hairlines, edge to edge,
+   and the figure itself sits on the plate rail inside. Nothing is framed,
+   nothing is rounded, and the only vertical rhythm in the book is the air
+   above and below a band. */
+
+.band {
+	margin-block: var(--band-gap);
+	padding-block: var(--band-pad);
+	background: var(--band);
+	border-top: 1px solid var(--line-soft);
+	border-bottom: 1px solid var(--line-soft);
+	/* clip, not hidden: contains wide demos without becoming a scroll container */
+	overflow: clip;
+}
+
+/* the hood is a band too, but a quieter one: it sits on the page's own paper
+   so the plates keep the stronger material */
+.band-quiet {
+	background: transparent;
+	border-top-color: transparent;
+	border-bottom-color: transparent;
+	padding-block: 0;
+	margin-block: calc(var(--band-gap) * 0.7);
+}
+
+/* two rails, and only two. Demos carry their own px-4, so the rail keeps a
+   sliver of its own — together they make the same 20px gutter as the prose. */
+.rail {
+	margin-block: 0;
+	margin-inline: auto;
+	max-width: var(--plate-w);
+	padding-inline: 0.25rem;
+}
+
+.rail-prose {
+	margin-inline: auto;
+	max-width: var(--prose-w);
+	padding-inline: 1.25rem;
+}
+
+/* ── the plate: a band with a numeral, a title, and a caption ── */
+
+.plate-head {
+	display: flex;
+	min-height: 1.75rem;
+	flex-wrap: wrap;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 0.25rem 1rem;
+	padding-inline: 1rem;
+	padding-bottom: 0.75rem;
+}
+
+.plate-label {
+	color: var(--ink-3);
+}
+
+.plate-title {
+	font-family: var(--font-serif);
+	font-size: 15px;
+	font-style: italic;
+	font-variation-settings: 'opsz' 14;
+}
+
+/* a plate that computes gets one live dot; a plate that explains gets none */
+.plate-live {
+	display: inline-block;
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: var(--accent);
+	transform: translateY(-2px);
+}
+
+/* cross-references to plates, written by the registry */
+.plate-ref {
+	color: inherit;
+	text-decoration: underline;
+	text-decoration-style: dotted;
+	text-decoration-color: color-mix(in srgb, var(--accent) 55%, transparent);
+	text-underline-offset: 3px;
+	white-space: nowrap;
+}
+.plate-ref:hover {
+	text-decoration-color: var(--accent);
+}
+
+.plate-caption {
+	padding-inline: 1rem;
+	padding-top: 0.875rem;
+	font-family: var(--font-serif);
+	font-size: 13.5px;
+	font-style: italic;
+	font-variation-settings: 'opsz' 13;
+	line-height: 1.6;
+	color: var(--ink-2);
+	max-width: 78ch;
 }
 
 /* ── the control kit: every chip, tab, and segmented switch in the book ──
@@ -322,23 +483,52 @@ body {
 	opacity: 0.88;
 }
 
-/* equation term coloring — used via \htmlClass{eq-a}{…} inside <Math> */
-.eq-a {
-	color: var(--accent);
+/* ── the color constitution ───────────────────────────────────────────────
+   One rule, learnable in ten seconds, and the same in every chapter:
+
+     cool hues live inside the machine · warm hues come from outside it
+     teal is fixed machinery · green is the verdict · grey is ignored
+
+   Applied to equations through \htmlClass{eq-model}{…} inside <Math>, and to
+   every legend, canvas palette, and diagram label that illustrates one. If a
+   symbol is ultramarine in the formula it is ultramarine in the picture. */
+
+/* the learned family — cool, analogous, always used in this slot order, so a
+   chapter that opens up three sets of parameters names them the same way */
+.eq-model {
+	color: var(--accent); /* slot 1 — θ, w, v, Q, the model's own vector */
 }
-.eq-w {
+.eq-model-2 {
+	color: var(--cat-8); /* slot 2 — b, K */
+}
+.eq-model-3 {
+	color: var(--cat-6); /* slot 3 — V */
+}
+
+/* everything the world supplies: data x, labels y, rewards r, returns G, the
+   real neighbour u₊, the target curve — and the gradient, which is the
+   world's verdict on the model */
+.eq-world {
 	color: var(--warm);
 }
-.eq-b {
-	color: var(--cat-2); /* teal — bias terms (the neuron chapter's third voice) */
+
+/* fixed machinery with no parameters at all: σ, tanh, softmax, norms, KL */
+.eq-op {
+	color: var(--cat-2);
 }
-.eq-g {
+
+/* knobs you set rather than learn: learning rate γ, discount γ, temperature */
+.eq-knob {
+	color: var(--cat-1);
+}
+
+/* the model's answer, as a probability: p_y, P(x), ŷ */
+.eq-out {
 	color: var(--good);
 }
-.eq-c {
-	color: var(--cat-1); /* amber — the value path in the attention equation */
-}
-.eq-m {
+
+/* masked, ignored, negative-sampled: M, u⁻ */
+.eq-mute {
 	color: var(--ink-3);
 }
 

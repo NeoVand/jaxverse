@@ -6,49 +6,9 @@
 export const SIDE = 28;
 export const DIM = SIDE * SIDE;
 
-export interface Tokens {
-	paper: string;
-	surface: string;
-	ink: string;
-	ink2: string;
-	ink3: string;
-	line: string;
-	lineSoft: string;
-	accent: string;
-	warm: string;
-	good: string;
-	bad: string;
-	/** --cat-0 … --cat-9, the ten digit-class categoricals. */
-	cats: string[];
-}
-
-/** Design tokens read from the live cascade — call inside the draw, not once. */
-export function readTokens(el: Element): Tokens {
-	const s = getComputedStyle(el);
-	const v = (name: string, fallback: string) => s.getPropertyValue(name).trim() || fallback;
-	const cats: string[] = [];
-	for (let d = 0; d < 10; d++) cats.push(v(`--cat-${d}`, '#888888'));
-	return {
-		paper: v('--paper', '#faf9f5'),
-		surface: v('--surface', '#ffffff'),
-		ink: v('--ink', '#1d1c18'),
-		ink2: v('--ink-2', '#605d54'),
-		ink3: v('--ink-3', '#a3a094'),
-		line: v('--line', '#e5e2d8'),
-		lineSoft: v('--line-soft', '#efede4'),
-		accent: v('--accent', '#2b45d8'),
-		warm: v('--warm', '#d3541f'),
-		good: v('--good', '#22774d'),
-		bad: v('--bad', '#bb3a2b'),
-		cats
-	};
-}
-
-/** Parse #rrggbb → [r, g, b]; tolerates whitespace. */
-export function hexRgb(hex: string): [number, number, number] {
-	const h = hex.replace('#', '').trim();
-	return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-}
+// Colors come from one place for the whole book.
+export { readTokens, hexRgb, type Rgb, type Tokens } from '$lib/viz/tokens.svelte';
+import { hexRgb } from '$lib/viz/tokens.svelte';
 
 /** DPR-aware canvas sizing (capped at 2) with an identity-at-dpr transform. */
 export function setupCanvas(canvas: HTMLCanvasElement): {

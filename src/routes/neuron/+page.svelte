@@ -2,7 +2,6 @@
 	import { resolve } from '$app/paths';
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
-	import Wide from '$lib/components/ui/Wide.svelte';
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
 	import OneNeuron from '$lib/components/demos/neuron/OneNeuron.svelte';
@@ -21,14 +20,15 @@
 		<p>
 			The working part is small enough to hold in your head. A <em>neuron</em> takes a number in,
 			multiplies it by a <em>weight</em>
-			<Math tex={'\\htmlClass{eq-w}{w}'} />, adds a
+			<Math tex={'\\htmlClass{eq-model}{w}'} />, adds a
 			<em>bias</em>
-			<Math tex={'\\htmlClass{eq-b}{b}'} />, and passes the result through a fixed curve called an
+			<Math tex={'\\htmlClass{eq-model-2}{b}'} />, and passes the result through a fixed curve
+			called an
 			<em>activation</em>. This book starts with the gentlest activation, the hyperbolic tangent:
 		</p>
 		<Math
 			display
-			tex={'a = \\sigma(\\htmlClass{eq-w}{w}x + \\htmlClass{eq-b}{b}), \\qquad \\sigma(z) = \\tanh(z)'}
+			tex={'\\htmlClass{eq-out}{a} = \\htmlClass{eq-op}{\\sigma}(\\htmlClass{eq-model}{w}x + \\htmlClass{eq-model-2}{b}), \\qquad \\htmlClass{eq-op}{\\sigma}(z) = \\htmlClass{eq-op}{\\tanh}(z)'}
 		/>
 		<p>
 			That is the whole organism. In one dimension its output is a smooth step: flat, a rise, flat
@@ -40,7 +40,7 @@
 		</p>
 		<Math
 			display
-			tex={'f(x) = \\sum_i \\htmlClass{eq-a}{v_i}\\,\\tanh\\!\\left(\\htmlClass{eq-w}{w_i}\\,x + \\htmlClass{eq-b}{b_i}\\right) + c'}
+			tex={'f(\\htmlClass{eq-world}{x}) = \\sum_i \\htmlClass{eq-model-3}{v_i}\\,\\htmlClass{eq-op}{\\tanh}\\!\\left(\\htmlClass{eq-model}{w_i}\\,x + \\htmlClass{eq-model-2}{b_i}\\right) + c'}
 		/>
 		<p>
 			Subtract one step from a slightly shifted copy and you get a bump. Sums of steps are therefore
@@ -52,54 +52,47 @@
 			chapter: write the error down as a loss, and send gradient descent looking.
 		</p>
 
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			One neuron, three knobs
-		</h2>
+		<h2 class="h2">One neuron, three knobs</h2>
 		<p>
 			Before training anything, get your hands on the unit itself. Below is the same neuron twice:
-			on the left as a circuit — the vermilion edge carries <Math tex={'\\htmlClass{eq-w}{w}'} />,
-			the teal edge carries <Math tex={'\\htmlClass{eq-b}{b}'} />, and the ultramarine path is the
-			signal itself — and on the right as
-			<Math tex={'\\htmlClass{eq-a}{v}\\,\\sigma(\\htmlClass{eq-w}{w}x + \\htmlClass{eq-b}{b})'} />,
-			the one shape it can draw. The third knob, <Math tex={'\\htmlClass{eq-a}{v}'} />, is just
-			another coefficient — an amplitude that stretches the bend taller or flips it upside down.
-			Move each slider until you can predict what both views will do before you touch it. Then swap <Math
-				tex="\sigma"
-			/> itself and see which of your intuitions survive: the same three knobs pull very different shapes
-			out of a relu than out of a tanh.
+			on the left as a circuit — the ultramarine edge carries <Math
+				tex={'\\htmlClass{eq-model}{w}'}
+			/>, the violet edge carries <Math tex={'\\htmlClass{eq-model-2}{b}'} />, and the blue-cyan
+			path is the signal itself — and on the right as
+			<Math
+				tex={'\\htmlClass{eq-model-3}{v}\\,\\htmlClass{eq-op}{\\sigma}(\\htmlClass{eq-model}{w}x + \\htmlClass{eq-model-2}{b})'}
+			/>, the one shape it can draw. The third knob, <Math tex={'\\htmlClass{eq-model-3}{v}'} />, is
+			just another coefficient — an amplitude that stretches the bend taller or flips it upside
+			down. Move each slider until you can predict what both views will do before you touch it. Then
+			swap <Math tex={'\\htmlClass{eq-op}{\\sigma}'} /> itself and see which of your intuitions survive:
+			the same three knobs pull very different shapes out of a relu than out of a tanh.
 		</p>
 	</Prose>
 
-	<Wide>
-		<OneNeuron />
-	</Wide>
+	<OneNeuron />
 
 	<UnderTheHood slug="neuron" block="bare" />
 
 	<Prose>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			The bend is the whole point
-		</h2>
+		<h2 class="h2">The bend is the whole point</h2>
 		<p>
-			It is worth pausing on why <Math tex="\sigma" /> must be there at all. Strip it out and a neuron
-			is just <Math tex={'\\htmlClass{eq-w}{w}x + \\htmlClass{eq-b}{b}'} /> — a line. Stack a hundred
-			all-linear layers and the stack collapses: a line of a line is still a line, so the deepest such
-			network can be multiplied out into a single matrix wearing a hundred costumes. The activation is
-			the only part of the machine that refuses to be linear, and everything a network can do that a line
-			cannot — every curve, corner, and decision — is purchased at that little bend.
+			It is worth pausing on why <Math tex={'\\htmlClass{eq-op}{\\sigma}'} /> must be there at all. Strip
+			it out and a neuron is just <Math
+				tex={'\\htmlClass{eq-model}{w}x + \\htmlClass{eq-model-2}{b}'}
+			/> — a line. Stack a hundred all-linear layers and the stack collapses: a line of a line is still
+			a line, so the deepest such network can be multiplied out into a single matrix wearing a hundred
+			costumes. The activation is the only part of the machine that refuses to be linear, and everything
+			a network can do that a line cannot — every curve, corner, and decision — is purchased at that little
+			bend.
 		</p>
 		<p>
 			Training cares about a second, quieter property: the slope. Gradient descent reaches every
-			weight through the chain rule, and the chain rule multiplies by <Math tex="\sigma'" /> at each layer
-			it crosses on the way back. The field guide below therefore draws every activation twice — the function
-			solid, its derivative dashed. Wherever the dashed curve hugs zero, learning goes quiet. The two
-			classics saturate at both ends, which is how deep sigmoid networks starved for decades — the
+			weight through the chain rule, and the chain rule multiplies by <Math
+				tex={"\\htmlClass{eq-op}{\\sigma'}"}
+			/> at each layer it crosses on the way back. The field guide below therefore draws every activation
+			twice — the function solid, its derivative dashed. Wherever the dashed curve hugs zero, learning
+			goes quiet. The two classics saturate at both ends, which is how deep sigmoid networks starved for
+			decades — the
 			<em>vanishing gradient</em>. relu is silent across its entire left half, and a unit trapped
 			there is called <em>dead</em>; its leaky cousin keeps a trickle flowing on purpose. The bottom
 			row — gelu, silu, mish — bends smoothly and holds a little slope even slightly below zero, one
@@ -112,23 +105,18 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<ActivationAtlas />
-	</Wide>
+	<ActivationAtlas />
 
 	<Prose>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			The curve workshop
-		</h2>
+		<h2 class="h2">The curve workshop</h2>
 		<p>
 			Now give the knobs away. The workshop below holds a whole network and trains it live, in a
 			worker beside this page, by the only rule this book uses —
-			<Math tex={'\\theta \\leftarrow \\theta - \\gamma \\nabla \\mathcal{L}'} /> — with the loss set
-			to the <em>mean-squared error</em>, the average of <Math tex="(f(x) - y)^2" /> over the training
-			points. Every step pulls the network’s curve a little closer to a target.
+			<Math
+				tex={'\\htmlClass{eq-model}{\\theta} \\leftarrow \\htmlClass{eq-model}{\\theta} - \\htmlClass{eq-knob}{\\gamma} \\htmlClass{eq-world}{\\nabla \\mathcal{L}}'}
+			/> — with the loss set to the <em>mean-squared error</em>, the average of <Math
+				tex={'(f(\\htmlClass{eq-world}{x}) - \\htmlClass{eq-world}{y})^2'}
+			/> over the training points. Every step pulls the network’s curve a little closer to a target.
 		</p>
 		<p>
 			You see the machine three ways at once. On the left sits the network itself: every edge is one
@@ -147,19 +135,12 @@
 		</p>
 	</Prose>
 
-	<Wide>
-		<CurveFit />
-	</Wide>
+	<CurveFit />
 
 	<UnderTheHood slug="neuron" block="engine" />
 
 	<Prose>
-		<h2
-			class="mt-14 mb-2 font-serif text-[1.6rem] tracking-tight"
-			style="font-weight: 520; font-variation-settings: 'opsz' 28;"
-		>
-			What width buys, what depth buys
-		</h2>
+		<h2 class="h2">What width buys, what depth buys</h2>
 		<p>
 			Width buys vocabulary. Every extra hidden unit is one more step the output layer can place, so
 			a wider palette affords finer detail: at width 2 the sine defeats the network — two steps

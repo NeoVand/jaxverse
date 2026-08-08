@@ -15,31 +15,9 @@ export {
 
 import { SIDE, DIM } from '$lib/data/brush';
 
-export type Rgb = [number, number, number];
-
-/** Design tokens resolved at draw time so canvases follow theme flips. */
-export function readTokens(el: Element) {
-	const s = getComputedStyle(el);
-	const v = (name: string, fallback: string) => s.getPropertyValue(name).trim() || fallback;
-	return {
-		paper: v('--paper', '#faf9f5'),
-		ink: v('--ink', '#1d1c18'),
-		ink2: v('--ink-2', '#605d54'),
-		ink3: v('--ink-3', '#a3a094'),
-		line: v('--line', '#e5e2d8'),
-		accent: v('--accent', '#2b45d8'),
-		warm: v('--warm', '#d3541f'),
-		good: v('--good', '#22774d'),
-		bad: v('--bad', '#bb3a2b'),
-		cats: Array.from({ length: 10 }, (_, d) => v(`--cat-${d}`, '#888888'))
-	};
-}
-
-/** Parse #rrggbb → [r, g, b]; tolerates whitespace. */
-export function hexRgb(hex: string): Rgb {
-	const h = hex.replace('#', '').trim();
-	return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-}
+// Colors come from one place for the whole book.
+export { readTokens, hexRgb, type Rgb, type Tokens } from '$lib/viz/tokens.svelte';
+import type { Rgb } from '$lib/viz/tokens.svelte';
 
 /** Numerically stable softmax over `len` values starting at `off`. */
 export function softmax(z: ArrayLike<number>, off = 0, len = 10): number[] {

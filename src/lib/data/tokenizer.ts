@@ -1,7 +1,7 @@
 // The two vocabularies the scribe can read, and the corpus in each of them.
 //
 // Word pieces are the default: the 300 merges in static/data/text-merges.json
-// are exactly the ones Plate II's first run elects (guarded by bpe.test.ts), so
+// are exactly the ones the tokenizer plate's first run elects (guarded by bpe.test.ts), so
 // the model really is reading the vocabulary the reader grows. Characters stay
 // available because the chapter's spelling-acquisition arc needs them — with
 // word pieces, most of English's spelling is bought before training starts.
@@ -100,7 +100,7 @@ export async function pieceTokenizer(
 	return pieceCache;
 }
 
-/** A vocabulary the reader grew past the snapshot, from Plate II's trainer. */
+/** A vocabulary the reader grew past the snapshot, from the tokenizer plate's trainer. */
 export function adoptedTokenizer(
 	chars: readonly string[],
 	pairs: readonly MergePair[],

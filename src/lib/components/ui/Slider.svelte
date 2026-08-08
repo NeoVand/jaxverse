@@ -10,8 +10,27 @@
 		/** Format the value readout; defaults to the raw number. */
 		format?: (v: number) => string;
 		disabled?: boolean;
-		tone?: 'accent' | 'warm' | 'teal' | 'ink';
+		/**
+		 * Which voice of the color constitution the slider speaks in. The
+		 * semantic names match the .eq-* classes, so a slider can be painted the
+		 * same color as the symbol it moves.
+		 */
+		tone?: keyof typeof TONES;
 	}
+
+	const TONES = {
+		accent: 'var(--accent)',
+		warm: 'var(--warm)',
+		teal: 'var(--cat-2)',
+		ink: 'var(--ink-2)',
+		model: 'var(--accent)',
+		'model-2': 'var(--cat-8)',
+		'model-3': 'var(--cat-6)',
+		world: 'var(--warm)',
+		op: 'var(--cat-2)',
+		knob: 'var(--cat-1)',
+		out: 'var(--good)'
+	} as const;
 
 	let {
 		label,
@@ -25,15 +44,7 @@
 	}: Props = $props();
 
 	const pct = $derived(((value - min) / (max - min)) * 100);
-	const toneColor = $derived(
-		tone === 'warm'
-			? 'var(--warm)'
-			: tone === 'teal'
-				? 'var(--cat-2)'
-				: tone === 'ink'
-					? 'var(--ink-2)'
-					: 'var(--accent)'
-	);
+	const toneColor = $derived(TONES[tone]);
 
 	let uid = $props.id();
 </script>
@@ -51,7 +62,7 @@
 		{max}
 		{step}
 		{disabled}
-		style="--p: {pct}%; --tone: {toneColor};"
+		style="--p: {pct}%; --tone: {toneColor}; --focus-tone: {toneColor};"
 	/>
 </div>
 
@@ -105,9 +116,9 @@
 		outline: none;
 	}
 	input[type='range']:focus-visible::-webkit-slider-thumb {
-		box-shadow: 0 0 0 4px color-mix(in srgb, var(--tone) 25%, transparent);
+		box-shadow: var(--focus-ring);
 	}
 	input[type='range']:focus-visible::-moz-range-thumb {
-		box-shadow: 0 0 0 4px color-mix(in srgb, var(--tone) 25%, transparent);
+		box-shadow: var(--focus-ring);
 	}
 </style>

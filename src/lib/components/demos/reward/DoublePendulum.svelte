@@ -1,5 +1,6 @@
 <script lang="ts">
-	// Plate I — the double pendulum swing-up on a sliding hinge. The links
+	import { readTokens } from '$lib/viz/tokens.svelte';
+	// The double pendulum swing-up on a sliding hinge. The links
 	// start hanging straight down; a linear softmax policy over hand-crafted
 	// gauges learns, via REINFORCE, to pump energy into the stack and catch
 	// it upright. The reader's job is to interfere: clicking or dragging
@@ -528,21 +529,10 @@
 		killPool();
 	});
 
-	function tokens(el: Element) {
-		const s = getComputedStyle(el);
-		const v = (name: string, fb: string) => s.getPropertyValue(name).trim() || fb;
-		return {
-			ink: v('--ink', '#1d1c18'),
-			ink3: v('--ink-3', '#a3a094'),
-			line: v('--line', '#e5e2d8'),
-			lineSoft: v('--line-soft', '#efede4'),
-			accent: v('--accent', '#2b45d8'),
-			warm: v('--warm', '#d3541f'),
-			amber: v('--cat-1', '#b98a1b'),
-			good: v('--good', '#3a7d44'),
-			bad: v('--bad', '#bb3a2b')
-		};
-	}
+	const tokens = (el: Element) => {
+		const t = readTokens(el);
+		return { ...t, amber: t.cats[1] };
+	};
 
 	function arrow(ctx: CanvasRenderingContext2D, x0: number, y: number, len: number, color: string) {
 		if (Math.abs(len) < 3) return;
@@ -707,7 +697,8 @@
 </script>
 
 <Plate
-	n={1}
+	id="pendulum"
+	live
 	title="The double pendulum swing-up"
 	caption="Training runs as a race, and the race is on stage: each small stage below is an independent learner on its own background thread, the big stage performs the current champion (outlined, fitness in the corner), and stragglers adopt the champion's weights when they fall far behind — REINFORCE discovery is luck-of-the-stream, and a race makes the demo as lucky as its luckiest stream. Watch them all flail at first, then stand up one by one. Once yours holds, shove the hinge — the red arrow is you, the blue one is the policy — and knock it clean over: it will brake the tumble and swing back up on its own."
 >
@@ -869,6 +860,7 @@
 					<div class="mt-auto flex flex-col gap-3">
 						<Slider
 							label="learning rate"
+							tone="knob"
 							bind:value={lr}
 							min={0.01}
 							max={0.3}

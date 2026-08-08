@@ -163,7 +163,8 @@
 </script>
 
 <Plate
-	n={2}
+	id="stepsize"
+	live
 	title="Too big, too small"
 	caption="Three regimes of one dial on θ²: below γ = 0.5 the ball eases in, near 0.5 it drops almost in one step, past 1.0 every hop bounces it out of the bowl. On the double well a bold γ hops between valleys; on |θ| the slope never softens, so the ball strides across the kink forever."
 >
@@ -310,7 +311,7 @@
 				max={1.15}
 				step={0.01}
 				format={(v) => v.toFixed(2)}
-				tone="accent"
+				tone="knob"
 			/>
 		</div>
 	</div>

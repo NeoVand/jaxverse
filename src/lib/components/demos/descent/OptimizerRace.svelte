@@ -679,7 +679,8 @@
 </script>
 
 <Plate
-	n={1}
+	id="race"
+	live
 	title="The descent race"
 	caption="Four walkers, one landscape, the same gradient at every point — only the rule for taking the step differs. Click anywhere to drop them there together: on the saddle's ridge, plain descent stalls where the ground flattens, momentum coasts through on stored velocity, and Adam's per-coordinate stride shrugs the geometry off. Raise γ until somebody overshoots; flip to 3-D and drag to see the terrain the contours were hiding."
 >
@@ -798,7 +799,7 @@
 					max={-0.3}
 					step={0.01}
 					format={(v) => fmtGamma(Math.pow(10, v))}
-					tone="accent"
+					tone="knob"
 				/>
 			</div>
 		</div>

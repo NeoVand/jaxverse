@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Plate from '$lib/components/ui/Plate.svelte';
 	// Skip-gram, drawn once and held still: the sentence window that makes the
 	// training pairs, the one-hot column that a word starts as, the table row
 	// it trades that for, and the push–pull rule whose loss trains the space.
@@ -48,10 +49,14 @@
 	const VSPO = [-0.5, 0.65, -0.2, 0.4];
 </script>
 
-<figure class="my-8">
+<Plate
+	id="skipgram"
+	title="One lesson, drawn"
+	caption="A word arrives as a one-hot column — six hundred slots and a single 1, a representation that says nothing about meaning — and leaves as its row of the table: sixteen dense numbers, all learned. The only pressure on that row is the rule on the right, applied a million times; the geometry in the plate below is what the pressure leaves behind."
+>
 	<svg
 		viewBox="0 -8 660 240"
-		class="mx-auto block w-full max-w-[760px]"
+		class="mx-auto block w-full max-w-[950px]"
 		role="img"
 		aria-label="Skip-gram in one picture. Left: in the sentence 'the little dog wagged his tail', a window around the centre word 'dog' marks its neighbors; every centre–neighbor pair is one lesson. Below, the word 'dog' begins as a one-hot column — six hundred slots, a single 1, which says nothing about meaning — and trades it for row 41 of a 600-by-16 embedding table: sixteen learned numbers, the dense vector the plate scatters. Right: the training rule. The dot product of dog's vector with a real neighbor like 'wagged' is pushed through a sigmoid toward 1, pulling the two vectors together; the dot product with a randomly drawn word like 'spoon' is pushed toward 0, pushing those vectors apart. The loss is the surprise at the real neighbor plus the surprise whenever a random word scores."
 	>
@@ -309,16 +314,7 @@
 			surprise at the real neighbor, plus whenever a random word scores
 		</text>
 	</svg>
-	<figcaption
-		class="mx-auto mt-2 max-w-[600px] text-center font-serif text-[13.5px] text-ink-2 italic"
-		style="font-variation-settings: 'opsz' 13;"
-	>
-		A word arrives as a one-hot column — six hundred slots and a single 1, a representation that
-		says nothing about meaning — and leaves as its row of the table: sixteen dense numbers, all
-		learned. The only pressure on that row is the rule on the right, applied a million times; the
-		geometry in the plate below is what the pressure leaves behind.
-	</figcaption>
-</figure>
+</Plate>
 
 <style>
 	.tok {

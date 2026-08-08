@@ -25,10 +25,10 @@
 </script>
 
 {#if entry}
-	<!-- Self-centering at the reading-column width, so closed it reads as one
-	     quiet line of the text, not a stray plate hugging the left margin. -->
-	<div class="mx-auto max-w-2xl px-5">
-		<section class="hood my-8 overflow-hidden rounded-lg" class:hood-open={open}>
+	<!-- The same band as a plate, so the code that ran a plate belongs to it
+	     visually. It carries no numeral: it is the hidden book, not a figure. -->
+	<div class="band band-quiet">
+		<section class="rail hood" class:hood-open={open}>
 			<button
 				class="hood-toggle flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left"
 				aria-expanded={open}
@@ -155,22 +155,28 @@
 	</div>
 {/if}
 
+<!--
+  The hood keeps its own dashed-to-solid affordance, but as a rule inside the
+  band rather than a card floating on the page.
+-->
+
 <style>
+	/* closed, the hood is a dashed rule the eye can skip; open, it is a solid
+	   panel of the same material as the plates it explains */
 	.hood {
-		border: 1px dashed var(--line);
-		background: color-mix(in srgb, var(--surface-2) 45%, var(--surface));
+		border-top: 1px dashed var(--line);
 		transition: border-color 150ms ease;
 	}
 	.hood-open {
-		border-style: solid;
-		background: var(--surface);
+		border-top-style: solid;
 	}
 	.hood-toggle:hover {
-		background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+		color: var(--ink);
 	}
 
 	.code {
 		border: 1px solid var(--line-soft);
+		border-radius: var(--r-2);
 		background: color-mix(in srgb, var(--surface-2) 55%, var(--surface));
 	}
 	.code pre {

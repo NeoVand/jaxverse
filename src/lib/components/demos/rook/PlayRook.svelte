@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Plate II — play the language model. The board is chess.js; Rook's reply is
+	// Play the language model. The board is chess.js; Rook's reply is
 	// a masked sample from its next-token distribution (the ChessLab port from
 	// LLMVibes): exp the log-probs, renormalize over the legal moves, draw by
 	// inverse CDF, fall back to uniform when the model puts ~no mass on
@@ -79,7 +79,7 @@
 
 	const stageBadge = $derived(
 		lab.stage === 'fine-tuned'
-			? { label: 'fine-tuned weights', color: 'var(--warm)' }
+			? { label: 'fine-tuned weights', color: 'var(--cat-8)' }
 			: lab.stage === 'reinforced'
 				? { label: 'RLVR weights', color: 'var(--good)' }
 				: { label: 'pretrained weights', color: 'var(--accent)' }
@@ -140,7 +140,7 @@
 		if (!lab.engine || !lab.data || !chess) return;
 		thinking = true;
 		try {
-			// the arena (Plate V) swaps weights in place while it compares stages —
+			// the arena (the arena) swaps weights in place while it compares stages —
 			// wait until the resident set is back, or "the current weights" would
 			// briefly be some contestant's
 			while (lab.busy === 'arena') await new Promise((r) => setTimeout(r, 60));
@@ -212,7 +212,8 @@
 
 <div id="rook-play">
 	<Plate
-		n={2}
+		id="play"
+		live
 		title="Play it — you are White"
 		caption="You are playing a language model: every reply is a sampled sentence-continuation, masked to legality. The gauge is the honest score — how much probability Rook put on legal moves before the mask saved it. And this board always plays the CURRENT weights: fine-tune or reinforce below, come back, and feel the difference."
 	>

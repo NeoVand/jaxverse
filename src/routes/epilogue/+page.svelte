@@ -1,27 +1,25 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
+	import Prose from '$lib/components/ui/Prose.svelte';
 </script>
 
-<svelte:head>
-	<title>Epilogue · jaxverse</title>
-	<meta name="description" content="Where the ideas in jaxverse came from, and where to go next." />
-</svelte:head>
-
-<article class="mx-auto max-w-2xl px-5 pt-16 pb-10 sm:pt-24">
-	<p class="eyebrow mb-4">Epilogue</p>
-	<h1
-		class="font-serif tracking-tight"
-		style="font-size: clamp(2.5rem, 6vw, 3.6rem); line-height: 1.05; font-weight: 480; font-variation-settings: 'opsz' 60;"
-	>
-		Sources &amp; onward
-	</h1>
-
-	<div class="chapter-prose mt-8">
+<ChapterShell
+	slug="epilogue"
+	front={{
+		numeral: '∞',
+		eyebrow: 'Epilogue · Sources · ≈3 min',
+		title: 'Sources & onward',
+		deck: 'Where the ideas in this book came from, and where to go when you have finished it.'
+	}}
+>
+	<Prose>
+		<h2 class="h2">The shoulders this stands on</h2>
 		<p>
 			This book stands on the shoulders of work it admires. If a chapter moved you, the original is
 			better:
 		</p>
-		<ul class="list-disc space-y-2 pl-5 text-[1.05rem]">
+		<ul class="list-disc space-y-2 pl-5">
 			<li>
 				Christopher Olah,
 				<a href="https://colah.github.io/posts/2014-03-NN-Manifolds-Topology/" rel="external"
@@ -47,9 +45,11 @@
 				shown a board and turn out to carry one anyway.
 			</li>
 		</ul>
+
+		<h2 class="h2">Onward</h2>
 		<p>
 			Start over from <a href={resolve('/')}>the beginning</a>, or open the hood: everything on this
 			site — every model, chapter, and mistake — lives in its repository. Train something.
 		</p>
-	</div>
-</article>
+	</Prose>
+</ChapterShell>

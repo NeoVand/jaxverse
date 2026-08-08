@@ -11,11 +11,10 @@
 	import { themePulse, watchTheme } from './digits-context.svelte';
 
 	interface Props {
-		n?: number;
 		title: string;
 		caption?: string;
 	}
-	let { n, title, caption }: Props = $props();
+	let { title, caption }: Props = $props();
 
 	// ten scores by default — one per digit class, the case this chapter needs
 	let count = $state(10);
@@ -131,9 +130,9 @@
 		if (!g) return;
 		const { ctx, W, H } = g;
 		const tk = readTokens(el);
-		// one rule across the chapter: warm is positive, blue is negative
-		const pos = hexRgb(tk.warm);
-		const neg = hexRgb(tk.accent);
+		// the book-wide rule for signed values: ultramarine up, vermilion down
+		const pos = hexRgb(tk.accent);
+		const neg = hexRgb(tk.warm);
 		const lim = Math.max(1e-6, ...vals.map(Math.abs));
 		const y0 = PADV + ((lim - 0) / (2 * lim)) * (H - 2 * PADV);
 
@@ -166,7 +165,7 @@
 		if (!g) return;
 		const { ctx, W, H } = g;
 		const tk = readTokens(el);
-		const c = hexRgb(tk.cats[2]);
+		const c = hexRgb(tk.good);
 		const lim = Math.max(1e-6, ...vals);
 		const base = H - PADV;
 
@@ -210,8 +209,9 @@
 		if (!g) return;
 		const { ctx, W, H } = g;
 		const tk = readTokens(el);
-		const pos = hexRgb(tk.warm);
-		const neg = hexRgb(tk.accent);
+		// the same rule as the bars beside it: ultramarine up, vermilion down
+		const pos = hexRgb(tk.accent);
+		const neg = hexRgb(tk.warm);
 		const lim = Math.max(1e-6, ...vals.map(Math.abs));
 		const hist = histogram(vals, -lim, lim, bins);
 		const mx = Math.max(1, ...hist);
@@ -232,7 +232,7 @@
 		if (!g) return;
 		const { ctx, W, H } = g;
 		const tk = readTokens(el);
-		const c = hexRgb(tk.cats[2]);
+		const c = hexRgb(tk.good);
 		const lim = Math.max(1e-6, ...vals);
 		const hist = histogram(vals, 0, lim, bins);
 		const mx = Math.max(1, ...hist);
@@ -277,7 +277,7 @@
 	}
 </script>
 
-<Plate {n} {title} {caption}>
+<Plate id="softmax" live {title} {caption}>
 	{#snippet status()}
 		<span>top {(topProb * 100).toFixed(1)}%</span>
 		<span aria-hidden="true">·</span>
@@ -336,7 +336,7 @@
 				max={0.7}
 				step={0.02}
 				format={() => `τ = ${T.toFixed(2)}`}
-				tone="warm"
+				tone="knob"
 			/>
 		</div>
 
@@ -344,7 +344,7 @@
 		<div class="flex flex-col gap-3">
 			<div>
 				<div class="mb-1 flex items-baseline justify-between gap-3">
-					<span class="eyebrow" style="color: var(--warm);">the scores · logits z</span>
+					<span class="eyebrow" style="color: var(--accent);">the scores · logits z</span>
 					{#if count <= 64}
 						<span class="text-[10.5px] text-ink-3 italic">drag a bar to bend it</span>
 					{/if}
@@ -370,7 +370,7 @@
 
 			<div>
 				<div class="mb-1 flex items-baseline justify-between gap-3">
-					<span class="eyebrow" style="color: var(--cat-2);">the belief · softmax(z / τ)</span>
+					<span class="eyebrow" style="color: var(--good);">the belief · softmax(z / τ)</span>
 					<span class="eyebrow text-ink-3">their shape →</span>
 				</div>
 				<div class="grid grid-cols-[1fr_72px] gap-1.5">

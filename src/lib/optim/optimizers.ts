@@ -21,6 +21,17 @@ export const RACER_TOKENS: Record<OptimizerId, string> = {
 };
 
 /**
+ * The three the home page and the prologue both show, in one order and one
+ * palette — the hero map and the descent race are the same story, so they had
+ * better be the same colors.
+ */
+export const OPTIMIZER_LEGEND = [
+	{ id: 'gd', label: 'gradient descent', token: RACER_TOKENS.gd },
+	{ id: 'momentum', label: 'with momentum', token: RACER_TOKENS.momentum },
+	{ id: 'adam', label: 'Adam', token: RACER_TOKENS.adam }
+] as const;
+
+/**
  * Per-optimizer stride scaling: one γ slider drives all five. Adaptive
  * methods (Adam/AdamW) and Lion take steps of roughly γ per axis whatever
  * the terrain, while SGD and momentum move as γ·|∇ℒ| — invisible on flat

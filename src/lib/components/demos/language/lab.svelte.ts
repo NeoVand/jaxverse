@@ -1,5 +1,5 @@
 // The shared scribe: one training WorkerEngine, one corpus, one training
-// history that three plates of this chapter read. Plate III trains it; the
+// history that three plates of this chapter read. the scribe trains it; the
 // surprise meter and the forward-pass walkthrough interrogate the same
 // weights, so "ask the model you trained" is literal. A second WorkerEngine
 // (the sampler) writes the desk's samples from couriered checkpoints so the
@@ -110,7 +110,7 @@ class ScribeLab {
 
 	/** The vocabulary in force: encode/decode for every plate in the chapter. */
 	private tokenizer: TokenizedCorpus | null = null;
-	/** Set by Plate II when the reader hands over a vocabulary of your own. */
+	/** Set by the tokenizer plate when the reader hands over a vocabulary of your own. */
 	private pending: TokenizedCorpus | null = null;
 	private engine: WorkerEngine | null = null;
 	/** The desk's own scribe: a second worker with its own GPU device. Each
@@ -174,7 +174,7 @@ class ScribeLab {
 		await this.rebuild();
 	}
 
-	/** Plate II handing its vocabulary to the model, merges and corpus and all. */
+	/** the tokenizer plate handing its vocabulary to the model, merges and corpus and all. */
 	async useVocabulary(
 		chars: readonly string[],
 		pairs: readonly MergePair[],
