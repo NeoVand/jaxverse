@@ -32,10 +32,10 @@ for (const slug of slugs) {
 		page.on('pageerror', (e) => errors.push(String(e)));
 		await page.goto(`http://localhost:${port}/`, { waitUntil: 'load' });
 		// wait until the lab reports progress (a step/episode line) or errors out
-		// progress = any step/episode counter beyond 1 (some labs update one
+		// progress = any step/episode/pairs counter beyond 1 (some labs update one
 		// status line in place rather than appending)
 		const progressed = (t) =>
-			[...t.matchAll(/(?:step|episode|t=)\s*(\d+)/g)].some((m) => Number(m[1]) > 1);
+			[...t.matchAll(/(?:step|episode|pairs|t=)\s*(\d+)/g)].some((m) => Number(m[1]) > 1);
 		const deadline = Date.now() + 150_000;
 		let text = '';
 		while (Date.now() < deadline) {

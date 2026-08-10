@@ -2,7 +2,7 @@
 // Slugs are routes (src/routes/<slug>); numbering is part of the design.
 
 export type ChapterSlug =
-	'descent' | 'neuron' | 'space' | 'digits' | 'latent' | 'language' | 'reward' | 'rook';
+	'descent' | 'neuron' | 'space' | 'digits' | 'latent' | 'language' | 'reward' | 'taste' | 'rook';
 
 export interface Chapter {
 	slug: ChapterSlug;
@@ -84,8 +84,17 @@ export const chapters: Chapter[] = [
 		live: true
 	},
 	{
-		slug: 'rook',
+		slug: 'taste',
 		n: 7,
+		title: 'Teaching Taste',
+		kicker: 'Preference learning',
+		deck: 'Some things can be checked. Most can’t. Fit a judge to nothing but which-of-these-two, watch an optimizer take it apart — then meet the one idea that stops it.',
+		minutes: 14,
+		live: true
+	},
+	{
+		slug: 'rook',
+		n: 8,
 		title: 'Rook',
 		kicker: 'Everything at once',
 		deck: 'One small language model learns chess three ways: pretrained on games, fine-tuned on better ones, then sharpened by verifiable reward. The modern pipeline, in miniature.',

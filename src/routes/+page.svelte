@@ -16,6 +16,7 @@
 		Map,
 		Mountain,
 		PenLine,
+		Scale,
 		Spline,
 		Type
 	} from 'lucide-svelte';
@@ -33,6 +34,7 @@
 		latent: Map,
 		language: Type,
 		reward: Gamepad2,
+		taste: Scale,
 		rook: Castle
 	};
 
@@ -109,7 +111,7 @@
 	id="field"
 	title="The loss landscape, live"
 	live
-	caption="Three optimizers descending the same surface, right now, on your machine. Click anywhere on the map to drop them somewhere new and watch the routes diverge — the whole of Chapter 0 is in this picture."
+	caption="Three optimizers descending the same surface, right now, on your machine. Click anywhere on the map to drop them somewhere new and watch the routes diverge — the whole of the Prologue is in this picture."
 >
 	<HeroField height={300} />
 	<p class="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 px-4 text-[12px] text-ink-3">
