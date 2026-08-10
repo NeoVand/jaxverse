@@ -1,4 +1,4 @@
-// Softmax utilities shared by the bandit and the gridworld policy.
+// Softmax utilities shared by every tabular policy in the reward chapter.
 
 import type { Rand } from './rng';
 

@@ -35,7 +35,7 @@
 			cls: 'eq-model',
 			token: '--accent',
 			role: 'learned, slot 1 — θ, w, Q',
-			tex: '\\htmlClass{eq-model}{\\theta} \\leftarrow \\htmlClass{eq-model}{\\theta} - \\htmlClass{eq-knob}{\\gamma} \\htmlClass{eq-world}{\\nabla \\mathcal{L}}'
+			tex: '\\htmlClass{eq-model}{\\theta} \\leftarrow \\htmlClass{eq-model}{\\theta} - \\htmlClass{eq-knob}{\\eta} \\htmlClass{eq-world}{\\nabla \\mathcal{L}}'
 		},
 		{
 			cls: 'eq-model-2',
@@ -64,7 +64,7 @@
 		{
 			cls: 'eq-knob',
 			token: '--cat-1',
-			role: 'set, not learned — γ, β, T',
+			role: 'set, not learned — η, γ, β, T',
 			tex: '\\htmlClass{eq-world}{G_t} = \\htmlClass{eq-world}{r_t} + \\htmlClass{eq-knob}{\\gamma}\\,\\htmlClass{eq-world}{r_{t+1}} + \\htmlClass{eq-knob}{\\gamma}^2 \\htmlClass{eq-world}{r_{t+2}} + \\cdots'
 		},
 		{

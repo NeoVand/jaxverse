@@ -12,6 +12,7 @@ import { digits } from './digits';
 import { latent } from './latent';
 import { language } from './language';
 import { reward } from './reward';
+import { taste } from './taste';
 import { rook } from './rook';
 
 export const hood: Record<string, HoodChapter> = {
@@ -23,6 +24,7 @@ export const hood: Record<string, HoodChapter> = {
 	latent,
 	language,
 	reward,
+	taste,
 	rook
 };
 

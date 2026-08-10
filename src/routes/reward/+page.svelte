@@ -1,22 +1,24 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import ChapterRef from '$lib/components/ui/ChapterRef.svelte';
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
+	import PlateRef from '$lib/components/ui/PlateRef.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import DoublePendulum from '$lib/components/demos/reward/DoublePendulum.svelte';
-	import Gridworld from '$lib/components/demos/reward/Gridworld.svelte';
 	import RlLoopDiagram from '$lib/components/demos/reward/RlLoopDiagram.svelte';
+	import SeaChart from '$lib/components/demos/reward/SeaChart.svelte';
 </script>
 
 <ChapterShell slug="reward">
 	<Prose>
 		<p>
 			Every learner in this book so far had something to copy. The classifier of
-			<a href={resolve('/digits')}>Chapter 3</a> was handed the right answer with every example; the
-			models of Chapters 4 and 5 found their answers hidden inside the data itself. This chapter
-			removes the answer entirely. An <em>agent</em> lives inside an <em>environment</em>: at each
-			moment it observes a <em>state</em>
+			<ChapterRef slug="digits" /> was handed the right answer with every example; the models of
+			<ChapterRef slug="latent" /> and <ChapterRef slug="language" /> found their answers hidden inside
+			the data itself. This chapter removes the answer entirely. An <em>agent</em> lives inside an
+			<em>environment</em>: at each moment it observes a <em>state</em>
 			<Math tex={'\\htmlClass{eq-world}{s}'} />, chooses an <em>action</em>
 			<Math tex={'\\htmlClass{eq-world}{a}'} />, and the world replies with a new state and a single
 			number <Math tex={'\\htmlClass{eq-world}{r}'} /> — the <em>reward</em>. That number is the
@@ -29,13 +31,13 @@
 
 	<Prose>
 		<p>
-			The trouble is the timing. Suppose balancing a pole takes two hundred little pushes and the
-			score arrives only as the run ends — you lasted this long, nothing more. Which of the two
-			hundred pushes was the mistake? The third, which overcorrected? The ninetieth, which drifted
-			toward the edge? This is the <em>credit assignment problem</em>, and it is the reason this
-			paradigm is hard. Supervised learning is told the right action at every step; self-supervised
-			learning finds the answer printed in the data. Here the answer exists nowhere. It has to be
-			<em>discovered</em>, by acting, and then divided fairly among the actions that led to it.
+			The trouble is the timing. Suppose reaching a harbour takes forty separate decisions and the
+			score arrives only at the end — you got there, this is what it cost. Which of the forty was
+			the mistake? The third, which pointed too high? The nineteenth, which stood on too long? This
+			is the <em>credit assignment problem</em>, and it is the reason this paradigm is hard.
+			Supervised learning is told the right action at every step; self-supervised learning finds the
+			answer printed in the data. Here the answer exists nowhere. It has to be <em>discovered</em>,
+			by acting, and then divided fairly among the actions that led to it.
 		</p>
 		<p>
 			What the agent learns is a <em>policy</em>: a rule <Math
@@ -74,41 +76,150 @@
 		/>
 		<p>
 			so an action is answerable for its whole future, near consequences weighing more than distant
-			ones. One housekeeping note: <Math tex={'\\htmlClass{eq-knob}{\\gamma}'} /> is the discount here,
-			not the learning rate — reinforcement learning claimed the letter first, so this chapter's sliders
-			say
-			<em>learning rate</em> in words.
+			ones. And here is the letter <ChapterRef slug="descent" lower /> was saving:
+			<Math tex={'\\htmlClass{eq-knob}{\\gamma}'} /> is the <em>discount</em>, and in this field it
+			never means anything else — which is exactly why the stride in every update rule in this book
+			is written
+			<Math tex={'\\htmlClass{eq-knob}{\\eta}'} />. Two knobs, two letters, and from here on they
+			sit side by side in the same equations.
+		</p>
+
+		<h2 class="h2">A harbour you cannot sail to</h2>
+		<p>
+			Now the world. It is a sea chart: fourteen cells by ten, a start, a harbour, an islet, two
+			shoals, and a wind. The boat picks one of eight compass headings each leg, and the reward is
+			simply time — every leg costs, the harbour pays, a shoal ends the passage badly.
 		</p>
 		<p>
-			Now the testbed — the classic cart-and-pole made meaner twice over: a hinge sliding on a short
-			rail, <em>two</em> pendulum links stacked on top of it, and the stack starting where gravity
-			wants it — hanging straight down. The policy must learn to <em>swing it up</em>: pump energy
-			in with rhythmic pushes, steer the top link <em>through</em> the bottom one (the hinge is all it
-			can touch), and then catch the whole thing upright, inside the ±18° cones. It reads six numbers
-			— hinge position and velocity, two angles and their velocities — through hand-crafted gauges arranged
-			as three dashboards that switch with the tip's height: swing gauges below, catch gauges on the rim,
-			hold gauges at the summit. Five pushes are available, hard or gentle, left or right, or nothing,
-			fifty times a second.
+			Two rules make this more than a maze. A sailing boat <em>cannot sail into the wind</em>: point
+			within 35° of it and the sails luff, the boat stops, and the clock keeps running. And a boat
+			is not equally quick on every heading — it is fastest with the wind on the beam, at ninety
+			degrees, slower close-hauled, and slower again running dead downwind. So the cost of a leg
+			depends on its angle to the wind, which is a real thing sailors call a polar diagram and is
+			the entire physics of this page.
 		</p>
 		<p>
-			The reward splits at the same height, and its shape is the answer to the obvious cheat. Down
-			low the policy is paid once, at the moment it <em>delivers</em> the tip past the hand-off, and
-			the prize is graded on exactly what a catcher would ask for: arrive slowly, links near
-			vertical, cart clear of the rail's ends. Up high, every calm tick inside the cones pays rent.
-			Everything else is fines — spin beyond what an honest pump needs, energy beyond what the top
-			requires, loitering against a bumper — because a stack spun like a propeller <em>looks</em>
-			upright twice per revolution, and without the fines a policy happily farms those moments forever.
-			Nothing ever fails and nothing resets: an episode is graded and moved past.
+			Look at where the harbour is: almost dead upwind of the start. There is no route that points
+			at it. Whatever the policy comes back with, it will be something nobody wrote down.
+		</p>
+	</Prose>
+
+	<SeaChart />
+
+	<UnderTheHood slug="reward" block="reinforce" />
+
+	<Prose>
+		<h2 class="h2">Reading the chart</h2>
+		<p>
+			Watch the first seconds: a small blob in every cell, near enough to a circle. That blob
+			<em>is</em> the policy. Each cell carries one <em>current rose</em> — a radius in each of the eight
+			compass directions, drawn to the probability the policy gives it — so a learner with no opinion
+			draws a circle, and a learner that has made up its mind draws a kite. The headings the wind forbids
+			are not drawn cell by cell, because they are the same in every cell: they are the shaded wedge on
+			the compass rose beside the chart, and they are the one mistake this world punishes immediately.
+			Everything else has to wait for the end of the passage to find out whether it helped.
 		</p>
 		<p>
-			One honest confession about the practice regime. Half the headless practice swings up — from
-			hanging, or from mid-tumble, so that braking a botched attempt back into a clean swing is a
-			practiced move — a quarter starts balanced to learn the hold, and a quarter
-			<em>replays the swing's own deliveries</em>, eased toward vertical at first, raw as the
-			success rate earns it. That reverse curriculum is what makes the catch learnable at all:
-			practicing what you already almost can is how the gradient stays informative. Below, the
-			policy starts as a coin flip. Press Train, watch it discover swinging, then delivering, then
-			the catch — and shove the hinge any time; knock it clean over and it will swing back up.
+			Then somewhere a wandering boat blunders into the harbour, return-to-go hands credit back down
+			the whole track, and the blobs along it stretch into kites. Within a few thousand passages the
+			field has organized into something you can read at a glance — and the shape it organizes into
+			is a
+			<strong>zigzag</strong>. To make ground upwind the boat sails as close to the wind as it can
+			on one side, then swaps to the other, then back. That is <em>tacking</em>, and it is what
+			every sailor on earth does, and nothing anywhere in the reward mentions it. It falls out of a
+			rule about what a boat can do and a number that counts time.
+		</p>
+		<p>
+			This is worth pausing on, because it is the difference between this world and a maze. In a
+			maze the best policy is the shortest path, which is the answer you already knew before the
+			learner started, so watching it arrive teaches you only that the code works. Here the best
+			policy is a manoeuvre with a name, and the learner has no idea it has a name.
+		</p>
+		<p>
+			Now spin the compass rose. The wind is the only thing that changes, and the entire field
+			reorganizes underneath a learner that never stopped running — new no-go headings go vermilion,
+			the old route stops paying, and a different zigzag grows in. Turn the wind behind the boat and
+			the zigzag vanishes altogether, because now it can simply go: the policy did not become
+			smarter, the problem became easier, and telling those two apart by looking at a reward curve
+			is most of what applied reinforcement learning actually is.
+		</p>
+
+		<h2 class="h2">Exploring, and failing to</h2>
+		<p>
+			There is no dial for exploration on this plate, and that is the point. The policy is a
+			probability distribution and never stops being one — early on it sails almost at random, which
+			is how it discovers anything at all, and even when trained every rose keeps a little width to
+			it: a sliver of belief on headings it has decided against.
+		</p>
+		<p>
+			Underneath the roses is what the learner has worked out about the water itself. The
+			<span class="num">value</span> layer draws the baseline — its running estimate of how a
+			passage tends to go from each cell — as soundings: ultramarine where a boat tends to get home
+			from, vermilion where it tends not to, and a heavier line marking the shore between them,
+			which sits exactly where the expected return crosses zero. Watch that shoreline early on and
+			you can see the harbour's influence seeping outward, one cell at a time, long before any
+			single passage looks competent. That spreading is what return-to-go <em>is</em>.
+		</p>
+		<p>
+			But a wind does something to exploration that a maze cannot, and this world had to be built
+			twice before it worked. A policy that picks headings uniformly <em>drifts downwind</em>. So a
+			harbour set to windward is not merely far, it is somewhere a random walk essentially never
+			reaches — and on some wind directions the learner never found it at all. What it found instead
+			was that sailing straight onto a shoal ended the passage for nine points, while wandering
+			until the clock ran out cost far more. So it did that. Deliberately, reliably, and with a
+			reward curve that simply flattened out and told you nothing.
+		</p>
+		<p>
+			The fix is the one <PlateRef id="pendulum" lower /> uses on a much harder problem: one passage in
+			five starts not at the mooring but at a random patch of water. Practising what you can already almost
+			do is how the gradient stays informative, and with that one change every wind direction is learnable.
+			It is worth knowing that this is not a detail of the demo. Somebody had to find that out, and the
+			only symptom was a curve that looked fine.
+		</p>
+		<p>
+			Which is also your invitation to break it. Switch on <em>edit</em> and redesign the sea under a
+			live learner: wall off the tacking corridor and watch the roses go round again before a new channel
+			carves itself; drop a shoal on the layline; drag the harbour into a corner and watch a confident
+			policy become a wanderer. Some of the worlds you build will not be learnable at all, and the plate
+			will tell you so honestly — the arrival rate falls, the dashed line stays where it is, and nothing
+			else announces the problem. The policy optimizes the reward you wrote in the world you built. Every
+			reinforcement learning system inherits both clauses.
+		</p>
+
+		<h2 class="h2">Where the real work is</h2>
+		<p>
+			The chart is small enough to see whole. Almost nothing in practice is, so here is the same
+			algorithm on something that is not: the classic cart-and-pole made meaner twice over. A hinge
+			sliding on a short rail, <em>two</em> pendulum links stacked on top of it, and the stack
+			starting where gravity wants it — hanging straight down. The policy must learn to
+			<em>swing it up</em>: pump energy in with rhythmic pushes, steer the top link
+			<em>through</em> the bottom one, and then catch the whole thing upright inside the ±18° cones. It
+			reads six numbers through hand-crafted gauges, and five pushes are available, fifty times a second.
+		</p>
+		<p>
+			Read the next two paragraphs as the honest subject of this section, because they are not
+			apparatus notes — they are what reinforcement learning is actually like once the world stops
+			fitting on a page. The update rule does not change. Everything else does.
+		</p>
+		<p>
+			The reward splits at a height, and its shape is the answer to a cheat. Down low the policy is
+			paid once, at the moment it <em>delivers</em> the tip past the hand-off, graded on exactly
+			what a catcher would ask for: arrive slowly, links near vertical, cart clear of the rail's
+			ends. Up high, every calm tick inside the cones pays rent. Everything else is fines — spin
+			beyond what an honest pump needs, energy beyond what the top requires, loitering against a
+			bumper — because a stack spun like a propeller <em>looks</em> upright twice per revolution, and
+			without the fines a policy happily farms those moments forever. Every one of those clauses is scar
+			tissue from a policy that found the loophole first.
+		</p>
+		<p>
+			And the practice regime is the chart's scatter, grown up. Half the headless practice swings up
+			— from hanging, or from mid-tumble, so that braking a botched attempt back into a clean swing
+			is a practised move — a quarter starts balanced to learn the hold, and a quarter
+			<em>replays the swing's own deliveries</em>, eased toward vertical at first and raw as the
+			success rate earns it. That reverse curriculum is what makes the catch learnable at all.
+			Below, the policy starts as a coin flip. Press Train, watch it discover swinging, then
+			delivering, then the catch — and shove the hinge any time; knock it clean over and it will
+			swing back up.
 		</p>
 	</Prose>
 
@@ -117,103 +228,44 @@
 	<UnderTheHood slug="reward" block="pendulum" />
 
 	<Prose>
-		<h2 class="h2">Reading the recovery</h2>
-		<p>
-			What changed between the flailing policy and the one that climbs? A hundred and sixty-five
-			numbers — the weights on thirty-three gauges for five pushes — nudged by REINFORCE after every
-			episode. Each push is judged by the return that followed it, minus a <em>baseline</em>: the
-			running average of how episodes usually go from that moment. The difference is called the
-			<em>advantage</em>, and it makes "good" mean <em>better than usual</em> — a push followed by
-			ten seconds of height teaches nothing once that height is normal, but the same push while the
-			stack usually dangles is news. That reward-minus-usual idea is exactly what
-			<a href={resolve('/rook')}>Chapter 7</a> will reuse on a language model, under the same name.
-		</p>
-		<p>
-			Notice, too, what exploration looks like here: there is no dial for it. The policy is a
-			probability distribution and never stops being one — early on it pushes almost at random,
-			which is how it discovers that leaning left wants a leftward push at all, and even trained it
-			keeps a sliver of probability on the losing action. And your shoves were not outside the
-			lesson: a disturbance the policy survives becomes an episode with high return, so recovering
-			from you is precisely what it was rewarded for learning. It learned feedback, not a script —
-			that is why it holds against shoves it has never seen.
-		</p>
-		<p>
-			One thing the pendulum cannot show you is the policy itself — its states are six continuous
-			numbers, and there are infinitely many of them. To look at a whole policy at once we need a
-			world small enough to draw. Below is an 8-by-6 field: a start (the small ring), a treasure ◆
-			worth +10, pits worth −8, and a tax of −0.15 on every step — walls block you, and bumping one
-			still costs. The policy is a bare table, four numbers per cell drawn as four arrows whose
-			opacity is their probability; the <em>value</em> chip overlays its baseline — the running estimate
-			of each cell's worth — as a blue wash. And it is worth saying out loud that nothing on this page
-			has touched your GPU: the policies are a few dozen numbers, the gradients a few multiplications,
-			hundreds of episodes a second in plain TypeScript. The hard part of reinforcement learning was never
-			the compute. It is the credit.
-		</p>
-		<p>
-			Press Play. The dashed line in the return chart is the best any route can do — the shortest
-			safe path, found by ordinary search — so you can see exactly how far from perfect the policy
-			is at every moment. And a warning worth experiencing on purpose: push the learning rate high
-			and the policy can seize up while still ignorant, freezing on a route to nowhere — a
-			policy-space cousin of Chapter 0's divergence. Reset θ forgives everything.
-		</p>
-	</Prose>
-
-	<Gridworld />
-
-	<UnderTheHood slug="reward" block="reinforce" />
-
-	<Prose>
-		<h2 class="h2">Reading the river</h2>
-		<p>
-			Watch the arrows in the first seconds: nearly uniform, four faint directions in every cell.
-			That haze <em>is</em> exploration — the same explore-exploit bargain the pendulum struck,
-			visible cell by cell. Then somewhere a random walk stumbles into the treasure, return-to-go
-			hands credit back down the whole path, and those arrows brighten. Runs that revisit the route
-			reinforce it. Within a few hundred episodes the gradient of <em>more</em> has carved a river through
-			the grid — and if two routes were equally short, it chose one essentially by coin flip and then
-			deepened its own channel.
-		</p>
-		<p>
-			Now read the reward like a designer. The step tax is why the river is <em>short</em>: every
-			wasted move subtracts from the very number the policy climbs. The pits teach the opposite
-			lesson: an −8 next to a corridor makes the arrows lean away from the edge like a walker
-			hugging the inside of a cliff path. And you don't have to take this on faith — flip on
-			<em>edit</em> and redesign the world under a live learner. Wall off the river mid-course and watch
-			the arrows go hazy, then carve a new channel around your wall; drop a pit on the old route; drag
-			the treasure across the map and watch a confident policy become a wanderer again. The policy optimizes
-			the reward you wrote, not the intention you had. Every reinforcement learning system inherits this
-			clause.
-		</p>
-		<p>
-			And the credit question from the opening has its answer. The nineteenth step of a fifty-step
-			episode is paid <Math tex={'\\htmlClass{eq-world}{G_{19}}'} /> — everything that happened after
-			it, discounted — minus the baseline for the cell it stood in, so its update reads:
-			<em>from here, this choice went better than usual</em>. Early steps get credit for late
-			treasure; steps before a pit get the blame; and "usual" is judged cell by cell, which is why
-			the wash under the value chip is itself a little map of hope.
-		</p>
-
 		<h2 class="h2">The same move, one more time</h2>
 		<p>
-			The table of arrows you trained is not a toy version of a policy. It <em>is</em> a policy — the
-			same mathematical object the phrase always means — and nothing in REINFORCE ever looked inside it.
-			The update touched only two things: the probability the policy assigned to an action, and the return
-			that followed. The pendulum's eighty weights sat in the same seat. Any object that can assign probabilities
+			What changed between the flailing policy and the one that climbs? A hundred and sixty-five
+			numbers, nudged by REINFORCE after every episode. Each push is judged by the return that
+			followed it, minus a <em>baseline</em>: the running average of how episodes usually go from
+			that moment. The difference is called the <em>advantage</em>, and it makes "good" mean
+			<em>better than usual</em> — a push followed by ten seconds of height teaches nothing once that
+			height is normal, but the same push while the stack usually dangles is news.
+		</p>
+		<p>
+			Notice that your shoves were never outside the lesson: a disturbance the policy survives
+			becomes an episode with high return, so recovering from you is precisely what it was rewarded
+			for learning. It learned feedback, not a script — that is why it holds against shoves it has
+			never seen.
+		</p>
+		<p>
+			And it is worth saying out loud that nothing on this page has touched your GPU. The policies
+			are a few dozen numbers, the gradients a few multiplications, hundreds of passages a second in
+			plain TypeScript. The hard part of reinforcement learning was never the compute. It is the
+			credit — and, as the chart showed you, getting the agent to stumble into anything worth
+			assigning credit for.
+		</p>
+		<p>
+			The table of roses you trained is not a toy version of a policy. It <em>is</em> a policy — the same
+			mathematical object the phrase always means — and nothing in REINFORCE ever looked inside it. The
+			update touched only two things: the probability the policy assigned to an action, and the return
+			that followed. The pendulum's weights sat in the same seat. Any object that can assign probabilities
 			and accept gradients can sit there.
 		</p>
 		<p>
 			So swap the table for a neural network. Let the state be a conversation so far, the action a
-			next token, the episode a whole reply — and let the reward be a human preference score, or a
-			checkable fact: the proof verifies, the tests pass, the answer matches. The equation at the
-			top of this chapter does not change. That is RLHF and RLVR — the techniques that turned raw
-			next-token predictors into usable assistants — and they are this gridworld wearing a language
-			model, with the baseline idea reappearing under the name <em>advantage</em>.
+			next token, the episode a whole reply. The equation at the top of this chapter does not
+			change. What does change is the hardest question in the subject, and this chapter has been
+			quietly ducking it: <em>where did the number come from?</em> A harbour is worth twelve because I
+			typed twelve. Nobody can type the number for a helpful answer, a tactful paragraph, a well-set page.
 		</p>
 		<p>
-			One chapter remains, and it is the whole pipeline at once: a small language model that learns
-			chess by prediction, then by imitation of better games, then by verifiable reward —
-			pretraining, fine-tuning, and reinforcement learning in one small machine.
-			<a href={resolve('/rook')}>Meet Rook</a>.
+			<a href={resolve('/taste')}>The next chapter</a> is what you do then — and what it costs you.
 		</p>
 	</Prose>
 </ChapterShell>

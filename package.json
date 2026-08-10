@@ -57,6 +57,7 @@
 		"@jax-js/jax": "^0.1.18",
 		"@jax-js/optax": "^0.1.2",
 		"chess.js": "^1.4.0",
+		"cm-chessboard": "^8.12.19",
 		"d3-contour": "^4.0.2",
 		"katex": "^0.18.1",
 		"lucide-svelte": "^1.0.1"

@@ -1,10 +1,10 @@
 <script lang="ts">
+	import ChapterRef from '$lib/components/ui/ChapterRef.svelte';
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
 	import SpaceLab from '$lib/components/demos/space/SpaceLab.svelte';
-	import { resolve } from '$app/paths';
 </script>
 
 <ChapterShell slug="space">
@@ -115,11 +115,11 @@
 		<p>
 			Every chapter from here is this chapter wearing different clothes. Handwritten digits live in
 			a 784-dimensional input space — one axis per pixel — and a classifier must deform
-			<em>that</em> space until ten regions come apart (<a href={resolve('/digits')}>Chapter 3</a>).
-			An autoencoder will squeeze the deformation through a two-dimensional bottleneck and hand us
-			the map to look at (<a href={resolve('/latent')}>Chapter 4</a>). Even the language model at
-			the end of the book is moving words around a space until the next token sits in a predictable
-			place. The grid you just watched bend is the only mental image you need.
+			<em>that</em> space until ten regions come apart (<ChapterRef slug="digits" />). An
+			autoencoder will squeeze the deformation through a two-dimensional bottleneck and hand us the
+			map to look at (<ChapterRef slug="latent" />). Even the language model at the end of the book
+			is moving words around a space until the next token sits in a predictable place. The grid you
+			just watched bend is the only mental image you need.
 		</p>
 	</Prose>
 </ChapterShell>

@@ -20,6 +20,7 @@ const DATA = {
 	latent: MNIST,
 	language: ['text-tokens.bin', 'text-vocab.json'],
 	reward: [],
+	taste: [],
 	rook: ['rook-tokens.bin', 'rook-vocab.json']
 };
 

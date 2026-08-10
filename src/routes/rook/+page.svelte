@@ -1,17 +1,19 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
+	import ChapterRef from '$lib/components/ui/ChapterRef.svelte';
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import PlateRef from '$lib/components/ui/PlateRef.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
+	import Vocabulary from '$lib/components/demos/rook/Vocabulary.svelte';
+	import LegalOrNot from '$lib/components/demos/rook/LegalOrNot.svelte';
 	import Pretrain from '$lib/components/demos/rook/Pretrain.svelte';
 	import PlayRook from '$lib/components/demos/rook/PlayRook.svelte';
 	import Sft from '$lib/components/demos/rook/Sft.svelte';
 	import Rlvr from '$lib/components/demos/rook/Rlvr.svelte';
 	import Arena from '$lib/components/demos/rook/Arena.svelte';
 	import { lab } from '$lib/components/demos/rook/rook-context.svelte';
-	import { resolve } from '$app/paths';
 
 	// One engine serves all four plates; the page owns its lifetime.
 	onDestroy(() => lab.dispose());
@@ -39,13 +41,24 @@
 			notation — <code>e2e4</code>, <code>g8f6</code> — is a short string, and only 1,930 distinct
 			ones ever occur in Rook's world. Add one marker token, ⟨game⟩, for “a new game begins”, and
 			you have a vocabulary of 1,931. A game is a sentence written in it. The game of
-			<a href={resolve('/language')}>Chapter 5</a> — predict the next token, score it with cross-entropy,
-			descend — carries over without changing a comma.
+			<ChapterRef slug="language" /> — predict the next token, score it with cross-entropy, descend —
+			carries over without changing a comma.
 		</p>
+	</Prose>
+
+	<Vocabulary />
+
+	<Prose>
 		<p>
 			Chess, second, because <strong>every claim is checkable</strong>. A move is legal in a
 			position or it is not, and a small library of rules (this page carries chess.js, a complete
-			referee) settles the question instantly, every time. That is what the V means in
+			referee) settles the question instantly, every time. Nothing in the vocabulary above knows
+			this: the same three tokens Rook can emit at any moment are, in one particular position, two
+			moves and one piece of nonsense.
+		</p>
+		<LegalOrNot />
+		<p>
+			That gap is what the V means in
 			<em>RLVR — reinforcement learning from verifiable rewards</em>: the judge is not anyone's
 			taste but a verifier that cannot be flattered, bribed, or fooled by confident nonsense. When
 			frontier models are trained to reason about mathematics and code, this is the same move:
@@ -123,7 +136,7 @@
 		<p>
 			Mechanically, nothing changes: the same weights, the same cross-entropy, the same update
 			<Math
-				tex={'\\htmlClass{eq-model}{\\theta} \\leftarrow \\htmlClass{eq-model}{\\theta} - \\htmlClass{eq-knob}{\\gamma} \\htmlClass{eq-world}{\\nabla \\mathcal{L}}'}
+				tex={'\\htmlClass{eq-model}{\\theta} \\leftarrow \\htmlClass{eq-model}{\\theta} - \\htmlClass{eq-knob}{\\eta} \\htmlClass{eq-world}{\\nabla \\mathcal{L}}'}
 			/> — only the corpus is now chosen on purpose. For Rook the mapping is direct. The “instruction”
 			is the game so far; the “good response” is what a competent player did next. Where a frontier lab
 			curates tens of thousands of demonstrations, we curate 2,381 games played by a greedy little bot
@@ -136,9 +149,9 @@
 			surprising to the model, and its validation loss there quietly rises. That drift is not a
 			malfunction — it is what specialization looks like from the old distribution's point of view.
 			It is also why fine-tuning is run at a smaller step size than pretraining (we ease
-			<Math tex={'\\htmlClass{eq-knob}{\\gamma}'} /> from 1.2·10⁻³ down to 3·10⁻⁴): nudge the weights
-			and the style shifts; blast them and the old competence goes too. The plate below measures both
-			sides of the trade, because a curve that only shows the win is an advertisement, not an experiment.
+			<Math tex={'\\htmlClass{eq-knob}{\\eta}'} /> from 1.2·10⁻³ down to 3·10⁻⁴): nudge the weights and
+			the style shifts; blast them and the old competence goes too. The plate below measures both sides
+			of the trade, because a curve that only shows the win is an advertisement, not an experiment.
 		</p>
 	</Prose>
 
@@ -179,7 +192,7 @@
 		/>
 		<p>
 			This <Math tex={'\\hat{A}_i'} /> is the <em>advantage</em>: how much better or worse rollout
-			<Math tex="i" /> did than its own siblings. <a href={resolve('/reward')}>Chapter 6</a>
+			<Math tex="i" /> did than its own siblings. <ChapterRef slug="reward" />
 			stabilized learning by measuring outcomes against a baseline instead of trusting raw reward; this
 			is the same idea with the scaffolding removed — <strong>the group is the baseline</strong>.
 			That trick (the heart of the GRPO family of methods) needs no second network to estimate
@@ -197,6 +210,25 @@
 			earn the same reward, the standard deviation is zero, the advantages are undefined, and the
 			step is skipped. When every answer is equally good, there is no gradient — reinforcement
 			learning learns from <em>differences</em>, and a group of equals teaches nothing.
+		</p>
+		<p>
+			Now the two things this update does <em>not</em> have, because
+			<ChapterRef slug="taste" lower /> just spent a chapter installing both, and a plate that quietly
+			omits them would be teaching you the wrong lesson. There is no importance ratio and no clip. That
+			is not a simplification — it is a consequence: we take exactly one gradient step per group of rollouts,
+			so the policy that generated the data <em>is</em> the policy being updated, every ratio is 1, and
+			a fence at 1 ± ε would never be touched. Clipping machinery is the price of reusing a batch, and
+			this loop does not reuse one. Read any paper in this family with that in hand: how much clipping
+			it carries is a direct readout of how many updates it takes per generation.
+		</p>
+		<p>
+			And there is no KL leash. A frontier run would carry one — the same
+			<Math tex={'\\htmlClass{eq-knob}{\\beta}'} /> you slid a moment ago — pinning the policy to the
+			model it started from. Here the leash's job is done by a very small step size instead, and the choice
+			was forced rather than principled: at pretraining rates this policy collapses into repeated tokens
+			within a dozen updates. That is measured, not feared. What you are watching is the cheapest thing
+			in the family that still works, and knowing exactly which safety rails have been taken off is the
+			difference between running a demo and reading one.
 		</p>
 	</Prose>
 
@@ -236,14 +268,25 @@
 			gradient did not change.
 		</p>
 		<p>
-			This is also why the verifiable domains are the ones moving fastest. A judge made of rules is
-			cheap, instant, tireless, and incorruptible — you can ask it a million times a day and it
-			never lowers its standards — while a judge made of human preference is expensive, slow, noisy,
-			and can be charmed. So coding and mathematics improve at a pace that essay-writing and advice
-			do not: the pipeline is the same, but only some subjects come with an answer key. One honest
-			caveat belongs here: a model rewarded for passing the tests will sometimes learn to game the
-			tests rather than solve the problem — <em>reward hacking</em> — and building judges that cannot
-			be fooled is a live research problem, not a solved one.
+			This is also why the verifiable domains are the ones moving fastest, and you have already felt
+			the other half of that sentence. A judge made of rules is cheap, instant, tireless, and
+			incorruptible; you can ask it a million times a day and it never lowers its standards, so no
+			curve of yours ever peaks and turns over. A judge made of taste is expensive, slow, noisy, and
+			has holes an optimizer will find. So coding and mathematics improve at a pace that
+			essay-writing and advice do not — the pipeline is identical, and only some subjects come with
+			an answer key. The caveat is that "no feelings to flatter" is not "no exploits": a model
+			rewarded for passing tests will sometimes learn to game the tests, and building verifiers that
+			cannot be lawyered is a live problem rather than a solved one.
+		</p>
+		<p>
+			There is a second consequence of grading on a curve, and it decides how a run is fed. A group
+			only teaches when its members <em>disagree</em>: all eight legal and the advantages vanish,
+			all eight hopeless and they vanish too. So a group-relative method learns only at the frontier
+			of what the model can currently almost do — which makes the difficulty distribution of your
+			data not a detail of the pipeline but arguably its most important hyperparameter. Feed it
+			problems it has already mastered and you will burn a week of compute on text that teaches
+			nothing, while the reward curve sits reassuringly pinned near the top. Neither number on your
+			dashboard will look broken.
 		</p>
 		<p>
 			And notice how the three stages fit: reinforcement could not have started from noise — a group
@@ -262,8 +305,9 @@
 		<p>
 			And that is the book. A loss surface and a step downhill; a neuron, a bump of influence; space
 			bent until classes come apart; a map that draws itself; a game of guess-the-next-word; a
-			policy learning from consequences — and here, all of it at once, teaching a pocket of numbers
-			to play chess it was never taught. None of it stayed mysterious once you could watch the
+			policy beating to windward because nobody told it it couldn't; a judge fitted to your own eye
+			and then broken by an optimizer — and here, all of it at once, teaching a pocket of numbers to
+			play chess it was never taught. None of it stayed mysterious once you could watch the
 			gradients move. That was the point.
 		</p>
 	</Prose>

@@ -3,28 +3,23 @@
 	// the real 2,600-step run, a live train button for readers who want to feel
 	// the loss move, and the chapter's honest metric: how often does a model
 	// that was only ever asked to predict-the-next-token play a LEGAL move?
-	import { Pause, Play } from 'lucide-svelte';
+	//
+	// The sample is ONE game on a board large enough to read, not three strips:
+	// pointing at any move in the sentence plays it there, so the reader can
+	// walk the model's own writing move by move and see exactly where the judge
+	// stopped believing it.
+	import { Pause, Play, Shuffle } from 'lucide-svelte';
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import { inview } from '$lib/components/ui/inview';
 	import { lab, LR_PRETRAIN } from './rook-context.svelte';
-	import {
-		replayGames,
-		snapshotGame,
-		snapCaption,
-		snapTone,
-		type BoardSnap,
-		type PlyMark
-	} from './chess-eval';
+	import { filmGame, type GameFilm } from './chess-eval';
+	import { filmView } from './film-view.svelte';
 	import Gauge from '$lib/components/ui/Gauge.svelte';
 	import MiniBoard from './MiniBoard.svelte';
+	import GameSentence from './GameSentence.svelte';
 	import BootRow from './BootRow.svelte';
 	import { sparkPath } from '$lib/viz/spark';
-
-	interface GameView {
-		snaps: BoardSnap[];
-		plies: PlyMark[];
-	}
 
 	let running = $state(false);
 	let evaling = $state(false);
@@ -32,7 +27,8 @@
 	let msPerStep = $state(0);
 	let valNow = $state<number | null>(null);
 	let legalNow = $state<number | null>(null);
-	let games = $state<GameView[]>([]);
+	/** The current sampled game, replayed ply by ply against the judge. */
+	let film = $state<GameFilm | null>(null);
 	/** Live-training histories for the telemetry strip; cleared on rewind. */
 	let lossHist = $state<number[]>([]);
 	let valHist = $state<number[]>([]);
@@ -41,8 +37,10 @@
 	const atWaypoint = $derived(lab.liveSteps === 0 && lab.stage === 'pretrained');
 	const chunkSize = 25;
 
+	const view = filmView(() => film);
+
 	// One baseline measurement after the inview boot, so the gauge and sample
-	// boards aren't blank. Guarded: once, and never mid-loop.
+	// board aren't blank. Guarded: once, and never mid-loop.
 	let baselineDone = false;
 	$effect(() => {
 		if (lab.phase === 'ready' && !baselineDone && lab.busy === '') {
@@ -51,7 +49,18 @@
 		}
 	});
 
-	/** Refresh val loss, run the legal-move probe, photograph three games. */
+	/** Draw one game from the empty board and replay it against chess.js. */
+	async function sampleFilm(myGen: number): Promise<void> {
+		if (!lab.data) return;
+		const sampled = await lab.sampleGames(1, myGen);
+		if (!sampled || myGen !== lab.gen) return;
+		const f = await filmGame(sampled[0], lab.data.decode);
+		if (myGen !== lab.gen) return;
+		film = f;
+		view.point(null);
+	}
+
+	/** Refresh val loss, run the legal-move probe, photograph one game. */
 	async function evalNow(myGen: number): Promise<void> {
 		if (!lab.engine || !lab.data) return;
 		evaling = true;
@@ -65,18 +74,23 @@
 			const rate = await lab.probeLegal(myGen);
 			if (rate === null || myGen !== lab.gen) return;
 			legalNow = rate;
-			const sampled = await lab.sampleGames(3, myGen);
-			if (!sampled || myGen !== lab.gen) return;
-			const decode = lab.data.decode;
-			const r = await replayGames(sampled, decode);
-			const views: GameView[] = [];
-			for (let i = 0; i < sampled.length; i++) {
-				views.push({ snaps: await snapshotGame(sampled[i], decode), plies: r.games[i] });
-			}
-			if (myGen !== lab.gen) return;
-			games = views;
+			await sampleFilm(myGen);
 		} catch {
 			/* interrupted mid-eval — the next owner repaints */
+		} finally {
+			evaling = false;
+		}
+	}
+
+	/** Another draw from the same weights — sampling is stochastic, and one
+	 * game is a sample of one. */
+	async function resample(): Promise<void> {
+		if (lab.phase !== 'ready' || evaling || lab.busy !== '') return;
+		evaling = true;
+		try {
+			await sampleFilm(lab.gen);
+		} catch {
+			/* interrupted — the next owner repaints */
 		} finally {
 			evaling = false;
 		}
@@ -88,7 +102,8 @@
 		await lab.loadWaypoint(step);
 		valNow = null;
 		legalNow = null;
-		games = [];
+		film = null;
+		view.point(null);
 		// the curves described weights that no longer exist — start them over
 		lossHist = [];
 		valHist = [];
@@ -127,7 +142,7 @@
 	id="pretrain"
 	live
 	title="Pretraining — predict the next move"
-	caption="The model is only ever playing predict-the-next-token, exactly as in Chapter 5 — nothing in its loss says “chess”. Legality is emerging as a side effect: the gauge asks, at 32 positions drawn from real games, whether Rook's top-choice next move is legal there — rewind to step 0 and watch it climb. Each sampled game is photographed at three moments; ✕ marks where the judge stopped believing it."
+	caption="Nothing in the loss says “chess”: the model is only playing predict-the-next-token, exactly as in the chapter on next-token prediction. Legality arrives as a side effect — the gauge asks, at 32 positions from real games, whether Rook's top-choice move is legal there; rewind to step 0 and watch it climb. Beside it is one game the model wrote, replayed against the referee: point at any move to see it played, and at the ✕ to see the board where the judge stopped believing it."
 >
 	{#snippet status()}
 		{#if lab.phase === 'ready'}
@@ -141,6 +156,11 @@
 	{/snippet}
 	{#snippet actions()}
 		{#if lab.phase === 'ready'}
+			{#if !running}
+				<Btn onclick={() => void resample()} disabled={evaling || lab.busy !== ''}>
+					<Shuffle size={12} aria-hidden="true" /> Sample
+				</Btn>
+			{/if}
 			<Btn onclick={() => void toggleTrain()}>
 				{#if running}
 					<Pause size={12} aria-hidden="true" /> Pause
@@ -153,75 +173,82 @@
 
 	<div use:inview={() => void lab.power()}>
 		{#if lab.phase === 'ready'}
-			<div class="flex flex-wrap items-center gap-x-5 gap-y-3 border-b border-line-soft px-4 py-3">
-				<span class="flex flex-wrap items-center gap-1" role="group" aria-label="Saved checkpoints">
-					<span class="eyebrow mr-1">time machine</span>
-					{#each waypoints as wp (wp.step)}
-						<button
-							class="chip num"
-							class:chip-on={atWaypoint && lab.waypointStep === wp.step}
-							onclick={() => void toWaypoint(wp.step)}
-							title="Load the step-{wp.step} checkpoint ({Math.round(wp.legalRate * 100)}% legal)"
-						>
-							step {wp.step} · {Math.round(wp.legalRate * 100)}%
-						</button>
-					{/each}
-				</span>
-			</div>
-
-			<div class="grid grid-cols-1 gap-x-8 gap-y-5 px-4 py-4 md:grid-cols-[240px_minmax(0,1fr)]">
-				<div class="flex flex-col gap-4">
-					<Gauge label="legal moves · 32 real positions" value={legalNow} />
-					<div class="num flex flex-col gap-1 text-[11.5px] text-ink-2">
-						<span>val loss (random-play corpus) · {valNow === null ? '—' : valNow.toFixed(3)}</span>
-						<span class="text-ink-3">
-							weights {lab.weightsLabel}
-							{#if evaling}· measuring…{/if}
-						</span>
-					</div>
-				</div>
-
-				<div class="flex min-w-0 flex-col gap-4">
-					<span class="eyebrow">three sampled games · temp 0.7 · its own moves as context</span>
-					{#if games.length === 0}
-						<p class="py-2 text-[12.5px] text-ink-3">
-							{evaling
-								? 'sampling — the first run also compiles the GPU kernels…'
-								: 'no samples yet'}
+			<div class="grid grid-cols-1 gap-x-7 gap-y-5 px-4 py-4 lg:grid-cols-[300px_minmax(0,1fr)]">
+				<!-- the board is the figure; its caption names what you are looking at -->
+				<div class="flex flex-col gap-1.5">
+					{#if view.shown}
+						<MiniBoard
+							fen={view.shown.fen}
+							move={view.shown.uci}
+							tone={view.tone}
+							arrow
+							showCoordinates
+							size={300}
+							label="The sampled game, {view.caption}"
+						/>
+						<p class="num text-center text-[11.5px]" style="color: {view.color};">
+							{view.caption}
+						</p>
+						<p class="text-center text-[10.5px] text-ink-3">
+							the board the move was played from — the arrow is the move
 						</p>
 					{:else}
-						{#each games as g, gi (gi)}
-							<div
-								class="flex flex-col gap-2 border-t border-line-soft pt-3 first:border-t-0 first:pt-0"
-							>
-								<div class="flex flex-wrap items-start gap-3">
-									{#each g.snaps as s (s.ply + s.kind)}
-										<MiniBoard
-											fen={s.fen}
-											move={s.uci}
-											tone={snapTone(s)}
-											caption={snapCaption(s)}
-											size={132}
-										/>
-									{/each}
-								</div>
-								<p
-									class="num flex flex-wrap gap-x-1.5 gap-y-0.5 text-[10px] leading-snug text-ink-3"
-								>
-									<span>⟨game⟩</span>
-									{#each g.plies as p, pi (pi)}
-										{#if p.legal}
-											<span>{p.uci}</span>
-										{:else}
-											<span class="text-bad" title="illegal in the position where it was played"
-												>{p.uci}✕</span
-											>
-										{/if}
-									{/each}
-								</p>
-							</div>
-						{/each}
+						<div
+							class="flex aspect-square w-[300px] max-w-full items-center justify-center rounded-[3px] border border-line-soft px-6 text-center text-[12.5px] text-ink-3"
+						>
+							{evaling
+								? 'sampling — the first run also compiles the GPU kernels…'
+								: 'no sample yet'}
+						</div>
 					{/if}
+				</div>
+
+				<!-- one panel, three groups, hairline-ruled: where the weights are,
+				     what they measure, and what they just wrote -->
+				<div class="flex min-w-0 flex-col justify-between gap-4">
+					<div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+						<span class="eyebrow">time machine</span>
+						<span
+							class="flex flex-wrap items-center gap-1"
+							role="group"
+							aria-label="Saved checkpoints"
+						>
+							{#each waypoints as wp (wp.step)}
+								<button
+									class="chip num"
+									class:chip-on={atWaypoint && lab.waypointStep === wp.step}
+									onclick={() => void toWaypoint(wp.step)}
+									title="Load the step-{wp.step} checkpoint ({Math.round(
+										wp.legalRate * 100
+									)}% legal)"
+								>
+									step {wp.step} · {Math.round(wp.legalRate * 100)}%
+								</button>
+							{/each}
+						</span>
+					</div>
+
+					<div
+						class="grid items-end gap-x-6 gap-y-2 border-t border-line-soft pt-3.5 sm:grid-cols-[minmax(0,300px)_minmax(0,1fr)]"
+					>
+						<Gauge label="legal moves · 32 real positions" value={legalNow} />
+						<div class="num flex flex-col gap-0.5 text-[11px] text-ink-3 sm:text-right">
+							<span>
+								val <span class="text-ink">{valNow === null ? '—' : valNow.toFixed(3)}</span> · held out
+							</span>
+							<span>weights {lab.weightsLabel}{evaling ? ' · measuring…' : ''}</span>
+						</div>
+					</div>
+
+					<div class="border-t border-line-soft pt-3.5">
+						{#if film}
+							<GameSentence {view} />
+						{:else}
+							<p class="text-[12px] text-ink-3">
+								{evaling ? 'sampling…' : 'the first sample arrives with the first measurement'}
+							</p>
+						{/if}
+					</div>
 				</div>
 			</div>
 

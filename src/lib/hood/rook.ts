@@ -10,7 +10,7 @@ export const rook: HoodChapter = {
 			ml: [
 				{
 					title: 'Three stages, one engine, three diets',
-					body: `Fine-tuning is not new machinery. The SFT plate swaps the token stream under the same worker — weights and Adam state untouched — and lowers the learning rate; the loop that runs afterwards is byte-for-byte the pretraining loop. That is the honest shape of the industry's pipeline, and here it is small enough to see whole: γ = 1.2·10⁻³ to pretrain, 3·10⁻⁴ to fine-tune, 10⁻⁴ to reinforce.`,
+					body: `Fine-tuning is not new machinery. The SFT plate swaps the token stream under the same worker — weights and Adam state untouched — and lowers the learning rate; the loop that runs afterwards is byte-for-byte the pretraining loop. That is the honest shape of the industry's pipeline, and here it is small enough to see whole: η = 1.2·10⁻³ to pretrain, 3·10⁻⁴ to fine-tune, 10⁻⁴ to reinforce.`,
 					code: {
 						file: 'src/lib/components/demos/rook/rook-context.svelte.ts',
 						code: `async useCorpus(which: LabCorpus): Promise<void> {

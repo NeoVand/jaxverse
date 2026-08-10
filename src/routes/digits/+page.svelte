@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ChapterRef from '$lib/components/ui/ChapterRef.svelte';
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
@@ -31,10 +32,10 @@
 			/>. Choose a loss
 			<Math tex={'\\mathcal{L}'} /> that scores how much a prediction disagrees with the attached answer.
 			Then run the only rule this book uses, <Math
-				tex={'\\htmlClass{eq-model}{\\theta} \\leftarrow \\htmlClass{eq-model}{\\theta} - \\htmlClass{eq-knob}{\\gamma} \\htmlClass{eq-world}{\\nabla \\mathcal{L}}'}
+				tex={'\\htmlClass{eq-model}{\\theta} \\leftarrow \\htmlClass{eq-model}{\\theta} - \\htmlClass{eq-knob}{\\eta} \\htmlClass{eq-world}{\\nabla \\mathcal{L}}'}
 			/>, averaged over examples. Fitting a curve was this recipe with x and y both single numbers.
-			The tangled spirals of <a href={resolve('/space')}>Chapter 2</a> were this recipe with x a point
-			on a plane. Nothing in the recipe says x must stay small.
+			The tangled spirals of <ChapterRef slug="space" /> were this recipe with x a point on a plane. Nothing
+			in the recipe says x must stay small.
 		</p>
 		<p>
 			So make x an image. MNIST is the field's old warhorse: handwritten digits scanned off forms in
@@ -43,10 +44,10 @@
 			<Math tex={'\\mathbb{R}^{784}'} />, exactly as a point on a plane was a list of two
 			coordinates. In that space, “every 7 anyone might write” is not an idea but a <em>place</em>:
 			a sprawling, tangled region, interleaved with the region of 1s and the region of 9s. The
-			classifier's job is Chapter 2's job, word for word — deform the space until the ten regions
-			come apart and flat cuts can separate them. The only thing you lose in 784 dimensions is the
-			ability to watch the bending. From here on, we judge the deformation by its consequences.
-			Before any model touches them, look at the raw material.
+			classifier's job is <ChapterRef slug="space" />'s job, word for word — deform the space until
+			the ten regions come apart and flat cuts can separate them. The only thing you lose in 784
+			dimensions is the ability to watch the bending. From here on, we judge the deformation by its
+			consequences. Before any model touches them, look at the raw material.
 		</p>
 	</Prose>
 
@@ -148,12 +149,13 @@
 		<p>
 			It is worth pausing on what the model is given, because it is not what you see. You see a 7 —
 			two strokes, a sharp corner, a thing with a top. It receives a list:
-			<code>0.00, 0.00, 0.31, 0.89, 0.94, …</code> — 784 numbers in a fixed order, and nothing else. It
-			is not told that pixel 215 sits directly above pixel 243; adjacency, stroke, corner, loop — every
-			visual notion has to be rediscovered statistically, from which brightnesses rise and fall together
-			across eight thousand examples. That “seven-ness” can be recovered from a bare list of numbers is
-			the quiet astonishment of this chapter, and the mechanism is the one you already watched: the same
-			bending of space as Chapter 2, performed in 784 dimensions instead of two.
+			<code>0.00, 0.00, 0.31, 0.89, 0.94, …</code> — 784 numbers in a fixed order, and nothing else.
+			It is not told that pixel 215 sits directly above pixel 243; adjacency, stroke, corner, loop —
+			every visual notion has to be rediscovered statistically, from which brightnesses rise and
+			fall together across eight thousand examples. That “seven-ness” can be recovered from a bare
+			list of numbers is the quiet astonishment of this chapter, and the mechanism is the one you
+			already watched: the same bending of space as <ChapterRef slug="space" />, performed in 784
+			dimensions instead of two.
 		</p>
 		<p>
 			While it trains, the two curves in the plate tell different stories. The

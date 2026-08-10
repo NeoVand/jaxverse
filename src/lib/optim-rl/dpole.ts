@@ -27,7 +27,7 @@
 
 import type { Rand } from './rng';
 import { sampleFrom, softmax } from './softmax';
-import { returnsToGo } from './gridworld';
+import { returnsToGo } from './chart';
 
 export const GRAVITY = 9.8;
 export const HINGE_MASS = 1.0; // the sliding dot

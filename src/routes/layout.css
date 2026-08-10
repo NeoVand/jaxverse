@@ -28,6 +28,16 @@
 	/* the figure surface — one step off the paper, recessed in light */
 	--band: #f6f4ec;
 
+	/* The chess set. The PIECES never change — a black bishop is black in any
+	   light — but the board is furniture, and dark mode gives it dark wood.
+	   Staunty's black pieces carry a white highlight at 25%, which is what keeps
+	   them readable once the squares go under them. */
+	--sq-light: #e9e1cf;
+	--sq-dark: #b8a887;
+	--sq-coord: #8d7f65;
+	/* markers have to survive on both woods */
+	--sq-wash: 0.34;
+
 	/* ink */
 	--ink: #1d1c18;
 	--ink-2: #605d54;
@@ -96,6 +106,11 @@
 
 		--band: #1a1915;
 
+		--sq-light: #625b4e;
+		--sq-dark: #3e382e;
+		--sq-coord: #8a7f6d;
+		--sq-wash: 0.44;
+
 		--ink: #e9e6dc;
 		--ink-2: #a29e91;
 		--ink-3: #6c695e;
@@ -134,6 +149,11 @@
 	--line-soft: #23211b;
 
 	--band: #1a1915;
+
+	--sq-light: #625b4e;
+	--sq-dark: #3e382e;
+	--sq-coord: #8a7f6d;
+	--sq-wash: 0.44;
 
 	--ink: #e9e6dc;
 	--ink-2: #a29e91;
@@ -481,6 +501,151 @@ body {
 }
 .btn-solid:hover {
 	opacity: 0.88;
+}
+
+/* ── the chessboard ───────────────────────────────────────────────────────
+   The Rook chapter draws its boards with cm-chessboard (SVG, Staunty pieces). This
+   block replaces the library's shipped stylesheet entirely: the structural
+   rules it needs, then one theme — `jaxverse` — built from the book's tokens,
+   so every board follows light/dark like everything else. Square colours are
+   the one place a hue is named rather than borrowed: a chess set is a physical
+   object with its own wood, and the pieces have to read on both shades. */
+
+.cm-chessboard .coordinates,
+.cm-chessboard .markers-layer,
+.cm-chessboard .pieces-layer,
+.cm-chessboard .markers-top-layer {
+	pointer-events: none;
+}
+.cm-chessboard .board.input-enabled .square {
+	cursor: pointer;
+}
+.cm-chessboard-accessibility.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}
+
+.cm-chessboard.jaxverse .board .square.white {
+	fill: var(--sq-light);
+}
+.cm-chessboard.jaxverse .board .square.black {
+	fill: var(--sq-dark);
+}
+.cm-chessboard.jaxverse .board .border {
+	fill: var(--sq-dark);
+	stroke-width: 0;
+}
+.cm-chessboard.jaxverse .coordinates .coordinate {
+	font-family: var(--font-mono);
+	font-size: 6.5px;
+	fill: var(--sq-coord);
+}
+
+/* markers: the book's own vocabulary, painted by ChessBoard.svelte */
+.cm-chessboard .markers .jx-wash {
+	opacity: var(--sq-wash);
+}
+.cm-chessboard .markers .jx-wash.jx-accent {
+	fill: var(--accent);
+}
+.cm-chessboard .markers .jx-wash.jx-warm {
+	fill: var(--warm);
+}
+.cm-chessboard .markers .jx-wash.jx-bad {
+	fill: var(--bad);
+}
+.cm-chessboard .markers .jx-wash.jx-good {
+	fill: var(--good);
+}
+.cm-chessboard .markers .jx-wash.jx-violet {
+	fill: var(--cat-8);
+}
+.cm-chessboard .markers .jx-check {
+	fill: var(--bad);
+	opacity: 0.42;
+}
+.cm-chessboard .markers .jx-selected {
+	stroke: var(--accent);
+	stroke-width: 2.2px;
+	opacity: 0.9;
+}
+/* Keyboard players get the book's focus language, not the library's blue —
+   and only they get it: the library shows the cursor on any focus, which after
+   a mouse click leaves a ring parked on a1 for the rest of the game. */
+.cm-chessboard:not(:focus-visible) .keyboard-focus-indicator {
+	display: none;
+}
+.cm-chessboard .keyboard-focus-indicator .keyboard-focus {
+	fill: none;
+	stroke: var(--accent);
+	stroke-width: 2.5px;
+	pointer-events: none;
+}
+.cm-chessboard .keyboard-focus-indicator .keyboard-from-square {
+	fill: color-mix(in srgb, var(--accent) 28%, transparent);
+	stroke: var(--accent);
+	stroke-width: 2px;
+	pointer-events: none;
+}
+.cm-chessboard:focus {
+	outline: none;
+}
+.cm-chessboard:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+/* the legal-move markers the board draws itself while a piece is lifted */
+.cm-chessboard .markers .marker-dot {
+	fill: var(--accent);
+	opacity: 0.4;
+}
+.cm-chessboard .markers .marker-bevel {
+	fill: var(--accent);
+	opacity: 0.34;
+}
+
+/* arrows */
+.cm-chessboard .arrow .arrow-line {
+	stroke-linecap: round;
+	opacity: 0.72;
+}
+.cm-chessboard .arrow.jx-accent .arrow-line {
+	stroke: var(--accent);
+}
+.cm-chessboard .arrow.jx-accent .arrow-head {
+	fill: var(--accent);
+}
+.cm-chessboard .arrow.jx-warm .arrow-line {
+	stroke: var(--warm);
+}
+.cm-chessboard .arrow.jx-warm .arrow-head {
+	fill: var(--warm);
+}
+.cm-chessboard .arrow.jx-bad .arrow-line {
+	stroke: var(--bad);
+}
+.cm-chessboard .arrow.jx-bad .arrow-head {
+	fill: var(--bad);
+}
+.cm-chessboard .arrow.jx-good .arrow-line {
+	stroke: var(--good);
+}
+.cm-chessboard .arrow.jx-good .arrow-head {
+	fill: var(--good);
+}
+.cm-chessboard .arrow.jx-violet .arrow-line {
+	stroke: var(--cat-8);
+}
+.cm-chessboard .arrow.jx-violet .arrow-head {
+	fill: var(--cat-8);
 }
 
 /* ── the color constitution ───────────────────────────────────────────────
