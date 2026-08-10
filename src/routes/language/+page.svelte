@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
 	import { resolve } from '$app/paths';
+	import ChapterRef from '$lib/components/ui/ChapterRef.svelte';
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
@@ -155,13 +156,12 @@
 			position. Answer the small question well and the identity hands you everything else.
 		</p>
 		<p>
-			And the answers cost nothing to grade. In <a href={resolve('/digits')}>Chapter 3</a> every
-			training example needed a person to write down the answer — ten thousand digits, ten thousand
-			labels. Here the label is the text itself: the covered token was there all along, put down for
-			free by whoever wrote the sentence. Every position in every sentence is a graded exercise that
-			nobody had to grade. This is <em>self-supervised learning</em>, and the zero price of its
-			labels is precisely why it scales to the whole internet while hand-labeled datasets stall at
-			millions.
+			And the answers cost nothing to grade. In <ChapterRef slug="digits" /> every training example needed
+			a person to write down the answer — ten thousand digits, ten thousand labels. Here the label is
+			the text itself: the covered token was there all along, put down for free by whoever wrote the sentence.
+			Every position in every sentence is a graded exercise that nobody had to grade. This is
+			<em>self-supervised learning</em>, and the zero price of its labels is precisely why it scales
+			to the whole internet while hand-labeled datasets stall at millions.
 		</p>
 		<p>
 			Training scores each answer by the probability the model gave to the token that actually came;
@@ -297,8 +297,8 @@
 			enforced as arithmetic: <Math tex={'e^{-\\infty} = 0'} />, so a future token gets exactly
 			nothing, not merely little. Then
 			<Math tex={'\\htmlClass{eq-op}{\\operatorname{softmax}}'} /> — the same machine that turned scores
-			into beliefs in <a href={resolve('/digits')}>Chapter 3</a> — runs along each row and turns it
-			into a budget of exactly 1.0. And multiplying by
+			into beliefs in <ChapterRef slug="digits" /> — runs along each row and turns it into a budget of
+			exactly 1.0. And multiplying by
 			<Math tex={'\\htmlClass{eq-model-3}{V}'} /> spends the budget: each token's output is a weighted
 			blend of what earlier tokens offered to pass along.
 		</p>
@@ -332,7 +332,7 @@
 		<p>
 			Everything in this chapter scales without changing shape. Take the scribe's loss, its update
 			rule <Math
-				tex={'\\htmlClass{eq-model}{\\theta} \\leftarrow \\htmlClass{eq-model}{\\theta} - \\htmlClass{eq-knob}{\\gamma} \\htmlClass{eq-world}{\\nabla_\\theta \\mathcal{L}}'}
+				tex={'\\htmlClass{eq-model}{\\theta} \\leftarrow \\htmlClass{eq-model}{\\theta} - \\htmlClass{eq-knob}{\\eta} \\htmlClass{eq-world}{\\nabla_\\theta \\mathcal{L}}'}
 			/>, the five stages you just walked; multiply the parameters by a few million, the corpus by a
 			billion, and the training run by months on thousands of GPUs — and you have the large language
 			models everyone talks to. They descend the same cross-entropy on the same next-token game, and

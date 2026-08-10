@@ -26,7 +26,7 @@ export const language: HoodChapter = {
 				},
 				{
 					title: 'The loss is cross-entropy over the next token',
-					body: `Chapter 3's loss returns with a bigger alphabet: at every position, the target is one-hot over the vocabulary and the loss selects the log-probability the model gave the true next token. One implementation note worth stealing: tokens go in as one-hot matrices multiplied against the embedding table, rather than indexed lookups — a matmul differentiates cleanly everywhere, which keeps the whole model on the fast path.`,
+					body: `The digit classifier's loss returns with a bigger alphabet: at every position, the target is one-hot over the vocabulary and the loss selects the log-probability the model gave the true next token. One implementation note worth stealing: tokens go in as one-hot matrices multiplied against the embedding table, rather than indexed lookups — a matmul differentiates cleanly everywhere, which keeps the whole model on the fast path.`,
 					code: {
 						file: 'src/lib/llm/model.ts',
 						code: `export function lossFn(params, cfg, tokenOH, posOH, targetOH) {

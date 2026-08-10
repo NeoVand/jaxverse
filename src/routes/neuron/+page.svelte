@@ -113,7 +113,7 @@
 			Now give the knobs away. The workshop below holds a whole network and trains it live, in a
 			worker beside this page, by the only rule this book uses —
 			<Math
-				tex={'\\htmlClass{eq-model}{\\theta} \\leftarrow \\htmlClass{eq-model}{\\theta} - \\htmlClass{eq-knob}{\\gamma} \\htmlClass{eq-world}{\\nabla \\mathcal{L}}'}
+				tex={'\\htmlClass{eq-model}{\\theta} \\leftarrow \\htmlClass{eq-model}{\\theta} - \\htmlClass{eq-knob}{\\eta} \\htmlClass{eq-world}{\\nabla \\mathcal{L}}'}
 			/> — with the loss set to the <em>mean-squared error</em>, the average of <Math
 				tex={'(f(\\htmlClass{eq-world}{x}) - \\htmlClass{eq-world}{y})^2'}
 			/> over the training points. Every step pulls the network’s curve a little closer to a target.
