@@ -40,6 +40,15 @@
 				the engine under every live plate here.
 			</li>
 			<li>
+				<a href="https://github.com/shaack/cm-chessboard" rel="external">cm-chessboard</a>
+				by Stefan Haack (MIT) — every board in <em>Everything at Once</em>, wearing the
+				<a
+					href="https://github.com/lichess-org/lila/tree/master/public/piece/staunty"
+					rel="external">Staunty</a
+				> pieces from lichess (CC BY-NC-SA 4.0), with the black set darkened here so it reads on this
+				book's board.
+			</li>
+			<li>
 				Kenneth Li et&nbsp;al., <em>Emergent World Representations</em> (Othello-GPT) and Adam Karvonen’s
 				chess-GPT work — the lineage Rook belongs to: small game-playing transformers that were never
 				shown a board and turn out to carry one anyway.

@@ -11,7 +11,13 @@
 	import { progress } from '$lib/data/progress.svelte';
 	import { plateLabel } from '$lib/data/plates';
 	import { lab, LR_RL } from './rook-context.svelte';
-	import { pickPrefix, scoreRollout, type BoardSnap, type RolloutPly } from './chess-eval';
+	import {
+		pickPrefix,
+		positionAfter,
+		scoreRollout,
+		type BoardSnap,
+		type RolloutPly
+	} from './chess-eval';
 	import { polyline, scale } from './chart';
 	import MiniBoard from './MiniBoard.svelte';
 	import BootRow from './BootRow.svelte';
@@ -36,6 +42,10 @@
 	let compiling = $state(false);
 	let skippedLast = $state(false);
 	let prefixShown = $state<string[]>([]);
+	/** The position all eight rollouts start from — the board's resting state. */
+	let prefixFen = $state('');
+	/** Which rollout the reader is pointing at; null shows the shared position. */
+	let hovered = $state<number | null>(null);
 	let group = $state<GroupRow[]>([]);
 	let meanPts = $state<Array<{ it: number; v: number }>>([]);
 	let legalPts = $state<Array<{ it: number; v: number }>>([]);
@@ -65,6 +75,8 @@
 			group = [];
 			skippedLast = false;
 			prefixShown = [];
+			prefixFen = '';
+			hovered = null;
 		}
 		errMsg = '';
 		running = true;
@@ -114,6 +126,9 @@
 
 		iter++;
 		prefixShown = prefixUci;
+		prefixFen = await positionAfter(prefixUci);
+		if (g !== lab.gen) return;
+		hovered = null;
 		meanPts = [...meanPts.slice(-249), { it: iter, v: mean }];
 
 		// 4 — group-relative advantages; equal rewards mean no gradient, honestly
@@ -176,32 +191,42 @@
 		}
 	}
 
-	/** Board caption for a rollout card. */
-	function rolloutCaption(row: GroupRow): string {
-		if (row.snap.kind === 'illegal') return `ply ${row.snap.ply} ✕ ${row.snap.uci}`;
-		if (row.attempted === 0) return 'ended immediately';
-		return `held all ${row.attempted}`;
-	}
+	// Ranked by what the judge paid, best first: the group IS the baseline, so
+	// sorting makes the line between positive and negative advantage visible as
+	// a line rather than as eight scattered signs.
+	const ranked = $derived(
+		group.map((r, i) => ({ ...r, n: i + 1 })).sort((a, b) => b.reward - a.reward)
+	);
+	/** First row the group's own mean rejects — the baseline, drawn where it falls. */
+	const cutIndex = $derived(ranked.findIndex((r) => r.adv !== null && r.adv < 0));
 
-	// ── chart geometry ──
-	const W = 560;
-	const H = 170;
-	const PAD = { l: 34, r: 10, t: 10, b: 20 };
-	const chart = $derived.by(() => {
-		if (meanPts.length === 0) return null;
-		const maxIt = Math.max(30, iter);
-		const minIt = meanPts[0].it;
-		const x = scale(minIt, maxIt, PAD.l, W - PAD.r);
-		const y = scale(0, 1.5, H - PAD.b, PAD.t);
-		return {
-			x,
-			y,
-			meanPath: polyline(meanPts.map((p) => [x(p.it), y(p.v)])),
-			legalPath: polyline(legalPts.map((p) => [x(p.it), y(p.v)])),
-			legalDots: legalPts.map((p) => ({ px: x(p.it), py: y(p.v) })),
-			ticks: [0, 0.5, 1.0, 1.5].map((v) => ({ v, py: y(v) }))
-		};
+	const shown = $derived(hovered === null ? null : (ranked.find((r) => r.n === hovered) ?? null));
+	const boardFen = $derived(shown ? shown.snap.fen : prefixFen);
+	const boardMove = $derived(shown ? shown.snap.uci : '');
+	const boardTone = $derived(shown?.snap.kind === 'illegal' ? 'bad' : 'accent');
+	const boardCaption = $derived.by(() => {
+		if (!shown) return prefixFen ? 'the position all eight start from' : '';
+		if (shown.snap.kind === 'illegal')
+			return `rollout ${shown.n} · ply ${shown.snap.ply} ✕ ${shown.snap.uci}`;
+		if (shown.attempted === 0) return `rollout ${shown.n} · ended immediately`;
+		return `rollout ${shown.n} · held all ${shown.attempted}`;
 	});
+
+	// ── chart geometry. W is close to the panel's real width so the SVG scales
+	//    ~1:1 and its 10px labels stay 10px — no preserveAspectRatio stretching ──
+	const W = 370;
+	const H = 240;
+	const PAD = { l: 30, r: 6, t: 10, b: 20 };
+	const TICKS = [0, 0.5, 1.0, 1.5];
+	// the x domain grows in coarse steps, so the series does not re-scale under
+	// the reader on every iteration
+	const maxIt = $derived(Math.max(30, Math.ceil(iter / 30) * 30));
+	const minIt = $derived(meanPts.length ? meanPts[0].it : 0);
+	const x = $derived(scale(minIt, maxIt, PAD.l, W - PAD.r));
+	const y = $derived(scale(0, 1.5, H - PAD.b, PAD.t));
+	const meanPath = $derived(polyline(meanPts.map((p) => [x(p.it), y(p.v)])));
+	const legalPath = $derived(polyline(legalPts.map((p) => [x(p.it), y(p.v)])));
+	const legalDots = $derived(legalPts.map((p) => ({ px: x(p.it), py: y(p.v) })));
 	const meanNow = $derived(meanPts.length ? meanPts[meanPts.length - 1].v : null);
 	const legalNow = $derived(legalPts.length ? legalPts[legalPts.length - 1].v : null);
 </script>
@@ -210,7 +235,7 @@
 	id="rlvr"
 	live
 	title="RLVR — reinforcement from a judge"
-	caption="No example ever said “this move is good”. A verifier said “this rollout held up longer”, the group's average set the bar, and the gradient did the rest. Each rollout's card shows the board where the judge stopped it — or the position it held to the end. This loop — sample, verify, standardize, reinforce — is a small, honest cousin of how frontier models learn to reason."
+	caption="No example ever said “this move is good”. A verifier said “this rollout held up longer”, the group's own average set the bar, and the gradient did the rest — which is why the eight are ranked here with that average drawn as a line: everything above it gets reinforced, everything below it discouraged. Point at any rollout to see the board where the judge stopped it. Sample, verify, standardize, reinforce: a small, honest cousin of how frontier models learn to reason."
 >
 	{#snippet status()}
 		{#if lab.phase === 'ready'}
@@ -238,179 +263,284 @@
 				<div class="border-b border-line-soft px-4 py-2 text-[12px] text-bad">{errMsg}</div>
 			{/if}
 
-			<div class="grid grid-cols-1 gap-x-8 gap-y-5 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_230px]">
-				<div class="min-w-0">
-					{#if chart}
-						<svg
-							viewBox="0 0 {W} {H}"
-							preserveAspectRatio="none"
-							class="h-42 w-full"
-							role="img"
-							aria-label="Mean reward per iteration and the legal-move probe"
+			<!-- one row, three roughly square cells: the position, the group graded
+			     against it, and the run so far. Pointing at a rollout in the middle
+			     cell paints the cell to its left. -->
+			<div class="grid px-4 pt-1 pb-2 lg:grid-cols-[300px_minmax(0,1fr)_minmax(0,1fr)]">
+				<section class="col lg:pr-6">
+					{#if boardFen}
+						<MiniBoard
+							fen={boardFen}
+							move={boardMove}
+							tone={boardTone}
+							arrow={!!boardMove}
+							showCoordinates
+							size={300}
+							label={boardCaption}
+						/>
+						<p
+							class="num text-center text-[11.5px]"
+							style="color: {shown?.snap.kind === 'illegal' ? 'var(--bad)' : 'var(--ink-2)'};"
 						>
-							{#each chart.ticks as t (t.v)}
-								<line
-									x1={PAD.l}
-									x2={W - PAD.r}
-									y1={t.py}
-									y2={t.py}
-									stroke="var(--line-soft)"
-									stroke-width="1"
-									stroke-dasharray={t.v === 1 ? '3 4' : undefined}
-								/>
-								<text
-									x={PAD.l - 6}
-									y={t.py + 3}
-									text-anchor="end"
-									class="num"
-									font-size="10"
-									fill="var(--ink-3)">{t.v.toFixed(1)}</text
-								>
-							{/each}
-							<path d={chart.meanPath} fill="none" stroke="var(--warm)" stroke-width="1.6" />
-							{#if legalPts.length > 1}
-								<path d={chart.legalPath} fill="none" stroke="var(--accent)" stroke-width="1.4" />
-							{/if}
-							{#each chart.legalDots as p, i (i)}
-								<circle cx={p.px} cy={p.py} r="2.6" fill="var(--accent)" />
-							{/each}
-							<text x={PAD.l} y={H - 6} class="num" font-size="10" fill="var(--ink-3)"
-								>iterations →</text
-							>
-						</svg>
-						<p class="num mt-1 text-[11px] text-ink-3">
-							<span style="color: var(--warm);">●</span> mean reward of the group (max 1.5) ·
-							<span style="color: var(--accent);">●</span> legal-move probe (32 real positions), every
-							5 iterations
+							{boardCaption}
 						</p>
 					{:else}
-						<div class="flex h-40 items-center justify-center">
-							<p class="max-w-md text-center text-[12.5px] text-ink-3">
-								Press run. Fifty-odd iterations usually show the climb: the legal-move probe pushes
-								past 95%, and the group's mean reward drifts up as more rollouts survive the judge.
-							</p>
+						<div
+							class="flex aspect-square w-[300px] max-w-full items-center justify-center rounded-[3px] border border-line-soft px-6 text-center text-[12.5px] text-ink-3"
+						>
+							{compiling ? 'compiling the group-sampling kernels…' : 'press Run RLVR'}
 						</div>
 					{/if}
-				</div>
-
-				<div class="num flex flex-col gap-2 text-[11.5px] text-ink-2">
-					<span class="eyebrow">now</span>
-					<span>iteration · {iter}</span>
-					<span>mean reward · {meanNow === null ? '—' : meanNow.toFixed(2)}</span>
-					<span
-						>legal-move probe · {legalNow === null ? '—' : `${(legalNow * 100).toFixed(0)}%`}</span
-					>
-					<span>policy updates · {updates}</span>
-					<span>skipped (no gradient) · {skips}</span>
-					{#if reached}
-						<span class="mt-1 font-serif text-[13px] italic" style="color: var(--good);">
-							the judge is running out of complaints
-						</span>
-					{/if}
-					{#if iter > 0}
-						<a
-							href="#rook-play"
-							class="mt-1 inline-flex items-center gap-1.5 text-[11.5px] underline decoration-dotted underline-offset-4 hover:text-ink"
-						>
-							<ArrowUp size={11} aria-hidden="true" /> play the reinforced Rook — {plateLabel(
-								'rook',
-								'play'
-							)} always plays the current weights
-						</a>
-					{/if}
-				</div>
-			</div>
-
-			<div class="border-t border-line-soft px-4 py-4">
-				<div class="flex flex-wrap items-baseline justify-between gap-2">
-					<span class="eyebrow">group inspector — 8 rollouts of one position</span>
-					{#if prefixShown.length > 0}
-						<span class="num text-[10.5px] text-ink-3">prefix: ⟨game⟩ {prefixShown.join(' ')}</span>
-					{/if}
-				</div>
-
-				{#if skippedLast}
-					<div
-						class="mt-2 rounded-md border border-line-soft bg-surface-2 px-3 py-2 text-[12px] text-ink-2"
-					>
-						All eight rollouts earned the same reward, so the group baseline leaves nothing to
-						prefer — the standard deviation is zero and the step is skipped. When every answer is
-						equally good, there is no gradient. A lesson, not a bug.
+					<div class="mt-auto min-h-[3rem]">
+						{#if shown}
+							<p class="num flex flex-wrap gap-x-1.5 gap-y-0.5 text-[10px] leading-snug text-ink-3">
+								{#each shown.plies as p, pi (pi)}
+									<span
+										class:text-bad={p.state === 'illegal'}
+										class:text-ink-2={p.state === 'legal'}
+										>{p.uci}{#if p.state === 'illegal'}✕{/if}</span
+									>
+								{:else}
+									<span>it ended the game immediately</span>
+								{/each}
+							</p>
+						{:else if prefixShown.length > 0}
+							<p class="num flex flex-wrap gap-x-1.5 gap-y-0.5 text-[10px] leading-snug text-ink-3">
+								<span class="text-ink-2">⟨game⟩</span>
+								{#each prefixShown as u, i (i)}
+									<span>{u}</span>
+								{/each}
+							</p>
+						{/if}
 					</div>
-				{/if}
+				</section>
 
-				{#if group.length > 0}
-					<div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-						{#each group as row, i (i)}
-							<div class="flex gap-3 rounded-md border border-line-soft p-2.5">
-								<MiniBoard
-									fen={row.snap.fen}
-									move={row.snap.uci}
-									tone={row.snap.kind === 'illegal' ? 'bad' : 'accent'}
-									caption={rolloutCaption(row)}
-									size={118}
-								/>
-								<div class="flex min-w-0 flex-1 flex-col gap-1.5">
-									<div class="flex items-center justify-between gap-2">
-										<span class="num text-[10.5px] text-ink-3">rollout {i + 1}</span>
-										{#if row.adv === null}
-											<span class="num text-[11px] text-ink-3">Â —</span>
-										{:else}
-											<span
-												class="num inline-block rounded px-1.5 py-0.5 text-[10.5px]"
-												style="color: {row.adv >= 0
-													? 'var(--good)'
-													: 'var(--bad)'}; background: color-mix(in srgb, {row.adv >= 0
-													? 'var(--good)'
-													: 'var(--bad)'} 10%, transparent);"
-											>
-												Â {row.adv >= 0 ? '+' : '−'}{Math.abs(row.adv).toFixed(2)}
-											</span>
-										{/if}
-									</div>
-									<p class="num min-w-0 text-[10.5px] leading-snug break-words text-ink-2">
-										{#each row.plies as p, pi (pi)}
-											<span
-												class="mr-1"
-												class:text-bad={p.state === 'illegal'}
-												class:text-ink-3={p.state === 'unchecked'}
-												>{p.uci}{#if p.state === 'illegal'}✕{/if}</span
-											>
-										{:else}
-											<span class="text-ink-3">(ended the game immediately)</span>
-										{/each}
-									</p>
-									<div class="mt-auto flex items-center gap-2">
-										<span class="num w-10 shrink-0 text-[10.5px] text-ink-2"
-											>{row.legalPlies}/{row.attempted}</span
-										>
-										<span class="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-surface-2">
-											<span
-												class="block h-full rounded-full"
-												style="width: {((row.reward / 1.5) * 100).toFixed(
-													0
-												)}%; background: var(--accent);"
-											></span>
-										</span>
-										<span class="num w-9 shrink-0 text-right text-[10.5px]"
-											>{row.reward.toFixed(2)}</span
-										>
-									</div>
+				<section class="col lg:border-l lg:px-6">
+					<div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+						<span class="eyebrow">the group · 8 rollouts</span>
+						{#if ranked.length > 0}
+							<span class="num text-[10px] text-ink-3">point at one</span>
+						{/if}
+					</div>
+					<div>
+						{#each ranked as r, i (r.n)}
+							{#if i === cutIndex && cutIndex > 0}
+								<div class="baseline-rule">
+									<span class="num">the group's own mean — the baseline</span>
 								</div>
-							</div>
+							{/if}
+							<button
+								type="button"
+								class="roll"
+								class:on={hovered === r.n}
+								onmouseenter={() => (hovered = r.n)}
+								onmouseleave={() => (hovered = null)}
+								onfocus={() => (hovered = r.n)}
+								onblur={() => (hovered = null)}
+							>
+								<span class="num text-ink-3">{r.n}</span>
+								<span class="num text-ink-2">{r.legalPlies}/{r.attempted}</span>
+								<span class="track">
+									<span
+										class="fill"
+										style="width: {((r.reward / 1.5) * 100).toFixed(0)}%; background: var(--warm);"
+									></span>
+								</span>
+								<span class="num text-right text-ink">{r.reward.toFixed(2)}</span>
+								{#if r.adv === null}
+									<span class="num text-right text-ink-3">—</span>
+								{:else}
+									<span
+										class="num text-right"
+										style="color: {r.adv >= 0 ? 'var(--good)' : 'var(--bad)'};"
+									>
+										{r.adv >= 0 ? '+' : '−'}{Math.abs(r.adv).toFixed(2)}
+									</span>
+								{/if}
+							</button>
+						{:else}
+							<!-- the shape the group will take, so pressing Run fills a table that
+							     is already there instead of growing one -->
+							{#each Array.from({ length: 8 }, (_, k) => k) as k (k)}
+								<div class="roll" style="opacity: 0.35;">
+									<span class="num text-ink-3">{k + 1}</span>
+									<span class="num text-ink-3">—/14</span>
+									<span class="track"></span>
+									<span class="num text-right text-ink-3">—</span>
+									<span class="num text-right text-ink-3">—</span>
+								</div>
+							{/each}
 						{/each}
 					</div>
-					<p class="num mt-2 text-[10.5px] text-ink-3">
-						each card: the board where the rollout broke (✕, washed red) or its final held position
-						· plies · legal / attempted · reward bar · advantage Â (greyed moves came after the
-						first illegal one — unverifiable, not scored)
+					<p class="mt-auto text-[10.5px] leading-snug text-ink-3">
+						{#if ranked.length === 0}
+							{compiling
+								? 'compiling the group-sampling kernels…'
+								: 'press Run RLVR — eight rollouts of one position, graded and ranked here'}
+						{:else}
+							rollout · legal / attempted · reward, max 1.5 · advantage Â against the group's mean
+						{/if}
 					</p>
-				{:else}
-					<p class="mt-2 text-[12.5px] text-ink-3">The first group will appear here.</p>
-				{/if}
+				</section>
+
+				<section class="col lg:border-l lg:pl-6">
+					<span class="eyebrow">the run so far</span>
+					<svg
+						viewBox="0 0 {W} {H}"
+						class="block w-full"
+						role="img"
+						aria-label="Mean reward of each group per iteration, and the legal-move probe every five iterations"
+					>
+						{#each TICKS as t (t)}
+							<line
+								x1={PAD.l}
+								x2={W - PAD.r}
+								y1={y(t)}
+								y2={y(t)}
+								stroke="var(--line-soft)"
+								stroke-width="1"
+								stroke-dasharray={t === 1 ? '3 4' : undefined}
+							/>
+							<text
+								x={PAD.l - 6}
+								y={y(t) + 3}
+								text-anchor="end"
+								class="num tick"
+								fill="var(--ink-3)">{t.toFixed(1)}</text
+							>
+						{/each}
+						{#if meanPts.length > 0}
+							<path d={meanPath} fill="none" stroke="var(--warm)" stroke-width="1.6" />
+						{/if}
+						{#if legalPts.length > 1}
+							<path d={legalPath} fill="none" stroke="var(--accent)" stroke-width="1.4" />
+						{/if}
+						{#each legalDots as p, i (i)}
+							<circle cx={p.px} cy={p.py} r="2.2" fill="var(--accent)" />
+						{/each}
+						<text x={PAD.l} y={H - 5} class="num tick" fill="var(--ink-3)">
+							{meanPts.length > 1 ? 'iterations →' : 'press Run RLVR'}
+						</text>
+					</svg>
+					<p class="num flex flex-col gap-0.5 text-[10px] text-ink-3">
+						<span
+							><span style="color: var(--warm);">●</span> mean reward of the group · max 1.5</span
+						>
+						<span
+							><span style="color: var(--accent);">●</span> legal-move probe · every 5 iterations</span
+						>
+					</p>
+
+					<div class="mt-auto flex flex-col gap-2 border-t border-line-soft pt-3">
+						<p class="num flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-ink-3">
+							<span>iter <span class="text-ink">{iter}</span></span>
+							<span
+								>reward <span class="text-ink">{meanNow === null ? '—' : meanNow.toFixed(2)}</span
+								></span
+							>
+							<span
+								>legal <span class="text-ink"
+									>{legalNow === null ? '—' : `${(legalNow * 100).toFixed(0)}%`}</span
+								></span
+							>
+							<span>updates <span class="text-ink">{updates}</span></span>
+							<span>skipped <span class="text-ink">{skips}</span></span>
+						</p>
+						{#if skippedLast}
+							<p class="text-[11px] leading-relaxed text-ink-2">
+								All eight earned the same reward: the standard deviation is zero, the advantages are
+								undefined and the step is skipped. When every answer is equally good there is no
+								gradient. A lesson, not a bug.
+							</p>
+						{:else if reached}
+							<p class="font-serif text-[12.5px] italic" style="color: var(--good);">
+								The judge is running out of complaints.
+								<a
+									href="#rook-play"
+									class="not-italic underline decoration-dotted underline-offset-4"
+								>
+									<ArrowUp size={11} aria-hidden="true" class="inline" /> play it in {plateLabel(
+										'rook',
+										'play'
+									)}
+								</a>
+							</p>
+						{/if}
+					</div>
+				</section>
 			</div>
 		{:else}
 			<BootRow />
 		{/if}
 	</div>
 </Plate>
+
+<style>
+	/* Three ruled cells in one row: the position, the group, the run. The cells
+	   stretch to a common height, so the table and the chart still line up with
+	   the board even when they have less to say. */
+	.col {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		border-color: var(--line-soft);
+		padding-block: 0.75rem;
+	}
+	@media (max-width: 1023px) {
+		.col + .col {
+			border-top: 1px solid var(--line-soft);
+		}
+	}
+
+	.tick {
+		font-size: 10px;
+	}
+
+	/* one rollout per row: index, how far it held, what it earned, what the
+	   group's mean made of that */
+	.roll {
+		display: grid;
+		width: 100%;
+		grid-template-columns: 1rem 2.6rem minmax(0, 1fr) 2.4rem 2.9rem;
+		align-items: center;
+		gap: 0.6rem;
+		padding: 4.5px 4px;
+		border-radius: 3px;
+		font-size: 11px;
+		text-align: left;
+		cursor: default;
+	}
+	.roll:hover,
+	.roll:focus-visible {
+		background: color-mix(in srgb, var(--accent) 10%, transparent);
+	}
+	.on {
+		background: color-mix(in srgb, var(--accent) 8%, transparent);
+	}
+	.track {
+		height: 4px;
+		overflow: hidden;
+		border-radius: 999px;
+		background: var(--surface-2);
+	}
+	.fill {
+		display: block;
+		height: 100%;
+		border-radius: 999px;
+	}
+
+	/* where the group's own mean falls, drawn as a line rather than as signs */
+	.baseline-rule {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 5px 0;
+		color: var(--ink-3);
+		font-size: 9.5px;
+	}
+	.baseline-rule::after {
+		content: '';
+		flex: 1;
+		border-top: 1px dashed var(--line);
+	}
+</style>

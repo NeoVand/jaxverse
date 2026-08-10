@@ -3,6 +3,8 @@
 // LLMVibes' ChessLab/TrainingLab measurement code, with per-ply verdicts kept
 // so the plates can show *which* move broke, not just how many did.
 
+import type { Square } from 'chess.js';
+
 type ChessCtor = (typeof import('chess.js'))['Chess'];
 export type ChessGame = InstanceType<ChessCtor>;
 
@@ -94,6 +96,90 @@ export async function snapshotGame(
 	return picked;
 }
 
+/** One ply of a sampled game, kept together with the board it was played on so
+ * a plate can show what the move looked like. After the first illegal move the
+ * board no longer matches the model's story, so every later ply is 'unchecked'
+ * — unverifiable rather than wrong. */
+export interface FilmPly {
+	/** 1-based ply. */
+	ply: number;
+	uci: string;
+	state: 'legal' | 'illegal' | 'unchecked';
+	capture: boolean;
+	/** The position the move was played FROM — '' for unchecked plies. */
+	fen: string;
+	/** Filled glyph of the piece that moved (or tried to); '' when unknowable. */
+	glyph: string;
+}
+
+export interface GameFilm {
+	plies: FilmPly[];
+	/** 1-based ply of the first illegal move, or null when the game held. */
+	brokeAt: number | null;
+	/** The model wrote the ⟨game⟩ marker instead of another move. */
+	ended: boolean;
+}
+
+/**
+ * Replay one sampled game and keep every ply beside the position it was played
+ * from — the film a plate scrubs through when the reader points at a move.
+ * Unlike replayGames this never resets the board: once the judge refuses a
+ * move, the remaining plies are marked unchecked rather than re-scored against
+ * a board the model was never looking at.
+ */
+export async function filmGame(
+	tokens: number[],
+	decode: (id: number) => string
+): Promise<GameFilm> {
+	const Chess = await loadChess();
+	const board = new Chess();
+	const plies: FilmPly[] = [];
+	let brokeAt: number | null = null;
+	let ended = false;
+	let n = 0;
+	for (const id of tokens) {
+		if (id === 0) {
+			ended = true; // the model closed the game — the story stops here
+			break;
+		}
+		const uci = decode(id);
+		n++;
+		if (brokeAt !== null) {
+			plies.push({ ply: n, uci, state: 'unchecked', capture: false, fen: '', glyph: '' });
+			continue;
+		}
+		const before = board.fen();
+		try {
+			const mv = board.move({
+				from: uci.slice(0, 2),
+				to: uci.slice(2, 4),
+				promotion: uci.length > 4 ? uci[4] : undefined
+			});
+			plies.push({
+				ply: n,
+				uci,
+				state: 'legal',
+				capture: mv.captured !== undefined,
+				fen: before,
+				glyph: PIECE_GLYPH[mv.piece] ?? ''
+			});
+		} catch {
+			// the piece it tried to move, read off the board the judge was looking at
+			const p = board.get(uci.slice(0, 2) as Square);
+			brokeAt = n;
+			plies.push({
+				ply: n,
+				uci,
+				state: 'illegal',
+				capture: false,
+				fen: before,
+				glyph: p ? (PIECE_GLYPH[p.type] ?? '') : ''
+			});
+		}
+	}
+	return { plies, brokeAt, ended };
+}
+
 export interface ReplayReport {
 	games: PlyMark[][];
 	/** legal / attempted over every ply of every game; null if nothing to score. */
@@ -177,6 +263,25 @@ export function snapTone(s: BoardSnap): 'accent' | 'warm' | 'bad' {
 
 /** One ply of an RLVR rollout. After the first illegal move the board state is
  * lost, so later plies are 'unchecked' — unverifiable rather than wrong. */
+/** The position a list of legal UCI moves leads to, as a FEN. Stops at the
+ * first move the rules refuse, so a caller can pass a prefix verbatim. */
+export async function positionAfter(uciList: string[]): Promise<string> {
+	const Chess = await loadChess();
+	const board = new Chess();
+	for (const uci of uciList) {
+		try {
+			board.move({
+				from: uci.slice(0, 2),
+				to: uci.slice(2, 4),
+				promotion: uci.length > 4 ? uci[4] : undefined
+			});
+		} catch {
+			break;
+		}
+	}
+	return board.fen();
+}
+
 export interface RolloutPly {
 	uci: string;
 	state: 'legal' | 'illegal' | 'unchecked';

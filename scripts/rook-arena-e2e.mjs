@@ -1,4 +1,4 @@
-// e2e probe for the rook arena (Plate V): boot the chapter on WebGPU, play a
+// e2e probe for the rook arena (Plate VI): boot the chapter on WebGPU, play a
 // move in the arena, verify the pretrained verdict + arrow + Black's reply,
 // then run a short fine-tune and check the snapshot reaches the arena.
 // Usage: node scripts/rook-arena-e2e.mjs
@@ -31,33 +31,38 @@ if (!hasGpu) {
 }
 
 // scroll the arena into view — its inview gate powers the shared lab
-const arena = page.getByRole('figure', { name: /Plate V/ });
+// plates are addressed by their registry anchor, so renumbering the chapter
+// never breaks this probe
+const arena = page.locator('#plate-arena');
 await arena.scrollIntoViewIfNeeded();
 say('arena in view — waiting for the model to boot');
 
 // the board renders once lab.phase === 'ready' and chess.js loaded
-const board = arena.locator('[role="grid"]');
+const board = arena.locator('svg.cm-chessboard');
 await board.waitFor({ state: 'visible', timeout: 120_000 });
 say('arena board visible');
 
+/** cm-chessboard reads the square off pointer coordinates, and the pieces sit
+ * over the square rects — so click the square's centre, forcing past them. */
+const tap = (figure, square) =>
+	figure.locator(`svg.cm-chessboard [data-square="${square}"]`).first().click({ force: true });
+
 // play 1. e2e4: tap e2, tap e4
-await arena.locator('button[aria-label^="e2 "]').click();
-await arena.locator('button[aria-label="e4"]').click();
+await tap(arena, 'e2');
+await tap(arena, 'e4');
 say('played e2e4 — waiting for the stages to answer');
 
-// the pretrained column must produce a decision
-await arena
-	.getByText(/plays [a-h][1-8][a-h][1-8]/)
-	.first()
-	.waitFor({ timeout: 120_000 });
-const verdict = await arena
-	.getByText(/plays [a-h][1-8][a-h][1-8]/)
-	.first()
-	.textContent();
-say(`pretrained verdict: ${verdict.trim().replace(/\s+/g, ' ')}`);
+// the pretrained column must produce a decision. Each fielded stage prints one
+// "N% of its belief" line, so that phrase counts decisions.
+const decisions = () => arena.getByText(/of its belief/);
+await decisions().first().waitFor({ timeout: 120_000 });
+const verdict = (await arena.locator('section').nth(1).innerText())
+	.replace(/\s+/g, ' ')
+	.match(/IT WOULD PLAY (\S+ \S+ of its belief)/i)?.[1];
+say(`pretrained verdict: plays ${verdict}`);
 
 // arrows overlay present while the verdicts describe the current position
-const arrowCount = await arena.locator('svg polygon').count();
+const arrowCount = await arena.locator('svg.cm-chessboard .arrows .arrow').count();
 say(`arrows drawn: ${arrowCount}`);
 
 // Black must actually reply (fen changes; simplest check: it becomes White's
@@ -67,13 +72,12 @@ const status = await arena.getByText(/of 3 fielded/).textContent();
 say(`status: ${status.trim()}`);
 
 // ── stage 2: a short fine-tune, then the arena should field it ──
-const sft = page.getByRole('figure', { name: /Plate III/ });
+const sft = page.locator('#plate-sft');
 await sft.scrollIntoViewIfNeeded();
-await sft.getByRole('button', { name: /Switch the diet/i }).click();
-say('diet switched — waiting for baseline eval');
+// one button: it swaps the corpus and starts the run
 await sft.getByRole('button', { name: /Fine-tune/i }).waitFor({ timeout: 120_000 });
 await sft.getByRole('button', { name: /Fine-tune/i }).click();
-say('fine-tuning…');
+say('fine-tuning (the diet swaps on the way in)…');
 await page.waitForTimeout(12_000);
 await sft.getByRole('button', { name: /Pause/i }).click();
 say('paused — snapshot should be captured');
@@ -90,31 +94,34 @@ if (disabled) {
 }
 
 // play another move and expect TWO stage verdicts now
-await arena.locator('button[aria-label^="d2 "]').click();
-await arena.locator('button[aria-label="d4"]').click();
+await tap(arena, 'd2');
+await tap(arena, 'd4');
 say('played d2d4 — waiting for both stages');
 await page.waitForTimeout(9000);
-const verdicts = await arena.getByText(/plays [a-h][1-8][a-h][1-8]/).count();
+const verdicts = await decisions().count();
 say(`stage verdicts shown: ${verdicts}`);
 const shot = '/tmp/rook-arena.png';
 await arena.screenshot({ path: shot });
 say(`screenshot: ${shot}`);
 
-// ── Plate II must still work after the Board extraction ──
-const play = page.getByRole('figure', { name: /Plate II Play/ });
+// ── the play-it plate must still work on the shared board ──
+const play = page.locator('#plate-play');
 await play.scrollIntoViewIfNeeded();
-await play.locator('button[aria-label^="g1 "]').click();
-await play.locator('button[aria-label^="f3"]').first().click();
-say('Plate II: played g1f3 — waiting for Rook');
-await play.getByText(/raw top-5/).waitFor({ timeout: 60_000 });
-say('Plate II: raw top-5 panel appeared');
+await tap(play, 'g1');
+await tap(play, 'f3');
+say('play plate: played g1f3 — waiting for Rook');
+await play.getByText(/raw top-8/).waitFor({ timeout: 60_000 });
+say('play plate: raw top-8 panel appeared');
 
 // ── stage 3: a short RLVR run, then the arena should field it too ──
-const rlvr = page.getByRole('figure', { name: /Plate IV/ });
+const rlvr = page.locator('#plate-rlvr');
 await rlvr.scrollIntoViewIfNeeded();
 await rlvr.getByRole('button', { name: /Run RLVR/i }).click();
 say('RLVR running (first iteration compiles kernels)…');
-await rlvr.getByText(/policy updates · [1-9]/).waitFor({ timeout: 180_000 });
+await rlvr
+	.getByText(/updates [1-9]/)
+	.first()
+	.waitFor({ timeout: 180_000 });
 await rlvr.getByRole('button', { name: /Pause/i }).click();
 say('RLVR paused — snapshot should be captured');
 await page.waitForTimeout(4_000);
@@ -125,11 +132,11 @@ const rlDisabled = await rlChip.isDisabled();
 say(`arena RLVR chip disabled: ${rlDisabled}`);
 
 await arena.getByRole('button', { name: /New game/i }).click();
-await arena.locator('button[aria-label^="e2 "]').click();
-await arena.locator('button[aria-label="e4"]').click();
+await tap(arena, 'e2');
+await tap(arena, 'e4');
 say('fresh game, played e2e4 — waiting for all three stages');
 await page.waitForTimeout(12_000);
-const verdicts3 = await arena.getByText(/plays [a-h][1-8][a-h][1-8]/).count();
+const verdicts3 = await decisions().count();
 say(`stage verdicts shown: ${verdicts3}`);
 const shot3 = '/tmp/rook-arena-3.png';
 await arena.screenshot({ path: shot3 });
