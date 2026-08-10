@@ -1,6 +1,8 @@
 # Lab 6 · Learning from Reward
 
-REINFORCE on a gridworld in plain TypeScript — watch the policy arrows sharpen. No GPU, no tensors.
+REINFORCE on a sea chart in plain TypeScript. A boat cannot sail within 35° of the wind, and the
+harbour is upwind — so watch a policy that has never heard of tacking work out how to beat to
+windward. No GPU, no tensors.
 
 This is a standalone lab from [jaxverse](https://github.com/NeoVand/jaxverse). It has no build
 requirements beyond Node:
