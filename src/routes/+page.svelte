@@ -1,42 +1,18 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { chapters, type ChapterSlug } from '$lib/data/chapters';
+	import { chapters } from '$lib/data/chapters';
+	import { chapterGlyphs, epilogueGlyph as BookOpen } from '$lib/data/glyphs';
 	import { progress } from '$lib/data/progress.svelte';
 	import HeroField from '$lib/components/ui/HeroField.svelte';
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import { setChapter } from '$lib/data/plates';
 	import { OPTIMIZER_LEGEND } from '$lib/optim/optimizers';
-	import {
-		ArrowRight,
-		BookOpen,
-		Castle,
-		Gamepad2,
-		Grid3x3,
-		Map,
-		Mountain,
-		PenLine,
-		Scale,
-		Spline,
-		Type
-	} from 'lucide-svelte';
+	import { ArrowRight } from 'lucide-svelte';
 
 	// The frontispiece is a plate too, so the reader meets the grammar before
 	// the first chapter uses it.
 	setChapter(() => 'home');
-
-	// One glyph per chapter — presentation only, so the mapping lives here.
-	const glyphs: Record<ChapterSlug, typeof Mountain> = {
-		descent: Mountain,
-		neuron: Spline,
-		space: Grid3x3,
-		digits: PenLine,
-		latent: Map,
-		language: Type,
-		reward: Gamepad2,
-		taste: Scale,
-		rook: Castle
-	};
 
 	// The contents rail: one thin thread wandering through every chapter node,
 	// with a soft glow drifting down it. Node positions come from the *measured*
@@ -250,7 +226,7 @@
 
 		<ol>
 			{#each chapters as c, i (c.slug)}
-				{@const Glyph = glyphs[c.slug]}
+				{@const Glyph = chapterGlyphs[c.slug]}
 				<li class="sm:pl-14" bind:this={rowEls[i]}>
 					<a
 						href={resolve(`/${c.slug}`)}

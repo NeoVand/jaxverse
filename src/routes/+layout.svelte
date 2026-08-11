@@ -2,9 +2,10 @@
 	import './layout.css';
 	import { page } from '$app/state';
 	import { base, resolve } from '$app/paths';
-	import { Moon, Sun, MonitorSmartphone } from 'lucide-svelte';
+	import { List, Moon, Sun, MonitorSmartphone } from 'lucide-svelte';
 	import { applyTheme, effectiveTheme, storedTheme, type ThemePreference } from '$lib/theme';
 	import { chapterBySlug } from '$lib/data/chapters';
+	import { chapterGlyphs } from '$lib/data/glyphs';
 	import { themePulse, watchTheme } from '$lib/viz/tokens.svelte';
 	import Logo from '$lib/components/ui/Logo.svelte';
 
@@ -38,20 +39,12 @@
 		const seg = page.url.pathname.split('/').filter(Boolean).at(-1) ?? '';
 		return chapterBySlug.get(seg);
 	});
-
-	// Reading progress: a hairline of accent that fills as you descend the page.
-	let readFrac = $state(0);
-	function onScroll() {
-		const doc = document.documentElement;
-		const span = doc.scrollHeight - innerHeight;
-		readFrac = span > 200 ? Math.min(1, Math.max(0, scrollY / span)) : 0;
-	}
+	// The same glyph the contents rail gave it, so the bar names the place twice.
+	const CurrentGlyph = $derived(current ? chapterGlyphs[current.slug] : undefined);
 
 	// The colophon: a small modal hidden behind the mark itself.
 	let colophon: HTMLDialogElement;
 </script>
-
-<svelte:window onscroll={onScroll} onresize={onScroll} />
 
 <svelte:head>
 	<!-- the mark at favicon scale: two contour rings + the ball at the minimum -->
@@ -92,16 +85,18 @@
 		</span>
 
 		<div class="flex items-center gap-2 sm:gap-3">
-			{#if current}
-				<span class="eyebrow hidden md:inline" aria-hidden="true">
+			{#if current && CurrentGlyph}
+				<span class="eyebrow hidden items-center gap-1.5 md:inline-flex" aria-hidden="true">
+					<CurrentGlyph size={13} class="shrink-0" style="color: var(--accent);" />
 					{current.n === 0 ? 'Prologue' : `Chapter ${current.n}`} · {current.kicker}
 				</span>
 				<span class="hidden h-3.5 w-px bg-line md:inline-block" aria-hidden="true"></span>
 			{/if}
 			<a
 				href="{resolve('/')}#contents"
-				class="eyebrow rounded-md px-2 py-1.5 transition-colors hover:bg-surface-2 hover:text-ink"
+				class="eyebrow inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 transition-colors hover:bg-surface-2 hover:text-ink"
 			>
+				<List size={13} aria-hidden="true" class="shrink-0" />
 				Contents
 			</a>
 			<a
@@ -144,15 +139,6 @@
 			</button>
 		</div>
 	</div>
-
-	<!-- reading progress, drawn as the thinnest possible line of accent -->
-	{#if readFrac > 0}
-		<div
-			class="absolute inset-x-0 bottom-[-1px] h-[2px] origin-left"
-			style="background: var(--accent); transform: scaleX({readFrac}); opacity: 0.75;"
-			aria-hidden="true"
-		></div>
-	{/if}
 </header>
 
 <!-- the colophon, hidden behind the mark: who made this, and where to find him -->
