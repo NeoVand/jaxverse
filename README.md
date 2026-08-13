@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="jaxverse.gif" alt="jaxverse" width="100%" />
+</p>
+
 # jaxverse
 
 **A little universe of learning machines** — an interactive book about deep
