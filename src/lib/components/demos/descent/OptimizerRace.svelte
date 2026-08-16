@@ -247,18 +247,17 @@
 		dirty = true;
 	}
 
-	// auto-start when the plate scrolls near — the house inview convention
+	// inview still boots reduced-motion; Play is what starts the race, so a
+	// click can drop the walkers without them running off before 3-D.
 	function boot() {
 		reducedMotion =
 			typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-		if (!reducedMotion) running = true;
 	}
 
 	function restartAt(p: Pt) {
 		start = p;
 		resetRacers(p);
-		if (!reducedMotion) running = true;
-		markRaced();
+		running = false;
 	}
 
 	// click, not pointerdown: browsers suppress click after a touch-scroll,
@@ -346,6 +345,7 @@
 	function resetRace() {
 		start = { ...presetById(presetId).start };
 		resetRacers(start);
+		running = false;
 	}
 
 	/** Rotate-project a 3-D point (y up); returns [x, y, depth]. Local copy
@@ -682,7 +682,7 @@
 	id="race"
 	live
 	title="The descent race"
-	caption="Four walkers, one landscape, the same gradient at every point — only the rule for taking the step differs. Click anywhere to drop them there together: on the saddle's ridge, plain descent stalls where the ground flattens, momentum coasts through on stored velocity, and Adam's per-coordinate stride shrugs the geometry off. Raise γ until somebody overshoots; flip to 3-D and drag to see the terrain the contours were hiding."
+	caption="Five walkers, one landscape, the same gradient at every point — only the rule for taking the step differs. Click anywhere to drop them there together; they wait for Play, so you can flip to 3-D and look before they move. On the saddle's ridge, plain descent stalls where the ground flattens, momentum coasts through on stored velocity, and Adam's per-coordinate stride shrugs the geometry off. Raise γ until somebody overshoots; drag the 3-D view to see the terrain the contours were hiding."
 >
 	{#snippet status()}
 		<span>t = {t} · γ = {fmtGamma(gamma)}</span>
@@ -711,7 +711,7 @@
 				preset.yMin}; touch-action: {view === '3d' ? 'none' : 'manipulation'};"
 			role="button"
 			tabindex="0"
-			aria-label="Loss landscape. In 2-D, click anywhere to drop the walkers there and restart the race; in 3-D, drag to rotate the surface."
+			aria-label="Loss landscape. In 2-D, click anywhere to drop the walkers there; they wait until Play. In 3-D, drag to rotate the surface."
 			onclick={onClick}
 			onkeydown={onKeyDown}
 			onpointerdown={onPointerDown}
