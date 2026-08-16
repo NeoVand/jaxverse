@@ -343,7 +343,6 @@
 	}
 
 	function resetRace() {
-		start = { ...presetById(presetId).start };
 		resetRacers(start);
 		running = false;
 	}
