@@ -39,8 +39,9 @@
 			point in the direction of steepest ascent — the quickest way to make things worse — which is exactly
 			why the rule subtracts them. The <em>learning rate</em>
 			<Math tex={'\\htmlClass{eq-knob}{\\eta}'} /> sets the stride: how far to trust each reading of the
-			slope before stopping to feel the ground again. Direction from the warm term, ambition from the
-			blue one; there is nothing else in the rule. (Other books write that stride
+			slope before stopping to feel the ground again. Direction from the
+			<span class="eq-world">gradient</span>, ambition from the
+			<span class="eq-knob">learning rate</span>; there is nothing else in the rule. (Other books write that stride
 			<Math tex="\alpha" />, and some write <Math tex="\gamma" />. This one keeps
 			<Math tex={'\\htmlClass{eq-knob}{\\eta}'} /> throughout, because
 			<Math tex="\gamma" /> has a different job waiting for it in
