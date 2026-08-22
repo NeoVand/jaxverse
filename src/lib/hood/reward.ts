@@ -88,7 +88,7 @@ for (const e of eps)
 				},
 				{
 					title: 'Six learners racing on worker threads',
-					body: `REINFORCE's discovery is luck-of-the-stream, so the demo manufactures luck: up to six workers each train an independent policy from an independent seed, the stage performs whichever is fittest, and stragglers adopt the champion's weights when they fall far behind. It is population-based training in miniature — and because each learner is plain TS, six of them fit in the browser without a GPU at all.`,
+					body: `REINFORCE's discovery is luck-of-the-stream, so the demo manufactures luck: up to six workers each train an independent policy from an independent seed, and the stage performs whichever is fittest. It is population-based training in miniature — and because each learner is plain TS, six of them fit in the browser without a GPU at all.`,
 					code: {
 						file: 'src/lib/optim-rl/dpole.worker.ts',
 						code: `// each hall: own θ, own baseline, own curriculum, own rng
@@ -96,9 +96,36 @@ async function round() {
 	const eps = collectEpisodes(theta, curriculum, rand, BATCH);
 	dpoleReinforceUpdate(theta, baseline, eps, lr);
 	fitness = 0.9 * fitness + 0.1 * scoreOf(eps);
-	postMessage({ kind: 'report', fitness, theta: maybeShare() });
+	postMessage({ kind: 'report', fitness, theta, finds });
 	setTimeout(round, 0); // yield, then keep practicing
 }`
+					}
+				},
+				{
+					title: 'What passes between them',
+					body: `A hall's own gradient is first-order in its own rollouts and knows nothing about the other five. Two things cross the gap. <em>Experience</em>: a hall that lands a delivery cleaner than any it has managed hands that state to everyone — filed on a small <em>guest</em> shelf, deliberately separate from its own arrivals, because sharing into one buffer made every hall practise the catch on the leader's clean deliveries and never on the sloppy ones its own swing produces. And the <em>gradient</em> of the episode that found it: 165 numbers, where the episode itself is a hundred kilobytes, stepped along at a fraction of the learning rate by the halls behind.`,
+					code: {
+						file: 'src/lib/optim-rl/dpole.worker.ts',
+						code: `// a personal best, announced: the state to practise from…
+finds.push({ state: ep.delivered, bonus,
+             grad: dpoleGradient(theta, baseline, [ep]) });
+// …and on the receiving side, one step along somebody else's lesson
+if (m.grad)
+	for (let i = 0; i < theta.length; i++)
+		theta[i] += lr * SHARED_GRAD * m.grad[i];`
+					}
+				},
+				{
+					title: 'And a second learner, for who to listen to',
+					body: `Influence applied indiscriminately made the pool fail <em>together</em>: mean pool fitness 0.33, against 0.82 for six halls sharing nothing at all — a hall mid-discovery that keeps being dragged toward the leader never finishes its own idea. So the demo stopped deciding. Every hall runs a second REINFORCE learner whose actions are &ldquo;take hall <em>j</em>'s weights a step&rdquo; and &ldquo;refuse everyone&rdquo;, whose policy is a softmax over one logit per peer plus a refusal logit added to a prior, and whose reward is whether it climbed the pool's ranking over the next two seconds. The adjacency matrix drawn beneath the swarm is not a diagram of the design — it is those weights, live.`,
+					code: {
+						file: 'src/lib/optim-rl/dpole.worker.ts',
+						code: `// graded by RANK, the one thing a competitor cares about
+const r = (past.rank - rank) / (n - 1);
+const adv = r - socBase;
+socBase += SOC_BASE_LR * (r - socBase);
+for (let k = 0; k <= n; k++)          // k = n is "refuse everyone"
+	socLogit[k] += SOC_LR * adv * ((k === past.pick ? 1 : 0) - past.probs[k]);`
 					}
 				}
 			],
@@ -108,8 +135,8 @@ async function round() {
 					body: `The cart-and-two-links dynamics come from the Lagrangian, integrated with RK4 at 50 Hz, with quadratic drag on the pins so a botched policy cannot wind the system up to numerical infinity. Your click-drag is injected as an external force on the hinge for a few frames — the red arrow — through exactly the same step function training uses.`
 				},
 				{
-					title: 'One big stage, six small ones',
-					body: `The race strip renders each worker's live policy into its own small canvas from the same draw routine as the main stage, scaled down. The champion's outline and score are just state from the latest worker reports; adopting a laggard is one <code>postMessage</code> carrying the champion's θ.`
+					title: 'One big stage, six small ones — or all six at once',
+					body: `The race strip renders each worker's live policy into its own small canvas from the same draw routine as the main stage, scaled down. Press Swarm and those six rigs move onto the one rail, each in its own hue with its own tip trail, while the strip becomes a field where every hall stands at its two skills and the ribbons between them are the social weights the halls trained on each other. Holding is drawn as light rather than geometry: the rig burns green in proportion to how near dead-vertical and dead-calm it is, so a shove reads as the glow going out and coming back.`
 				}
 			],
 			lab: {

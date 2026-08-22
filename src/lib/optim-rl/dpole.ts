@@ -460,6 +460,23 @@ export function tumbleStart(rand: Rand): DpoleState {
 
 export class DpoleCurriculum {
 	readonly deliveries = new DeliveryBuffer();
+	/** Arrivals somebody ELSE found, kept on a small separate shelf.
+	 *
+	 * Measured, and the whole reason this is not one buffer: with six halls
+	 * broadcasting their finds into one 256-slot ring, a hall's own arrivals
+	 * are overwritten within seconds, and it ends up practising the catch
+	 * exclusively on the leader's clean deliveries. Its own sloppy arrivals
+	 * — the ones its swing actually produces — are then never rehearsed, so
+	 * the loop that carries a hall from "delivers occasionally" to "delivers
+	 * and catches" is cut. Pools sharing into one buffer became superb
+	 * catchers that never learned to swing: mean pool fitness 0.33 against
+	 * 0.82 for no sharing at all, with the catch score HIGHER. A guest shelf
+	 * this small can seed a hall that has nothing of its own and cannot
+	 * drown out a hall that does. */
+	readonly guests = new DeliveryBuffer(24);
+	/** How often a brink drill rehearses somebody else's arrival instead of
+	 * its own — but only when it has some of its own to prefer. */
+	guestShare = 0.25;
 	/** How much of the raw delivered state the brink replays. */
 	alpha = 0.25;
 	/** Recent brink success rate (caught for 2 s), EMA. */
@@ -470,7 +487,15 @@ export class DpoleCurriculum {
 		const k = drawStart(rand);
 		let start: DpoleState | undefined;
 		if (k === 2) {
-			const d = this.deliveries.sample(rand);
+			// its own arrivals by preference; a neighbour's when it has none
+			// of its own yet, or on the guest share. The `guests.size` test
+			// comes FIRST and short-circuits on purpose: a solo learner with
+			// no neighbours must not draw the lottery at all, or it consumes
+			// an extra number from the stream and every seeded result in this
+			// file's tests moves. (It moved. One of them went to zero.)
+			const useGuest =
+				this.guests.size > 0 && (this.deliveries.size === 0 || rand() < this.guestShare);
+			const d = useGuest ? this.guests.sample(rand) : this.deliveries.sample(rand);
 			// a band of difficulties up to α, not just the frontier — the
 			// easy end keeps refreshing what the hard end builds on
 			if (d) start = scaleToward(d, this.alpha * (0.5 + 0.5 * rand()));
@@ -736,6 +761,27 @@ export function dpoleReinforceUpdate(
 	decay = DPOLE_DECAY,
 	beta = DPOLE_ENTROPY
 ): void {
+	const grad = dpoleGradient(theta, baseline, eps, gamma, beta);
+	// the decay keeps the softmax soft, so exploration never dies —
+	// REINFORCE's classic failure here is a premature freeze
+	for (let i = 0; i < N_PARAMS; i++) theta[i] = theta[i] * (1 - decay) + lr * grad[i];
+}
+
+/** The policy gradient alone, without applying it — the same arithmetic as
+ * `dpoleReinforceUpdate`, stopped one step early. Split out because a
+ * gradient is the one thing a learner can hand to another learner and have
+ * it mean something immediately: 165 numbers that say "from where you are,
+ * this is the way", small enough to post between workers many times a
+ * second, where the episode that produced it is a hundred kilobytes. Note
+ * it also advances the baselines — the caller owns that state, and a
+ * gradient computed against a stale baseline is worth less. */
+export function dpoleGradient(
+	theta: Float64Array,
+	baseline: Float64Array,
+	eps: DpoleEpisode[],
+	gamma = GAMMA,
+	beta = DPOLE_ENTROPY
+): Float64Array {
 	const grad = new Float64Array(N_PARAMS);
 	const probs = new Float64Array(DPOLE_ACTIONS);
 	const gz = new Float64Array(DPOLE_ACTIONS);
@@ -780,7 +826,5 @@ export function dpoleReinforceUpdate(
 			}
 		}
 	}
-	// the decay keeps the softmax soft, so exploration never dies —
-	// REINFORCE's classic failure here is a premature freeze
-	for (let i = 0; i < N_PARAMS; i++) theta[i] = theta[i] * (1 - decay) + lr * grad[i];
+	return grad;
 }
