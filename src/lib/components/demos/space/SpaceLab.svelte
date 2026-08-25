@@ -14,11 +14,14 @@
 	import {
 		makeGridLines,
 		makeProbeGrid,
-		pcaProject,
+		pcaApply,
+		pcaFit,
+		pcaPlane,
 		project3,
 		planeCubePolygon,
 		readTokens,
-		hexRgb
+		hexRgb,
+		type Pca
 	} from './common';
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Plate from '$lib/components/ui/Plate.svelte';
@@ -129,6 +132,34 @@
 	let snapA: Snap | null = null;
 	let snapB: Snap | null = null;
 	let offscreen: HTMLCanvasElement | null = null;
+	/** Which reading the wash was painted from, and under which colours. */
+	let washFor: Snap | null = null;
+	let washTheme = '';
+
+	/** Steps per worker run. Long enough that the round-trip costs nothing,
+	 * short enough that a stop lands promptly (the worker also yields between
+	 * sync points, so `stop` is heard mid-run anyway). */
+	const RUN_STEPS = 4000;
+	/** Steps between the worker's sync points. Each one costs a GPU stall to
+	 * read the loss back and buys one sample of the curve; 240 samples at this
+	 * spacing is six thousand steps of history, which is more than the curve
+	 * can show. */
+	const SYNC_EVERY = 25;
+	/** The pictures' own clock. Below about this the reader sees no more
+	 * change, and above it the main thread has no time left for the canvas. */
+	const REFRESH_MS = 130;
+	let refreshAt = 0;
+	let refreshing = false;
+	/** Identifies the current training run — see trainLoop. */
+	let runToken = 0;
+	/** Metric history and the live scalars, kept off $state — see onMetrics. */
+	let lossRing: number[] = [];
+	let accRing: number[] = [];
+	let liveStep = 0;
+	let liveLoss = NaN;
+	let liveMs = 0;
+	/** The shadow's basis, carried between refreshes so it cannot flip. */
+	let pca: Pca | null = null;
 
 	// ── engine lifecycle ──
 	// auto-boot when the plate scrolls near (use:inview) — never on mount
@@ -163,6 +194,13 @@
 			step = 0;
 			lossHist = [];
 			accHist = [];
+			lossRing = [];
+			accRing = [];
+			liveStep = 0;
+			liveLoss = NaN;
+			liveMs = 0;
+			pca = null;
+			refreshing = false;
 			snapA = snapB = null;
 			hovered = null;
 			foldTarget = 1;
@@ -191,36 +229,70 @@
 	function setTraining(on: boolean) {
 		if (on && !training && phase === 'ready') {
 			training = true;
-			void trainLoop();
+			void trainLoop(++runToken);
 		} else {
 			training = false;
+			runToken++;
+			// The worker is mid-run and would otherwise finish its whole batch.
+			engine?.stop().catch(() => {});
+			publish(); // whatever the last run measured, shown rather than dropped
 		}
 	}
 
-	async function trainLoop() {
+	/**
+	 * Train, and let the pictures keep their own time.
+	 *
+	 * This used to be a ping-pong: forty steps, then evaluate, then rebuild
+	 * every snapshot, then forty more. Two things were wrong with it. The
+	 * worker sat idle through the whole main-thread half, and — worse for the
+	 * reader — the snapshot half ran as often as training allowed, which on a
+	 * network this small is twenty-five times a second: twenty-five principal
+	 * component fits, twenty-five rebuilds of a hundred-edge SVG, twenty-five
+	 * reactive array copies. The animation frame never got a clear run at the
+	 * canvas, and scrolling the page fought all of it.
+	 *
+	 * Now the worker is given a long run and left alone. It yields between
+	 * sync points, so the snapshot RPCs interleave with training rather than
+	 * taking turns with it, and the main thread pulls a new picture on a fixed
+	 * clock (see REFRESH_MS) no matter how fast the steps are going.
+	 */
+	async function trainLoop(token: number) {
 		const myGen = gen;
-		while (training && engine && myGen === gen) {
+		// `token` and not just `training`: pause-then-play while the worker is
+		// mid-run would otherwise leave the old loop alive to see `training`
+		// true again, and two loops would drive one worker.
+		while (training && engine && myGen === gen && token === runToken) {
 			try {
-				await engine.train(
-					40,
-					(m) => {
-						step = m.step;
-						lossNow = m.loss;
-						msPerStep = msPerStep ? msPerStep * 0.7 + m.stepMs * 0.3 : m.stepMs;
-						lossHist = [...lossHist.slice(-239), m.loss];
-					},
-					8
-				);
-				if (myGen !== gen || !engine) return;
-				const ev = await engine.eval();
-				accNow = ev.accuracy ?? NaN;
-				accHist = [...accHist.slice(-239), accNow];
-				await refresh();
-				guidedBeats();
+				await engine.train(RUN_STEPS, onMetrics, SYNC_EVERY);
 			} catch {
 				return; // engine disposed mid-flight
 			}
+			if (myGen !== gen) return;
 		}
+	}
+
+	/**
+	 * Cheap by design: this fires around eighty times a second and must not
+	 * touch anything that re-renders. Everything lands in plain variables, and
+	 * `refresh` copies them into $state on the pictures' own clock — a status
+	 * line redrawn eighty times a second says nothing a reader can read that
+	 * eight times a second does not.
+	 */
+	function onMetrics(m: { step: number; loss: number; stepMs: number }) {
+		liveStep = m.step;
+		liveLoss = m.loss;
+		liveMs = liveMs ? liveMs * 0.7 + m.stepMs * 0.3 : m.stepMs;
+		lossRing.push(m.loss);
+		if (lossRing.length > 240) lossRing.splice(0, lossRing.length - 240);
+	}
+
+	/** Copy the run's numbers into the page. */
+	function publish() {
+		step = liveStep;
+		lossNow = liveLoss;
+		msPerStep = liveMs;
+		lossHist = lossRing.slice();
+		accHist = accRing.slice();
 	}
 
 	function guidedBeats() {
@@ -258,6 +330,12 @@
 		step = 0;
 		lossHist = [];
 		accHist = [];
+		lossRing = [];
+		accRing = [];
+		liveStep = 0;
+		// a fresh θ is a fresh representation; the old shadow basis is no
+		// longer a good guess to warm-start from
+		pca = null;
 		if (variant === 'guided') stage = width === 2 ? 'flat' : 'lifted';
 		await refresh();
 		if (wasTraining) setTraining(true);
@@ -327,13 +405,22 @@
 		let ptsV: Float32Array;
 		let gridV: Float32Array;
 		let outDim = hDim;
+		let planeN = sepN;
+		let planeC = sepC;
 		if (mode === 'pca') {
-			// top-3 components so the shadow can be turned like the true 3-D view
-			const proj = pcaProject(hAll, n + g, hDim, 3);
+			// top-3 components so the shadow can be turned like the true 3-D
+			// view, fitted from the previous basis so the axes stay put
+			pca = pcaFit(hAll, n + g, hDim, 3, pca ?? undefined);
+			const proj = pcaApply(pca, hAll, n + g, 3);
 			ptsV = proj.slice(0, n * 3);
 			gridV = proj.slice(n * 3);
 			outDim = 3;
+			// and the classifier's plane, traced into the same three directions
+			const pp = pcaPlane(pca, sepN, sepC, 3);
+			planeN = pp.n;
+			planeC = pp.c;
 		} else {
+			pca = null;
 			ptsV = hAll.slice(0, n * hDim);
 			gridV = hAll.slice(n * hDim);
 		}
@@ -346,7 +433,29 @@
 		}
 
 		snapA = snapB;
-		snapB = { t: performance.now(), mode, hDim: outDim, ptsV, gridV, sepN, sepC, prob, scale };
+		snapB = {
+			t: performance.now(),
+			mode,
+			hDim: outDim,
+			ptsV,
+			gridV,
+			sepN: planeN,
+			sepC: planeC,
+			prob,
+			scale
+		};
+
+		// the numbers the page renders, taken once per picture rather than
+		// once per metrics callback
+		if (training) {
+			const ev = await engine.eval();
+			if (myGen !== gen) return;
+			accNow = ev.accuracy ?? NaN;
+			accRing.push(accNow);
+			if (accRing.length > 240) accRing.splice(0, accRing.length - 240);
+			guidedBeats();
+		}
+		publish();
 	}
 
 	// ── painting ──
@@ -359,6 +468,18 @@
 			if (!reduced && !dragging && snapB && snapB.mode !== '2d') yaw += dt * 0.00013;
 			drawInput();
 			drawHidden(t);
+			// The pictures ask for a new reading when they are ready for one,
+			// instead of the trainer pushing one every forty steps. `refreshing`
+			// matters: a snapshot is four worker round-trips and a fit, and
+			// starting the next before the last has landed is how a slow device
+			// ends up with a queue it can never work off.
+			if (training && phase === 'ready' && !refreshing && t - refreshAt >= REFRESH_MS) {
+				refreshAt = t;
+				refreshing = true;
+				void refresh().finally(() => {
+					refreshing = false;
+				});
+			}
 		};
 		raf = requestAnimationFrame(paint);
 	}
@@ -398,7 +519,10 @@
 			if (!training && phase === 'ready') void refresh();
 		}
 
-		// decision field — soft, low-contrast wash
+		// Decision field — soft, low-contrast wash. Painted only when the
+		// reading behind it changes, and blitted the rest of the time: it is
+		// 9,216 pixels, and rebuilding the ImageData every animation frame
+		// bought a picture identical to the last one sixty times a second.
 		const snap = snapB;
 		if (snap?.prob) {
 			if (!offscreen) {
@@ -406,24 +530,28 @@
 				offscreen.width = PROBE_RES;
 				offscreen.height = PROBE_RES;
 			}
-			const octx = offscreen.getContext('2d')!;
-			const img = octx.createImageData(PROBE_RES, PROBE_RES);
-			const ca = hexRgb(tk.accent);
-			const cw = hexRgb(tk.warm);
-			// prob index k = j·res + i with y ascending; canvas rows grow downward
-			for (let j = 0; j < PROBE_RES; j++) {
-				for (let i = 0; i < PROBE_RES; i++) {
-					const p = snap.prob[j * PROBE_RES + i];
-					const conf = Math.abs(p - 0.5) * 2;
-					const c = p > 0.5 ? cw : ca;
-					const k = 4 * ((PROBE_RES - 1 - j) * PROBE_RES + i);
-					img.data[k] = c[0];
-					img.data[k + 1] = c[1];
-					img.data[k + 2] = c[2];
-					img.data[k + 3] = Math.round(conf * 46);
+			if (washFor !== snap || washTheme !== tk.accent + tk.warm) {
+				washFor = snap;
+				washTheme = tk.accent + tk.warm;
+				const octx = offscreen.getContext('2d')!;
+				const img = octx.createImageData(PROBE_RES, PROBE_RES);
+				const ca = hexRgb(tk.accent);
+				const cw = hexRgb(tk.warm);
+				// prob index k = j·res + i with y ascending; canvas rows grow downward
+				for (let j = 0; j < PROBE_RES; j++) {
+					for (let i = 0; i < PROBE_RES; i++) {
+						const p = snap.prob[j * PROBE_RES + i];
+						const conf = Math.abs(p - 0.5) * 2;
+						const c = p > 0.5 ? cw : ca;
+						const k = 4 * ((PROBE_RES - 1 - j) * PROBE_RES + i);
+						img.data[k] = c[0];
+						img.data[k + 1] = c[1];
+						img.data[k + 2] = c[2];
+						img.data[k + 3] = Math.round(conf * 46);
+					}
 				}
+				octx.putImageData(img, 0, 0);
 			}
-			octx.putImageData(img, 0, 0);
 			ctx.imageSmoothingEnabled = true;
 			ctx.imageSmoothingQuality = 'high';
 			ctx.drawImage(offscreen, 0, 0, W, H);
@@ -492,7 +620,12 @@
 		const snap = snapB;
 		if (!snap) return;
 		const prev = snapA && snapA.mode === snap.mode && snapA.hDim === snap.hDim ? snapA : null;
-		const u = prev ? ease(Math.min(1, (t - snap.t) / 380)) : 1;
+		// Cross-fade over exactly the gap the last two readings were apart, so
+		// the view arrives as the next one lands. A fixed 380 ms was either a
+		// stutter (readings faster than the fade) or a lag (slower), and on a
+		// small network it was the first.
+		const span = prev ? Math.max(60, Math.min(600, snap.t - prev.t)) : 380;
+		const u = prev ? ease(Math.min(1, (t - snap.t) / span)) : 1;
 		const S = snap.scale;
 		const [Ex, Ey] = viewExtents(1.18 / zoom, W, H); // wheel zoom widens or narrows the window
 		const d = snap.hDim;
@@ -573,7 +706,12 @@
 				ctx.stroke();
 				ctx.globalAlpha = 1;
 			}
-		} else if (snap.mode === '3d') {
+		} else {
+			// Both the true 3-D hidden space and the wide-layer shadow: in each
+			// the separator is a plane and the drawing is identical. The shadow
+			// used to get nothing at all, so the plate that most needed to show
+			// "one straight cut is enough" was the one plate that never showed
+			// the cut.
 			const [n0, n1, n2] = snap.sepN;
 			const poly = planeCubePolygon(n0, n1, n2, snap.sepC * S, 1.0 /* scaled cube */);
 			if (poly.length >= 3) {
@@ -755,7 +893,7 @@
 								— drag to turn</span
 							>{/if}
 						{#if hiddenMode === 'pca'}<span class="tracking-normal text-ink-3 normal-case">
-								— PCA shadow of {width}-D · drag to turn</span
+								— PCA shadow of {width}-D · the cut is its trace · drag to turn</span
 							>{/if}
 					</span>
 					<canvas

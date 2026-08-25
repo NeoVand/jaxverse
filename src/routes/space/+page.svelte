@@ -99,7 +99,7 @@
 		variant="free"
 		id="tangles"
 		title="The playground — pick your tangle"
-		caption="Seven tangles, easiest to hardest, under the plot — spirals are the classic stress test. Watch the hidden view: tanh bends space in soft waves; relu folds it along straight creases; gelu and silu fold with the crease sanded smooth. Hover the hidden view and press unfold to replay the deformation. Widths beyond three are shown as a PCA shadow — the true untangling happens in more dimensions than a screen has."
+		caption="Seven tangles, easiest to hardest, under the plot — spirals are the classic stress test. Watch the hidden view: tanh bends space in soft waves; relu folds it along straight creases; gelu and silu fold with the crease sanded smooth. Hover the hidden view and press unfold to replay the deformation. Widths beyond three are shown as a PCA shadow — the true untangling happens in more dimensions than a screen has, and the plane drawn through it is where the classifier’s one straight cut crosses the three directions being shown, not the cut itself."
 	/>
 
 	<UnderTheHood slug="space" block="middle" />

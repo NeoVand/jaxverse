@@ -42,57 +42,158 @@ export function makeProbeGrid(res: number, extentX = 1.15, extentY = extentX): F
 	return g;
 }
 
-/** Top-k principal directions by power iteration — the “shadow” view for
- * hidden layers wider than 3. Returns n×k projections, centered. */
-export function pcaProject(data: Float32Array, n: number, d: number, k = 2): Float32Array {
+/**
+ * The shadow: the top-k principal directions of a hidden layer too wide to
+ * draw, kept STABLE from one frame to the next.
+ *
+ * Power iteration finds a direction, not an arrow — flip the sign of an
+ * eigenvector and it is still an eigenvector — and it has no opinion about
+ * the order of two components with nearly equal eigenvalues. Refitting from
+ * scratch every refresh therefore produced a basis that silently negated or
+ * swapped its axes several times a second, and since the view lerps between
+ * consecutive snapshots, each flip was animated: the whole cloud swept
+ * through the origin and reassembled mirrored. That is what a reader saw as
+ * the wide-layer plate "not behaving".
+ *
+ * So the fit is handed the previous basis and does two things with it: starts
+ * the iteration there, which is already nearly converged and cuts the work by
+ * an order of magnitude, and then matches each new component back to the old
+ * one it most resembles — reordering, and negating where the sign turned
+ * over. The shadow drifts as the representation drifts, and does nothing
+ * else.
+ */
+export interface Pca {
+	/** k orthonormal directions in the hidden space, each of length d. */
+	basis: Float64Array[];
+	/** The centre they are measured from. */
+	mean: Float64Array;
+	d: number;
+}
+
+export function pcaFit(data: Float32Array, n: number, d: number, k: number, prev?: Pca): Pca {
 	const mean = new Float64Array(d);
-	for (let i = 0; i < n; i++) for (let k = 0; k < d; k++) mean[k] += data[i * d + k];
-	for (let k = 0; k < d; k++) mean[k] /= n;
+	for (let i = 0; i < n; i++) for (let q = 0; q < d; q++) mean[q] += data[i * d + q];
+	for (let q = 0; q < d; q++) mean[q] /= n;
 
 	const matVec = (v: Float64Array, out: Float64Array) => {
 		out.fill(0);
 		for (let i = 0; i < n; i++) {
 			let dot = 0;
-			for (let k = 0; k < d; k++) dot += (data[i * d + k] - mean[k]) * v[k];
-			for (let k = 0; k < d; k++) out[k] += dot * (data[i * d + k] - mean[k]);
+			for (let q = 0; q < d; q++) dot += (data[i * d + q] - mean[q]) * v[q];
+			for (let q = 0; q < d; q++) out[q] += dot * (data[i * d + q] - mean[q]);
 		}
 	};
 	const normalize = (v: Float64Array) => {
 		let s = 0;
-		for (let k = 0; k < d; k++) s += v[k] * v[k];
+		for (let q = 0; q < d; q++) s += v[q] * v[q];
 		s = Math.sqrt(s) || 1;
-		for (let k = 0; k < d; k++) v[k] /= s;
+		for (let q = 0; q < d; q++) v[q] /= s;
+		return s;
 	};
 
 	const comps = Math.min(k, d);
+	const warm = prev && prev.d === d && prev.basis.length >= comps;
+	// A warm basis is already the answer to within a drift; three sweeps hold
+	// it there. Cold, it is a guess and needs the full climb.
+	const iters = warm ? 3 : 24;
 	const basis: Float64Array[] = [];
 	for (let c = 0; c < comps; c++) {
 		let v = new Float64Array(d);
-		for (let q = 0; q < d; q++) v[q] = Math.sin(q * 2.3 + c * 1.7) + 0.5;
+		if (warm) v.set(prev.basis[c]);
+		else for (let q = 0; q < d; q++) v[q] = Math.sin(q * 2.3 + c * 1.7) + 0.5;
+		normalize(v);
 		const tmp = new Float64Array(d);
-		for (let it = 0; it < 24; it++) {
+		for (let it = 0; it < iters; it++) {
 			matVec(v, tmp);
-			// deflate against earlier components
 			for (const b of basis) {
 				let dot = 0;
 				for (let q = 0; q < d; q++) dot += tmp[q] * b[q];
 				for (let q = 0; q < d; q++) tmp[q] -= dot * b[q];
 			}
-			normalize(tmp);
+			if (normalize(tmp) < 1e-12) break;
 			v = tmp.slice();
 		}
 		basis.push(v.slice());
 	}
+	return prev ? alignTo(prev, { basis, mean, d }) : { basis, mean, d };
+}
 
+/**
+ * Reorder and sign-flip `next` so each of its axes continues the axis of
+ * `prev` it most resembles. Greedy on |cosine|, which is enough: the basis
+ * moves a little per refresh, so the correct match is nearly always the
+ * obvious one, and when two components genuinely swap this follows them
+ * across rather than cutting to the new order.
+ */
+function alignTo(prev: Pca, next: Pca): Pca {
+	if (prev.d !== next.d) return next;
+	const k = Math.min(prev.basis.length, next.basis.length);
+	const taken = new Array(next.basis.length).fill(false);
+	const out: Float64Array[] = [];
+	for (let c = 0; c < k; c++) {
+		let best = -1;
+		let bestDot = 0;
+		for (let j = 0; j < next.basis.length; j++) {
+			if (taken[j]) continue;
+			let dot = 0;
+			for (let q = 0; q < next.d; q++) dot += prev.basis[c][q] * next.basis[j][q];
+			if (Math.abs(dot) > Math.abs(bestDot) || best < 0) {
+				best = j;
+				bestDot = dot;
+			}
+		}
+		if (best < 0) break;
+		taken[best] = true;
+		const v = next.basis[best].slice();
+		if (bestDot < 0) for (let q = 0; q < next.d; q++) v[q] = -v[q];
+		out.push(v);
+	}
+	for (let j = 0; j < next.basis.length; j++) if (!taken[j]) out.push(next.basis[j]);
+	return { basis: out.slice(0, next.basis.length), mean: next.mean, d: next.d };
+}
+
+/** Rows of `data` in shadow coordinates: n × k, centred on the fit's mean. */
+export function pcaApply(pca: Pca, data: Float32Array, n: number, k: number): Float32Array {
+	const d = pca.d;
+	const comps = Math.min(k, pca.basis.length);
 	const out = new Float32Array(n * k);
-	for (let i = 0; i < n; i++) {
+	for (let i = 0; i < n; i++)
 		for (let c = 0; c < comps; c++) {
 			let dot = 0;
-			for (let q = 0; q < d; q++) dot += (data[i * d + q] - mean[q]) * basis[c][q];
+			const b = pca.basis[c];
+			for (let q = 0; q < d; q++) dot += (data[i * d + q] - pca.mean[q]) * b[q];
 			out[i * k + c] = dot;
 		}
-	}
 	return out;
+}
+
+/**
+ * Where the classifier's hyperplane cuts the shadow.
+ *
+ * A plane w·h + c = 0 lives in the full hidden space. A point drawn at shadow
+ * coordinates t stands for mean + Σ tᵢ·basisᵢ, so along that slice the plane
+ * is w·mean + c + Σ tᵢ (w·basisᵢ) = 0 — still a plane, with normal (w·basisᵢ)
+ * and offset (w·mean + c). It is the plane's TRACE in the three directions
+ * being shown and not the plane itself: whatever the classifier does in the
+ * directions the shadow drops is, by construction, not on screen.
+ */
+export function pcaPlane(
+	pca: Pca,
+	w: readonly number[],
+	c: number,
+	k = 3
+): { n: number[]; c: number } {
+	const comps = Math.min(k, pca.basis.length);
+	const n: number[] = [];
+	for (let i = 0; i < comps; i++) {
+		let dot = 0;
+		for (let q = 0; q < pca.d; q++) dot += w[q] * pca.basis[i][q];
+		n.push(dot);
+	}
+	while (n.length < k) n.push(0);
+	let off = c;
+	for (let q = 0; q < pca.d; q++) off += w[q] * pca.mean[q];
+	return { n, c: off };
 }
 
 /** Rotate-project a 3-D point to view coordinates (y up). */
