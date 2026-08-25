@@ -46,7 +46,16 @@ import {
 import { mulberry32, type Rand } from './rng';
 
 const BATCHES_PER_ROUND = 6; // 48 episodes ≈ 25 ms per report
-const EMA = 0.02; // fitness horizon ≈ the last few hundred episodes
+// Fitness horizon. This was 0.02, and the comment next to it claimed "the
+// last few hundred episodes" — it was not. Only half of a round's episodes
+// are swing attempts, so at 0.02 the delivery rate averaged its last fifty of
+// those: about two rounds, about fifty milliseconds. The number was therefore
+// mostly sampling noise, with a standard deviation near 0.04 on a rate of
+// 0.9, and since the plate draws each hall AT its fitness, that noise was
+// visible as the whole pool twitching. A horizon of a few hundred episodes —
+// which is what was wanted all along — costs about a second of response and
+// takes the twitch out.
+const EMA = 0.003;
 const FINDS_PER_ROUND = 2; // announcements are rare by construction; cap anyway
 // A find must beat the hall's own best by this much to be worth everyone's
 // attention — and that bar sags very slowly, so a hall whose policy has
@@ -99,12 +108,6 @@ let lr = 0.15;
 let running = false;
 let deliverEMA = 0; // recent fraction of swing drills that delivered
 let drillEMA = 0; // recent caught-ticks per brink drill, as a fraction
-// What the hall is actually PAID, per tick, averaged over everything it
-// practises. Unlike the two rates above it does not saturate: a hall that
-// can already swing up every time still climbs this as it learns to arrive
-// calmly, catch, and then hold — which is the whole back half of the
-// problem, and the half that a delivery rate pinned at 1.0 cannot see.
-let rewardEMA = 0;
 let bestFind = 0; // the finest delivery this hall has ever announced
 
 function round() {
@@ -118,7 +121,6 @@ function round() {
 		dpoleReinforceUpdate(theta, baseline, batch, lr);
 		episodes += batch.length;
 		for (const ep of batch) {
-			rewardEMA += EMA * (ep.ret / Math.max(1, ep.steps) - rewardEMA);
 			if (ep.kind === 0) deliverEMA += EMA * ((ep.delivered ? 1 : 0) - deliverEMA);
 			if (ep.kind === 2) {
 				drillEMA += EMA * (ep.caught / 400 - drillEMA);
@@ -155,7 +157,6 @@ function round() {
 		score: deliverEMA + 0.5 * drillEMA,
 		deliverEMA,
 		drillEMA,
-		rewardEMA,
 		episodes,
 		drills,
 		alpha: curriculum.alpha,
@@ -181,7 +182,6 @@ function social(m: {
 	prior: Float64Array;
 	deliverEMAs: Float64Array;
 	drillEMAs: Float64Array;
-	rewardEMAs: Float64Array;
 	rank: number;
 	n: number;
 	gate: number;
@@ -242,7 +242,8 @@ function social(m: {
 		sum += probs[c];
 	}
 	for (let c = 0; c <= K; c++) probs[c] /= sum;
-	let u = Math.random();
+	// the hall's own seeded stream, like everything else it draws
+	let u = rand();
 	let slot = K;
 	for (let c = 0; c <= K; c++) {
 		u -= probs[c];
@@ -273,7 +274,6 @@ function social(m: {
 	for (let i = 0; i < P; i++) theta[i] += k * (m.thetas[off + i] - theta[i]);
 	deliverEMA += k * (m.deliverEMAs[slot] - deliverEMA);
 	drillEMA += k * (m.drillEMAs[slot] - drillEMA);
-	rewardEMA += k * (m.rewardEMAs[slot] - rewardEMA);
 }
 
 type HallMessage =
@@ -288,7 +288,6 @@ type HallMessage =
 			prior: Float64Array;
 			deliverEMAs: Float64Array;
 			drillEMAs: Float64Array;
-			rewardEMAs: Float64Array;
 			rank: number;
 			n: number;
 			gate: number;

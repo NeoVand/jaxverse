@@ -397,6 +397,12 @@ body {
 	text-decoration-color: var(--accent);
 }
 
+/* A caption is set small so it stays subordinate to the figure, and small
+   type needs a short measure — but a 78ch measure on a 72rem plate left
+   nearly half the plate empty and turned a long caption into a tall column
+   the reader had to scroll past to reach the next figure. Columns keep the
+   measure and halve the height: the browser takes two once the plate is
+   wider than two comfortable measures, one below that, and balances them. */
 .plate-caption {
 	padding-inline: 1rem;
 	padding-top: 0.875rem;
@@ -406,7 +412,11 @@ body {
 	font-variation-settings: 'opsz' 13;
 	line-height: 1.6;
 	color: var(--ink-2);
-	max-width: 78ch;
+	column-width: 30rem;
+	column-gap: 2.25rem;
+	/* an orphaned last line at the top of column two reads as a mistake */
+	orphans: 2;
+	widows: 2;
 }
 
 /* ── the control kit: every chip, tab, and segmented switch in the book ──

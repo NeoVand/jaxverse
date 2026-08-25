@@ -60,6 +60,15 @@
 	} from '$lib/optim-rl/dpole';
 	import { mulberry32 } from '$lib/optim-rl/rng';
 	import { priorLogits, pullStrength, RISE_EMA, SWARM } from '$lib/optim-rl/swarm';
+	import {
+		camera,
+		fieldBox,
+		fitness,
+		isoLine,
+		niceStep,
+		isoWindow,
+		separate
+	} from '$lib/optim-rl/field';
 	import PracticeHall from '$lib/optim-rl/dpole.worker?worker';
 
 	const SEED = 512;
@@ -154,7 +163,7 @@
 	const PULSE_MS = 1300; // how long a shared discovery takes to fly
 	let hallSlow: number[] = []; // each hall's own slow fitness average…
 	let hallRise: number[] = []; // …and how far it has just pulled above it
-	let hallEMAs: { deliverEMA: number; drillEMA: number; rewardEMA: number }[] = [];
+	let hallEMAs: { deliverEMA: number; drillEMA: number }[] = [];
 	let hallFindAt: number[] = []; // last announcement, for the cooldown
 	// row w = hall w's LEARNED social weights over the pool (last entry: the
 	// probability it refuses everyone), as reported back by the hall itself
@@ -173,7 +182,7 @@
 		hallScore.push(0);
 		hallSlow.push(0);
 		hallRise.push(0);
-		hallEMAs.push({ deliverEMA: 0, drillEMA: 0, rewardEMA: 0 });
+		hallEMAs.push({ deliverEMA: 0, drillEMA: 0 });
 		hallFindAt.push(0);
 		pullK.push(0);
 		hallTheta.push(createDpoleTheta());
@@ -191,7 +200,18 @@
 		while (pool.length > n) {
 			const hall = pool.pop();
 			hall?.terminate();
-			for (const a of [hallAlpha, hallScore, hallSlow, hallRise, hallFindAt, pullK, nodeX, nodeY])
+			for (const a of [
+				hallAlpha,
+				hallScore,
+				hallSlow,
+				hallRise,
+				hallFindAt,
+				pullK,
+				nodeX,
+				nodeY,
+				showD,
+				showC
+			])
 				a.pop();
 			for (const a of [hallEMAs, hallTheta, hallSims, hallTrails, hallPath]) a.pop();
 			if (champIdx >= pool.length) champIdx = 0;
@@ -226,7 +246,6 @@
 			score: number;
 			deliverEMA: number;
 			drillEMA: number;
-			rewardEMA: number;
 			episodes: number;
 			drills: number[];
 			alpha: number;
@@ -237,7 +256,7 @@
 		if (m.type !== 'report') return;
 		hallScore[w] = m.score;
 		hallAlpha[w] = m.alpha;
-		hallEMAs[w] = { deliverEMA: m.deliverEMA, drillEMA: m.drillEMA, rewardEMA: m.rewardEMA };
+		hallEMAs[w] = { deliverEMA: m.deliverEMA, drillEMA: m.drillEMA };
 		hallTheta[w].set(m.theta);
 		// fitness against the hall's own slow average: `rise` is the spike a
 		// hall shows in the seconds after it finds something, and it is what
@@ -246,7 +265,12 @@
 		hallRise[w] = Math.max(0, m.score - hallSlow[w]);
 		pendingEpisodes += m.episodes;
 		for (const c of m.drills) pendingDrills.push(c);
-		if (m.social) attn[w].set(m.social);
+		// A report is in flight when the learners slider moves, so its social
+		// row can be sized for a pool that no longer exists. Writing it anyway
+		// either throws or — worse, silently — files the "refuse everyone"
+		// probability under some hall's index and draws a ribbon that was never
+		// learned.
+		if (m.social && m.social.length === attn[w].length) attn[w].set(m.social);
 		if (m.finds?.length) announce(w, m.finds);
 		// The champion is STICKY: the stage follows one hall's θ until
 		// another beats it by a clear margin. Following the argmax naively
@@ -326,14 +350,12 @@
 			const thetas = new Float64Array(K * N_PARAMS);
 			const pr = new Float64Array(K);
 			const dEMA = new Float64Array(K);
-			const rEMA = new Float64Array(K);
-			const wEMA = new Float64Array(K);
+			const cEMA = new Float64Array(K);
 			for (let c = 0; c < K; c++) {
 				thetas.set(hallTheta[cand[c]], c * N_PARAMS);
 				pr[c] = prior[w][cand[c]];
 				dEMA[c] = hallEMAs[cand[c]].deliverEMA;
-				rEMA[c] = hallEMAs[cand[c]].drillEMA;
-				wEMA[c] = hallEMAs[cand[c]].rewardEMA;
+				cEMA[c] = hallEMAs[cand[c]].drillEMA;
 			}
 			// how much one accepted step is allowed to move this hall: a hall at
 			// the front barely moves even when it chooses to listen, because the
@@ -345,8 +367,7 @@
 				cand: Int32Array.from(cand),
 				prior: pr,
 				deliverEMAs: dEMA,
-				drillEMAs: rEMA,
-				rewardEMAs: wEMA,
+				drillEMAs: cEMA,
 				rank: rank[w],
 				n,
 				gate: Math.max(0.12, pullK[w]),
@@ -388,7 +409,10 @@
 		nodeX = [];
 		nodeY = [];
 		hallPath = [];
-		view = [];
+		showD = [];
+		showC = [];
+		trailD = [];
+		trailC = [];
 		champIdx = 0;
 		pendingEpisodes = 0;
 		pendingDrills = [];
@@ -578,21 +602,42 @@
 		return Math.max(0, 1 - lean) * Math.max(0, 1 - spin);
 	}
 
-	// ── the influence lane ──
+	/** A canvas font string is not CSS and will not resolve var(--font-sans). */
+	const FONT = 'Inter, system-ui, sans-serif';
+
+	// ── the field ──
 	// Every hall is a living portrait, not a dot: the same rig it is running
-	// on the stage above, drawn small, standing at the place on the fitness
-	// axis it has earned — laggards left, leader right, so the geometry
-	// carries the rule. Under them runs the wire. Discoveries race along it
-	// as sparks, in the finder's colour, to every other hall at once; the
-	// slow curves dipping below it are weights seeping downhill, one curve
-	// per hall a laggard is listening to, thickness its attention. Nothing
-	// here is decoration — the curves are the rows `mixRound` posted, and
-	// the sparks are actual `postMessage`s leaving one worker for five.
+	// on the stage above, drawn small, standing at the place two skills have
+	// earned it. Across is how often it gets the stack to the top at all; up
+	// is how much of the catch window it then holds. Those are not two
+	// decorative measurements — they are the two terms of the fitness the
+	// pool actually races on, so the diagonals are lines of equal fitness and
+	// a hall's rank is legible as "which rung is it standing on".
+	//
+	// The position is a claim, and keeping it one is the hard part. See
+	// $lib/optim-rl/field: overlapping halls are fanned apart ALONG a line of
+	// equal fitness and never across one, so the picture can never put a
+	// better hall below a worse one. It used to. Replayed on a converged pool
+	// the old collision solver drew 8.8% of delivery comparisons and 15.8% of
+	// fitness comparisons backwards, by up to 0.037 of delivery rate — enough
+	// to see a hall obviously performing well sitting at the bottom of the
+	// field, which is what sent this code to be audited.
 	let nodeX: number[] = [];
 	let nodeY: number[] = [];
-	let hallPath: number[][] = []; // each hall's wake through the skill field
+	/** The settled skills each hall is drawn at — smoothed in data space, so
+	 * that a drawn position is always some real pair of numbers. */
+	let showD: number[] = [];
+	let showC: number[] = [];
+	/** …and a much slower pair, which is what the wake is drawn from. */
+	let trailD: number[] = [];
+	let trailC: number[] = [];
+	/** Each hall's wake, kept in DATA space. Screen space was wrong: the
+	 * camera drifts as the pool spreads, so a trail recorded in pixels is a
+	 * history of a field that has since moved. */
+	let hallPath: number[][] = [];
 	let lastPathAt = 0;
-	let view: number[] = []; // the field's own slow camera: [x0, x1, y0, y1]
+	/** The field, once and for all: both axes are rates, both run 0…1. */
+	const VIEW = [0, 1, 0, 1];
 
 	function drawLane(now: number) {
 		const c = webCanvas;
@@ -613,165 +658,180 @@
 		const tk = tokens(c);
 
 		// the portraits shrink as the pool grows, so thirty of them still fit
-		const slot = Math.max(9, Math.min(46, H * 0.105, Math.sqrt((W * H) / (n * 16)) / 2));
+		const slot = Math.max(9, Math.min(40, H * 0.1, Math.sqrt((W * H) / (n * 18)) / 2));
 		const rigScale = slot * 1.25;
-		const padL = 44;
-		const padR = 34;
-		const padT = 40;
-		const padB = 34;
+		const box = fieldBox(W, H, slot);
 
-		// ── the field: two skills, not one number ──
-		// Fitness is a sum, and a sum hides which half a hall has. These are
-		// the two halves, and they are learned in a definite order: getting the
-		// stack up at all (across) and keeping it there once it arrives (up).
-		// Height is REWARD — what the hall is actually paid per tick, averaged
-		// over everything it practises. It was the delivery rate first, and
-		// that was wrong in a way worth recording: a rate pins at 1.0 the
-		// moment a hall can swing up every time, so a hall that then went on
-		// to master the catch — the hard half — sat at exactly the same height
-		// as one that could only arrive and drop it. Reward never saturates
-		// while the policy is still improving, so the summit of the field is
-		// the hall standing still at the top of its stack.
-		//
-		// Across is the delivery rate, which does saturate, and should: once
-		// everyone can get it up there, the horizontal axis compresses and
-		// the vertical one carries the story.
-		//
-		// The frame follows the pool. Both skills saturate — six trained halls
-		// all deliver nearly every time — so a fixed 0…1 field would end the
-		// run as six rigs stacked in one corner with the interesting differences
-		// squeezed to nothing. The view tracks the swarm's own spread instead,
-		// slowly enough to feel like drift rather than a jump, and the dashed
-		// lines of equal fitness keep the absolute ranking legible underneath.
-		let dxLo = Infinity;
-		let dxHi = -Infinity;
-		let dyLo = Infinity;
-		let dyHi = -Infinity;
-		for (let w = 0; w < n; w++) {
-			const e = hallEMAs[w] ?? { deliverEMA: 0, drillEMA: 0 };
-			dxLo = Math.min(dxLo, e.deliverEMA);
-			dxHi = Math.max(dxHi, e.deliverEMA);
-			dyLo = Math.min(dyLo, e.rewardEMA);
-			dyHi = Math.max(dyHi, e.rewardEMA);
-		}
-		const frame = (lo: number, hi: number, minSpan: number): [number, number] => {
-			const c = (lo + hi) / 2;
-			const half = Math.max(minSpan, (hi - lo) * 0.72);
-			return [c - half, c + half];
-		};
-		const want = [...frame(dxLo, dxHi, 0.12), ...frame(dyLo, dyHi, 0.25)];
-		for (let i = 0; i < 4; i++)
-			view[i] = view[i] === undefined ? want[i] : view[i] + 0.02 * (want[i] - view[i]);
-		const fx = (u: number) =>
-			padL + ((u - view[0]) / Math.max(1e-6, view[1] - view[0])) * (W - padL - padR);
-		const fy = (v: number) =>
-			H - padB - ((v - view[2]) / Math.max(1e-6, view[3] - view[2])) * (H - padT - padB);
+		// ── fixed axes, on purpose ──
+		// This used to be a camera that tracked the pool's spread, and it was
+		// a mistake with a name: if the frame moves, a trail is a path through
+		// a space that no longer exists, and the one thing a trail is for —
+		// comparing where a hall was with where it is — becomes unreadable.
+		// Both skills are already rates in 0…1, so the field IS 0…1, always.
+		// A pool that ends up crowded into the top right has not defeated the
+		// chart; that is what winning looks like.
+		const cam = camera(VIEW, box);
 
-		// faint rules across the reward axis: no numbers, because the camera
-		// moves — they are there to make a hall's climb legible against
-		// something, and to show the pool spreading vertically as it learns
-		ctx.strokeStyle = tk.lineSoft;
-		ctx.lineWidth = 1;
-		ctx.setLineDash([2, 6]);
-		ctx.globalAlpha = 0.75;
-		for (let i = 1; i <= 4; i++) {
-			const y = fy(view[2] + ((view[3] - view[2]) * i) / 5);
+		// ── the rungs: lines of equal fitness ──
+		// deliver + ½·catch, the number the halls are ranked by, drawn as the
+		// ladder it is. Two halls on one rung are worth the same to the race
+		// and got there differently, which is the single most useful thing
+		// this picture can say.
+		const fLo = fitness(VIEW[0], VIEW[2]);
+		const fHi = fitness(VIEW[1], VIEW[3]);
+		const step = niceStep((fHi - fLo) / 5);
+		ctx.font = `10px ${FONT}`;
+		ctx.textBaseline = 'middle';
+		let labelled = false;
+		for (let f = Math.ceil(fLo / step) * step; f <= fHi + 1e-9; f += step) {
+			const seg = isoLine(f, VIEW);
+			if (!seg) continue;
+			const [ax, ay, bx, by] = seg;
+			ctx.strokeStyle = tk.line;
+			ctx.setLineDash([3, 5]);
+			ctx.lineWidth = 1;
+			ctx.globalAlpha = 0.55;
 			ctx.beginPath();
-			ctx.moveTo(padL - 4, y);
-			ctx.lineTo(W - padR + 16, y);
+			ctx.moveTo(cam.x(ax), cam.y(ay));
+			ctx.lineTo(cam.x(bx), cam.y(by));
 			ctx.stroke();
+			ctx.setLineDash([]);
+			// The number rides the LOW end of the rung — down among the
+			// delivery axis rather than up the side, where it read as a y tick
+			// and had nothing to do with y at all.
+			const low = cam.y(ay) > cam.y(by) ? [cam.x(ax), cam.y(ay)] : [cam.x(bx), cam.y(by)];
+			const lx = Math.min(W - 30, Math.max(box.left, low[0]));
+			const ly = Math.min(H - 8, Math.max(box.top + 6, low[1]));
+			ctx.globalAlpha = 0.9;
+			ctx.fillStyle = tk.ink3;
+			ctx.textAlign = 'left';
+			ctx.fillText(f.toFixed(2), lx + 4, ly - 6);
+			if (!labelled) {
+				labelled = true;
+				ctx.globalAlpha = 0.6;
+				ctx.fillText('fitness', lx + 4, ly + 7);
+			}
+			ctx.globalAlpha = 1;
 		}
-		ctx.setLineDash([]);
-		ctx.globalAlpha = 1;
 
-		// the two walls of the field — a frame, not a scale: the numbers on
-		// these axes move with the camera, and it is the pool's shape that is
-		// being read, not a reading off a ruler
+		// the two walls — a frame, not a scale: the numbers on the rungs are
+		// the reading, and these only say which way is better
 		ctx.strokeStyle = tk.lineSoft;
 		ctx.lineWidth = 1;
 		ctx.beginPath();
-		ctx.moveTo(padL - 10, padT - 16);
-		ctx.lineTo(padL - 10, H - padB + 8);
-		ctx.lineTo(W - padR + 16, H - padB + 8);
+		ctx.moveTo(box.left - 10, box.top - 10);
+		ctx.lineTo(box.left - 10, box.bottom + 10);
+		ctx.lineTo(box.right + 8, box.bottom + 10);
 		ctx.stroke();
 
-		// where each hall stands
-		const tx: number[] = [];
-		const ty: number[] = [];
+		// ── where each hall stands ──
+		// The settling is done HERE, on the two skills, and not on the pixels
+		// afterwards. Smoothing pixels was the second way this plot lied: a
+		// lerp toward a target is a straight line in screen space, and a
+		// straight line in screen space crosses rungs, so a hall on its way
+		// somewhere was drawn with a fitness it did not have. Measured live at
+		// six halls it put the third-best hall in second place. Smoothing the
+		// skills instead keeps every drawn position the exact image of some
+		// real pair of numbers — a slightly stale reading, which is honest,
+		// rather than a position between two readings, which is not.
+		// The follower snaps when it is far behind and eases when it is close.
+		//
+		// A plain lerp cannot win here. Slow enough to kill the tremble means
+		// slow enough to lag, and lag is a fitness error, and a fitness error
+		// is the picture drawing two halls in the wrong order — measured live
+		// at 2.7% of the pairs far enough apart to see. Making the rate grow
+		// with the distance still to cover separates the two jobs: a hall that
+		// has genuinely moved arrives within a frame or two, while the last
+		// hundredth of tremble is damped hard, because that is the only part
+		// worth damping.
 		for (let w = 0; w < n; w++) {
 			const e = hallEMAs[w] ?? { deliverEMA: 0, drillEMA: 0 };
-			tx[w] = fx(e.deliverEMA);
-			ty[w] = fy(e.rewardEMA);
-		}
-		// a few rounds of gentle repulsion so two halls with the same skills
-		// stand beside each other rather than inside each other
-		const minD = 2 * slot + 8;
-		for (let it = 0; it < 4; it++) {
-			for (let a = 0; a < n; a++)
-				for (let b = a + 1; b < n; b++) {
-					let dx = tx[b] - tx[a];
-					let dy = ty[b] - ty[a];
-					const d = Math.hypot(dx, dy);
-					if (d >= minD) continue;
-					if (d < 0.01) {
-						dx = (a - b) * 0.7;
-						dy = 1;
-					}
-					const k = ((minD - d) / (d || 1)) * 0.5;
-					tx[a] -= dx * k;
-					ty[a] -= dy * k;
-					tx[b] += dx * k;
-					ty[b] += dy * k;
-				}
-			for (let w = 0; w < n; w++) {
-				tx[w] = Math.max(slot + 4, Math.min(W - slot - 4, tx[w]));
-				ty[w] = Math.max(padT - 6, Math.min(H - 10, ty[w]));
+			if (showD[w] === undefined) {
+				showD[w] = e.deliverEMA;
+				showC[w] = e.drillEMA;
+				continue;
 			}
+			const gd = e.deliverEMA - showD[w];
+			const gc = e.drillEMA - showC[w];
+			const rate = Math.min(1, 0.25 + 6 * Math.hypot(gd, gc));
+			showD[w] += rate * gd;
+			showC[w] += rate * gc;
 		}
+		const px = Float64Array.from({ length: n }, (_, w) => cam.x(showD[w]));
+		const py = Float64Array.from({ length: n }, (_, w) => cam.y(showC[w]));
+		// Fanned apart along a rung, never across one. `room` is how much of
+		// that rung the canvas actually offers; when the pool outgrows it the
+		// halls close up rather than being clamped, because a clamped point
+		// stands somewhere it did not earn.
+		// How much of a rung the box actually offers, measured rather than
+		// guessed: the projection of the drawable rectangle onto the fan's own
+		// direction. Past that the halls close up instead of walking off the
+		// plate, which is the other way a rig used to end up outside its field.
+		// How much of a rung the box offers FROM WHERE THE POOL IS — not the
+		// box's own width along that direction, which is an upper bound the fan
+		// can overrun, because a trained pool sits in a corner and the corner
+		// is where the room runs out. Past it the halls close up rather than
+		// walking off the plate.
+		let cx = 0;
+		let cy = 0;
 		for (let w = 0; w < n; w++) {
-			nodeX[w] = nodeX[w] === undefined ? tx[w] : nodeX[w] + 0.07 * (tx[w] - nodeX[w]);
-			nodeY[w] = nodeY[w] === undefined ? ty[w] : nodeY[w] + 0.07 * (ty[w] - nodeY[w]);
+			cx += px[w] / n;
+			cy += py[w] / n;
+		}
+		separate(px, py, n, 2 * slot + 6, cam.iso, isoWindow(cx, cy, cam.iso, box, box.slack));
+		for (let w = 0; w < n; w++) {
+			nodeX[w] = px[w];
+			nodeY[w] = py[w];
 		}
 
 		// ── the wake each hall leaves through the field ──
-		// Sampled slowly and only when it has actually moved, then drawn
-		// through the midpoints as one smooth curve: what matters is the
-		// SHAPE of a learning history — right first, then up, and the long
-		// slide back when a hall loses the catch — not the frame-to-frame
-		// tremble of an EMA.
+		// Sampled slowly, in data space, and drawn through the midpoints as
+		// one smooth curve: what matters is the SHAPE of a learning history —
+		// right first, then up, and the long slide back when a hall loses the
+		// catch — not the frame-to-frame tremble of an EMA.
 		if (now - lastPathAt > 420) {
 			lastPathAt = now;
 			for (let w = 0; w < n; w++) {
+				const e = hallEMAs[w];
+				if (!e) continue;
+				// A much slower average than the one the rig stands on. The
+				// trail was drawn from the live EMA first and it was a scribble
+				// — that EMA turns over in about a second, so fifty seconds of
+				// it is a random walk with the shape of the learning buried
+				// somewhere inside. Seven seconds of smoothing leaves the arc:
+				// right first, then up, and the long slide back when a hall
+				// loses the catch.
+				trailD[w] =
+					trailD[w] === undefined ? e.deliverEMA : trailD[w] + 0.06 * (e.deliverEMA - trailD[w]);
+				trailC[w] =
+					trailC[w] === undefined ? e.drillEMA : trailC[w] + 0.06 * (e.drillEMA - trailC[w]);
 				const p = hallPath[w] ?? (hallPath[w] = []);
 				const k = p.length;
-				if (k && Math.hypot(nodeX[w] - p[k - 2], nodeY[w] - p[k - 1]) < 3) continue;
-				p.push(nodeX[w], nodeY[w]);
-				if (p.length > 120) p.splice(0, p.length - 120);
+				if (k && Math.hypot(trailD[w] - p[k - 2], trailC[w] - p[k - 1]) < 0.003) continue;
+				p.push(trailD[w], trailC[w]);
+				if (p.length > 72) p.splice(0, p.length - 72);
 			}
 		}
 		for (let w = 0; w < n; w++) {
 			const p = hallPath[w];
 			const pts = p ? p.length / 2 : 0;
 			if (!p || pts < 3) continue;
+			const sx = (i: number) => cam.x(p[2 * i]);
+			const sy = (i: number) => cam.y(p[2 * i + 1]);
 			ctx.strokeStyle = hue(tk, w);
-			ctx.lineWidth = 1.3;
+			ctx.lineWidth = 1.1;
 			for (let i = 1; i < pts - 1; i++) {
-				ctx.globalAlpha = 0.34 * (i / pts) ** 1.4;
+				ctx.globalAlpha = 0.14 * (i / pts) ** 1.5;
 				ctx.beginPath();
-				ctx.moveTo((p[2 * i - 2] + p[2 * i]) / 2, (p[2 * i - 1] + p[2 * i + 1]) / 2);
-				ctx.quadraticCurveTo(
-					p[2 * i],
-					p[2 * i + 1],
-					(p[2 * i] + p[2 * i + 2]) / 2,
-					(p[2 * i + 1] + p[2 * i + 3]) / 2
-				);
+				ctx.moveTo((sx(i - 1) + sx(i)) / 2, (sy(i - 1) + sy(i)) / 2);
+				ctx.quadraticCurveTo(sx(i), sy(i), (sx(i) + sx(i + 1)) / 2, (sy(i) + sy(i + 1)) / 2);
 				ctx.stroke();
 			}
 			// and a last stroke into where it stands now
-			ctx.globalAlpha = 0.34;
+			ctx.globalAlpha = 0.14;
 			ctx.beginPath();
-			ctx.moveTo((p[2 * pts - 4] + p[2 * pts - 2]) / 2, (p[2 * pts - 3] + p[2 * pts - 1]) / 2);
-			ctx.quadraticCurveTo(p[2 * pts - 2], p[2 * pts - 1], nodeX[w], nodeY[w]);
+			ctx.moveTo((sx(pts - 2) + sx(pts - 1)) / 2, (sy(pts - 2) + sy(pts - 1)) / 2);
+			ctx.quadraticCurveTo(sx(pts - 1), sy(pts - 1), nodeX[w], nodeY[w]);
 			ctx.stroke();
 		}
 		ctx.globalAlpha = 1;
@@ -814,8 +874,8 @@
 				const bow = Math.min(30, 0.16 * len);
 				const cx = (x0 + x1) / 2 - (dy / len) * bow;
 				const cy = (y0 + y1) / 2 + (dx / len) * bow;
-				const px = -dy / len;
-				const py = dx / len;
+				const nx = -dy / len;
+				const ny = dx / len;
 				const wS = 0.8 + 4 * a; // wide where it leaves…
 				const wT = 0.7; // …a filament where it lands
 				ctx.fillStyle = hue(tk, j);
@@ -823,10 +883,10 @@
 				// two leaders is a wash at the alpha six halls need
 				ctx.globalAlpha = Math.min(0.7, (0.08 + 0.4 * a) * fade * (1 + 1.6 * flare[j]));
 				ctx.beginPath();
-				ctx.moveTo(x0 + px * wS, y0 + py * wS);
-				ctx.quadraticCurveTo(cx + px * wT, cy + py * wT, x1 + px * wT, y1 + py * wT);
-				ctx.lineTo(x1 - px * wT, y1 - py * wT);
-				ctx.quadraticCurveTo(cx - px * wT, cy - py * wT, x0 - px * wS, y0 - py * wS);
+				ctx.moveTo(x0 + nx * wS, y0 + ny * wS);
+				ctx.quadraticCurveTo(cx + nx * wT, cy + ny * wT, x1 + nx * wT, y1 + ny * wT);
+				ctx.lineTo(x1 - nx * wT, y1 - ny * wT);
+				ctx.quadraticCurveTo(cx - nx * wT, cy - ny * wT, x0 - nx * wS, y0 - ny * wS);
 				ctx.closePath();
 				ctx.fill();
 			}
@@ -840,9 +900,8 @@
 			const s = hallSims[w];
 			const champ = w === champView;
 			// the aura is ATTENTION RECEIVED — the sum of the pool's learned
-			// weights pointing at this hall. Nobody assigns it; it is what five
-			// independent social learners decided, and the hall paying off best is
-			// the one wearing the most light.
+			// weights pointing at this hall. Nobody assigns it; it is what the
+			// other halls' independent social learners decided.
 			const got = inAttn[w] / Math.max(1, n - 1);
 			if (got > 0.01) {
 				ctx.globalAlpha = 0.1 + 0.22 * got;
@@ -875,7 +934,32 @@
 				ctx.stroke();
 				ctx.globalAlpha = 1;
 			}
-			ctx.strokeStyle = champ ? tk.accent : tk.lineSoft;
+			// The champion is the hall whose θ the big rig on the rail above is
+			// running. That was previously a one-pixel change of stroke colour,
+			// and readers could not find the pendulum they were shoving. It is
+			// now an amber ring in the stage's own colour, with the label —
+			// the same object, in two places.
+			// Vermilion, and not one of the ten categorical hues: `tk.amber` is
+			// cats[1], so an amber ring would have been indistinguishable from
+			// hall 2's own colour. Warm belongs to no hall, and it is the
+			// colour of the big rig's lower link — the same object, marked the
+			// same way, in both places.
+			if (champ) {
+				ctx.strokeStyle = tk.warm;
+				ctx.globalAlpha = 0.9;
+				ctx.lineWidth = 1.6;
+				ctx.beginPath();
+				ctx.arc(x, y, slot * 1.18, 0, Math.PI * 2);
+				ctx.stroke();
+				ctx.globalAlpha = 0.8;
+				ctx.fillStyle = tk.warm;
+				ctx.font = `9.5px ${FONT}`;
+				ctx.textAlign = 'center';
+				ctx.fillText('on the rail ↑', x, y - slot * 1.18 - 5);
+				ctx.textAlign = 'left';
+				ctx.globalAlpha = 1;
+			}
+			ctx.strokeStyle = champ ? tk.warm : tk.lineSoft;
 			ctx.lineWidth = champ ? 1.4 : 1;
 			ctx.beginPath();
 			ctx.moveTo(x - slot * 0.8, y);
@@ -1402,7 +1486,7 @@
 	id="pendulum"
 	live
 	title="The double pendulum swing-up"
-	caption="A pool of independent learners, one problem, and a second thing being learned on top of it: who to listen to. Each small stage below is its own policy on its own background thread — press Swarm and they all step onto the one rail, a colour each, weaving as many ideas about how to pump as there are halls, with your own rig in white among them. Discoveries are broadcast: when any hall lands an arrival cleaner than it has ever managed, that state goes to every other hall as something to practise from, and the gradient of the episode that found it goes to the halls behind. But whether to take anyone’s advice is not imposed — every hall runs a second, tiny REINFORCE learner whose actions are &ldquo;take that hall’s weights a step&rdquo; and &ldquo;refuse everyone&rdquo;, and whose only reward is whether it climbed the pool’s ranking afterwards. The field underneath draws what they decided: each hall stands where its delivery rate (across) and its reward per tick (up) put it, the ribbons are the weights they trained on each other, the halo is attention received — the hall paying off best wears the most light — and a dashed shell is a hall that has learned to take nobody’s advice at all. It usually learns that first at the front, which is the honest answer: a race is insurance, and influence spends it. Take the learners slider up and the pool becomes a crowd, arriving at zero and deciding for itself whom to follow — then shove the hinge, and watch every one of them fight back."
+	caption="A pool of independent learners, one problem, and a second thing being learned on top of it: who to listen to. Each hall is its own policy on its own background thread — press Swarm and they all step onto the one rail, a colour each, with your own rig among them. Discoveries are broadcast: an arrival cleaner than any a hall has managed goes to every other hall as something to practise from, and the gradient behind it goes to the halls doing worse. But influence is not imposed. Every hall runs a second, tiny REINFORCE learner whose actions are &ldquo;take that hall&rsquo;s weights a step&rdquo; and &ldquo;refuse everyone&rdquo;, and whose only reward is whether it climbed the pool&rsquo;s ranking. Imposed instead, influence made the pool fail together — mean fitness 0.33 against 0.82 for six halls sharing nothing — because a hall mid-discovery that keeps being dragged toward the leader never finishes its own idea. The field below stands each hall on the two skills its fitness is made of, so the labelled diagonals are lines of equal fitness and the ribbons are what the halls decided about each other."
 >
 	{#snippet status()}
 		<span>
@@ -1531,32 +1615,36 @@
 								<div class="relative mt-1">
 									<canvas
 										bind:this={webCanvas}
-										class="block h-[300px] w-full sm:h-[272px]"
-										aria-label="Every practice hall as a live pendulum, standing in a field of two
-										skills: how often it gets the stack to the top at all (left to right) and how much
-										reward it earns per tick (bottom to top). Faint diagonals are lines of equal fitness. Each
-										hall trails the path it took to get where it stands. Sparks flying between them are
-										one hall's discovery being handed to all the others; the slow curves are laggards
-										drifting toward the weights of the halls ahead."
+										class="block h-[340px] w-full sm:h-[404px] lg:h-[448px]"
+										aria-label="Every practice hall drawn as a live pendulum, standing in a field of
+										the two skills its fitness is made of: how often it gets the stack to the top at
+										all (left to right) and how much of the catch window it then holds (bottom to
+										top). The dashed diagonals are lines of equal fitness, labelled — two halls on
+										one diagonal are worth the same to the race and got there differently. Each hall
+										trails the path it took. Ribbons run from a hall being listened to into the hall
+										listening; a halo is attention received; a dashed shell is a hall that has
+										learned to take nobody's advice. The warm ring marks the hall whose weights the
+										big rig on the rail above is running."
 									></canvas>
 									<span
-										class="num pointer-events-none absolute bottom-1 left-11 text-[10px] text-ink-3"
+										class="num pointer-events-none absolute right-3 bottom-1 text-[10px] text-ink-3"
 									>
 										delivers →
 									</span>
 									<span
 										class="num pointer-events-none absolute top-1.5 left-2 text-[10px] text-ink-3"
 									>
-										↑ reward
+										↑ catches
 									</span>
 								</div>
 								<div
 									class="num mt-0.5 flex flex-wrap items-center gap-x-4 gap-y-0.5 text-[10px] text-ink-3"
 								>
+									<span>diagonals: equal fitness</span>
+									<span>warm ring: the rig on the rail</span>
 									<span>ribbons: who listens to whom, learned</span>
 									<span>halo: attention received</span>
 									<span>dashed shell: refusing advice</span>
-									<span>trails: how each hall got here</span>
 									{#if lastFind}
 										<span style="color: var(--ink-2);">
 											hall {lastFind.hall + 1} found a cleaner arrival — shared with {lastFind.to}

@@ -157,5 +157,9 @@ export function blendInto(
 
 /** Fitness measured against a hall's own slow average: how far it has just
  * pulled above its recent self. A hall that has been good for a long time
- * has a rise of ~0; a hall that just found something has a spike. */
-export const RISE_EMA = 0.01;
+ * has a rise of ~0; a hall that just found something has a spike.
+ *
+ * It has to be a good deal slower than the fitness it is subtracting, or the
+ * two averages track each other and every rise is zero. Fitness now settles
+ * over about a second; this settles over several. */
+export const RISE_EMA = 0.004;
