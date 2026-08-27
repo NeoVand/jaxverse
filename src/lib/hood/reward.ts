@@ -29,7 +29,7 @@ for (let t = 0; t < p.states.length; t++) {
 				},
 				{
 					title: 'The physics is four lines, and it is the whole chapter',
-					body: `Everything that makes this world interesting lives in one function: how fast a boat goes at a given angle to the wind. Zero inside the no-go zone, quickest on a beam reach, easing off downwind. Divide the time cost of a leg by that number and tacking is no longer something you have to program — it is the cheapest route, and the policy is left to find out.`,
+					body: `Everything that makes this world interesting lives in one function: how fast a boat goes at a given angle to the wind. Zero inside the no-go zone, quickest on a beam reach, easing off downwind. Divide the time cost of a leg by that number — floored at 0.45, so that a heading one degree inside the sailable range costs a great deal rather than everything — and tacking is no longer something you have to program — it is the cheapest route, and the policy is left to find out.`,
 					code: {
 						file: 'src/lib/optim-rl/chart.ts',
 						code: `export function boatSpeed(twa: number): number {

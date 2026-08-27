@@ -105,10 +105,11 @@
 		<p>
 			Two rules make this more than a maze. A sailing boat <em>cannot sail into the wind</em>: point
 			within 35° of it and the sails luff, the boat stops, and the clock keeps running. And a boat
-			is not equally quick on every heading — it is fastest with the wind on the beam, at ninety
-			degrees, slower close-hauled, and slower again running dead downwind. So the cost of a leg
-			depends on its angle to the wind, which is a real thing sailors call a polar diagram and is
-			the entire physics of this page.
+			is not equally quick on every heading — fastest with the wind on the beam, at ninety degrees;
+			slower running dead downwind, where the sails can only be pushed; and slowest of all
+			close-hauled, clawing along the edge of the no-go zone at less than half its best. So the cost
+			of a leg depends on its angle to the wind, which is a real thing sailors call a polar diagram
+			and is the entire physics of this page.
 		</p>
 		<p>
 			Look at where the harbour is: almost dead upwind of the start. There is no route that points
