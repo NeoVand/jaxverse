@@ -56,7 +56,7 @@
 	<Plate
 		id="dataset"
 		title="The dataset"
-		caption="A random page from the training set — ten thousand of these ride with this chapter, each a 28 × 28 grid of gray written by a different hand. Reshuffle a few times and the difficulty announces itself: 4s that could be 9s, 3s a squint away from 5s, 1s with and without a foot. Whatever rule tells them apart, nobody will get to write it down — it will have to be learned."
+		caption="A random page from the training set — eight thousand of these teach the model on this page, and two thousand more are held back to grade it, each a 28 × 28 grid of gray off somebody's pen. Reshuffle a few times and the difficulty announces itself: 4s that could be 9s, 3s a squint away from 5s, 1s with and without a foot. Whatever rule tells them apart, nobody will get to write it down — it will have to be learned."
 	>
 		<Gallery />
 	</Plate>
