@@ -31,7 +31,7 @@
 	}
 
 	/** What each diet's own games look like — the two ends of the experiment. */
-	const RANDOM_RATE = 0.08;
+	const RANDOM_RATE = 0.12;
 	const GREEDY_RATE = 0.38;
 
 	let running = $state(false);
@@ -223,7 +223,7 @@
 	id="sft"
 	live
 	title="Fine-tuning — the same weights, a better diet"
-	caption="Nothing about the machine changed — same parameters, same loss, same update rule — only the corpus. Style follows the diet: within a hundred-odd steps the capture rate of Rook's own games climbs from the random-play 8% toward the greedy corpus's 38%, while the held-out loss on the corpus it left drifts up. That drift is the price, printed beside the prize. Stop while you are ahead: over-tuning keeps buying style and starts paying with competence."
+	caption="Nothing about the machine changed — same parameters, same loss, same update rule — only the corpus. Style follows the diet: within a hundred-odd steps the capture rate of Rook's own games climbs from the random-play 12% toward the greedy corpus's 38%, while the held-out loss on the corpus it left drifts up. That drift is the price, printed beside the prize. Stop while you are ahead: over-tuning keeps buying style and starts paying with competence."
 >
 	{#snippet status()}
 		{#if lab.phase === 'ready'}
@@ -319,7 +319,7 @@
 							viewBox="0 0 {W} {H}"
 							class="block w-full"
 							role="img"
-							aria-label="Capture rate of the model's own sampled games across fine-tuning steps, between the random-play diet at 8 percent and the greedy diet at 38 percent"
+							aria-label="Capture rate of the model's own sampled games across fine-tuning steps, between the random-play diet at 12 percent and the greedy diet at 38 percent"
 						>
 							{#each TICKS as t (t)}
 								<line
@@ -353,7 +353,7 @@
 								y={y(RANDOM_RATE) - 4}
 								text-anchor="end"
 								class="num tick"
-								fill="var(--ink-3)">random-play diet ≈8%</text
+								fill="var(--ink-3)">random-play diet ≈12%</text
 							>
 							<line
 								x1={PAD.l}
