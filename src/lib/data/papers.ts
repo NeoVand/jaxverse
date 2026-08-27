@@ -580,6 +580,14 @@ export const papers = {
 		url: 'https://web.stanford.edu/class/psych209/Readings/SuttonBartoIPRLBook2ndEd.pdf',
 		note: 'The book, given away by its authors. If any single chapter of this one leaves you wanting the whole subject properly, it is this one.'
 	},
+	'barto-1983': {
+		authors: 'Barto, Sutton & Anderson',
+		year: 1983,
+		title: 'Neuronlike Adaptive Elements That Can Solve Difficult Learning Control Problems',
+		where: 'IEEE Transactions on Systems, Man, and Cybernetics SMC-13(5)',
+		url: 'https://web.archive.org/web/20260205231609/http://incompleteideas.net/papers/barto-sutton-anderson-83.pdf',
+		note: "Where the cart-pole comes from, and it was a credit-assignment problem from the start: the only feedback is a failure signal when the pole falls past an angle or the cart runs off its track. The archived copy of Sutton's own page — his site serves it over plain http, and this book's sources are all https."
+	},
 	'kakade-langford-2002': {
 		authors: 'Kakade & Langford',
 		year: 2002,
@@ -822,6 +830,7 @@ export const citationOrder: Partial<Record<string, readonly PaperId[]>> = {
 		'sutton-barto-2018',
 		'kakade-langford-2002',
 		'florensa-2017',
+		'barto-1983',
 		'krakovna-2020'
 	],
 	taste: [

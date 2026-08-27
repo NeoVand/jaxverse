@@ -204,9 +204,13 @@
 		<h2 class="h2">Where the real work is</h2>
 		<p>
 			The chart is small enough to see whole. Almost nothing in practice is, so here is the same
-			algorithm on something that is not: the classic cart-and-pole made meaner twice over. A hinge
-			sliding on a short rail, <em>two</em> pendulum links stacked on top of it, and the stack
-			starting where gravity wants it — hanging straight down. The policy must learn to
+			algorithm on something that is not: the classic cart-and-pole, made meaner twice over. Barto,
+			Sutton and Anderson set the original in 1983, and it was a study in credit assignment from the
+			start: the learner was told nothing at all until the pole fell past an angle or the cart ran
+			off the end of its track — one bit, at the end of everything it had done.<Cite
+				id="barto-1983"
+			/> A hinge sliding on a short rail, <em>two</em> pendulum links stacked on top of it, and the
+			stack starting where gravity wants it — hanging straight down. The policy must learn to
 			<em>swing it up</em>: pump energy in with rhythmic pushes, steer the top link
 			<em>through</em> the bottom one, and then catch the whole thing upright inside the ±18° cones. It
 			reads six numbers through hand-crafted gauges, and five pushes are available, fifty times a second.
