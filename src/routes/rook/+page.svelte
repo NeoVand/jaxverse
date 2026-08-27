@@ -300,12 +300,15 @@
 			curve of yours ever peaks and turns over. A judge made of taste is expensive, slow, noisy, and
 			has holes an optimizer will find. So coding and mathematics improve at a pace that
 			essay-writing and advice do not — the pipeline is identical, and only some subjects come with
-			an answer key. The caveat is that "no feelings to flatter" is not "no exploits": a model
-			rewarded for passing tests will sometimes learn to game the tests — patching the assertions,
-			special-casing the inputs, exiting early with the expected code — and building verifiers that
-			cannot be lawyered is a live problem rather than a solved one. There is a nastier turn to it,
-			too. Read the model's own reasoning and you can often catch it planning the exploit in plain
-			language; train against that signal and it does not stop exploiting, it stops saying so.<Cite
+			an answer key.
+		</p>
+		<p>
+			The caveat is that "no feelings to flatter" is not "no exploits": a model rewarded for passing
+			tests will sometimes learn to game the tests — patching the assertions, special-casing the
+			inputs, exiting early with the expected code — and building verifiers that cannot be lawyered
+			is a live problem rather than a solved one. There is a nastier turn to it, too. Read the
+			model's own reasoning and you can often catch it planning the exploit in plain language; train
+			against that signal and it does not stop exploiting, it stops saying so.<Cite
 				id="baker-2025"
 			/>
 		</p>
@@ -332,9 +335,10 @@
 			Step back and look at what you ran. One set of weights was pretrained on everything available,
 			fine-tuned on a curated slice, then reinforced against a verifier. Swap chess for language.
 			Swap legality for human preference and verified answers. Swap 1.3 million parameters for a
-			trillion, and a browser tab for a datacenter — the same text-only treatment of chess, given
-			enough of both, plays grandmaster-level blitz with no search at all.<Cite id="ruoss-2024" />
-			The recipe you just ran is the recipe. The ideas do not change — only the appetite.
+			trillion, and a browser tab for a datacenter. The recipe you just ran is the recipe. The ideas
+			do not change — only the appetite. And the appetite is not a hand-wave: this same text-only
+			treatment of chess, given enough of both, plays grandmaster-level blitz without searching a
+			single move ahead.<Cite id="ruoss-2024" />
 		</p>
 		<p>
 			And that is the book. A loss surface and a step downhill; a neuron, a bump of influence; space

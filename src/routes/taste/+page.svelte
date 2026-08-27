@@ -95,9 +95,9 @@
 			at the heart of modern alignment is the oldest, most boring shape in statistics, pointed at pairs
 			of essays instead of pairs of chess players — and the mystique evaporates the moment you can see
 			the two forward passes and the subtraction. Bolting a neural network onto that shape and optimising
-			against the result is barely older than this book's readers: it was first done on Atari games and
-			simulated robots, where about a thousand human comparisons bought behaviours nobody could have written
-			a reward function for.<Cite id="christiano-2017" />
+			against the result is far more recent than the shape itself: it was first done in 2017, on Atari
+			games and simulated robots, where about a thousand human comparisons bought behaviours nobody could
+			have written a reward function for.<Cite id="christiano-2017" />
 		</p>
 		<p>
 			One number below is worth more than the rest. It is easy to score a model on data it was
@@ -119,12 +119,16 @@
 		</p>
 		<p>
 			Your judge is not your taste. It is four hundred parameters fitted to a few dozen of your
-			clicks, and away from those clicks it is guessing. Nor is the industrial version any purer:
-			when this is done for real, the people supplying the comparisons agree with each other only
-			about three times in four,<Cite id="stiennon-2020" /> so the judge is fitted to a noisy majority
-			and inherits its noise as a ceiling. Where you never voted, it extrapolates, and extrapolation from
-			a small sample is not opinion but arithmetic accident. There are regions of ornament space where
-			the judge is confidently, splendidly wrong, and neither of you has any idea where they are.
+			clicks, and away from those clicks it is guessing. Where you never voted, it extrapolates, and
+			extrapolation from a small sample is not opinion but arithmetic accident. There are regions of
+			ornament space where the judge is confidently, splendidly wrong, and neither of you has any
+			idea where they are.
+		</p>
+		<p>
+			Nor is the industrial version any purer. When this is done for real, the people supplying the
+			comparisons agree with each other only about three times in four,<Cite id="stiennon-2020" /> so
+			the judge is fitted to a noisy majority and inherits that noise as a ceiling — one no amount of
+			extra data will lift.
 		</p>
 		<p>
 			An optimizer will find them. Not out of malice — it has no model of your intentions and no
