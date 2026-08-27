@@ -138,13 +138,13 @@
 			second number is a claim about handwriting.
 		</p>
 		<p>
-			Worth knowing that even this discipline leaks. A test set is only held out until people start
-			choosing what to keep by how it scores, and then, one published result at a time, the field
-			begins fitting to it too. When researchers built a fresh test set for a famous image benchmark
-			by repeating the original collection procedure as closely as they could, every model scored
-			worse on the new one — not catastrophically, but consistently, in the order of their original
-			ranks.<Cite id="recht-2019" /> Nothing here was cheated. The number was simply optimistic in a way
-			nobody could see from inside.
+			Even this discipline leaks. A test set is only held out until people start choosing what to
+			keep by how it scores, and then, one published result at a time, the field begins fitting to
+			it too. When researchers built a fresh test set for a famous image benchmark by repeating the
+			original collection procedure as closely as they could, every model scored worse on the new
+			one — not catastrophically, but consistently, in the order of their original ranks.<Cite
+				id="recht-2019"
+			/> Nothing here was cheated. The number was simply optimistic in a way nobody could see from inside.
 		</p>
 	</Prose>
 
@@ -191,10 +191,10 @@
 			a corner, and without that shift it would fail for reasons that have nothing to do with shape.
 		</p>
 		<p>
-			Beside the pad sits an <em>evidence square</em>, and it deserves a word of caution along with
-			its introduction. It is the gradient of the winning score with respect to each pixel: brighten
-			this pixel a little, and the score for the model's answer goes up by this much, or down. Laid
-			out as an image, that vector is a <em>saliency map</em>, and it does look like an explanation.<Cite
+			Beside the pad sits an <em>evidence square</em>, and it arrives with a caution attached. It is
+			the gradient of the winning score with respect to each pixel: brighten this pixel a little,
+			and the score for the model's answer goes up by this much, or down. Laid out as an image, that
+			vector is a <em>saliency map</em>, and it does look like an explanation.<Cite
 				id="simonyan-2014"
 			/> Read it as one carefully. A gradient describes the model's behaviour in an infinitesimal neighbourhood
 			of exactly this input, which is not the same thing as the reason for the verdict — and some popular
@@ -229,6 +229,18 @@
 			the winners. And its mistakes on the test set have structure. It does not confuse digits at random;
 			it confuses digits that share a skeleton, the same pairs you would confuse squinting at a bad fax.
 		</p>
+	</Prose>
+
+	<Plate
+		id="inside"
+		live
+		title="Inside the machine"
+		caption="Left: an explorer over every learned layer, with two ways to look at a unit. Weights draws what it is made of — a first-layer unit owns 784 incoming weights, one per pixel, so it simply is an image, and a deeper unit is carried back to pixel space by multiplying out the matrices behind it, its linear shadow. Excites it drops the algebra and asks the test set: the two dozen digits that drive the unit hardest, averaged. Walk out to the readout in that view and the ten class templates come back as ten clean digits — the machine's idea of each name. Right: the confusion matrix over all 2,000 test digits, rows truth and columns its reading. Hover any cell to open the digits it actually got that way; the heaviest are usually 4 read as 9 and 3 read as 5, mistakes of shared shape."
+	>
+		<Inside />
+	</Plate>
+
+	<Prose>
 		<p>
 			The machine's idea of a 7 is further from yours than its mistakes suggest. Take an image it
 			reads correctly and confidently, compute which direction in pixel space would most reduce that
@@ -243,18 +255,6 @@
 			model has genuinely learned something about handwriting. It has not learned what you would call
 			seeing.
 		</p>
-	</Prose>
-
-	<Plate
-		id="inside"
-		live
-		title="Inside the machine"
-		caption="Left: an explorer over every learned layer, with two ways to look at a unit. Weights draws what it is made of — a first-layer unit owns 784 incoming weights, one per pixel, so it simply is an image, and a deeper unit is carried back to pixel space by multiplying out the matrices behind it, its linear shadow. Excites it drops the algebra and asks the test set: the two dozen digits that drive the unit hardest, averaged. Walk out to the readout in that view and the ten class templates come back as ten clean digits — the machine's idea of each name. Right: the confusion matrix over all 2,000 test digits, rows truth and columns its reading. Hover any cell to open the digits it actually got that way; the heaviest are usually 4 read as 9 and 3 read as 5, mistakes of shared shape."
-	>
-		<Inside />
-	</Plate>
-
-	<Prose>
 		<h2 class="h2">The workhorse and its price</h2>
 		<p>
 			What you just trained is not a toy version of the real thing; it is the real thing, small.

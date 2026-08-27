@@ -145,6 +145,13 @@
 			click. Watch where they part company, and notice that nothing on the first curve marks the
 			spot.
 		</p>
+	</Prose>
+
+	<Goodhart />
+
+	<UnderTheHood slug="taste" block="goodhart" />
+
+	<Prose>
 		<p>
 			This is not a quirk of a four-hundred-parameter judge on a toy space. Run the same experiment
 			with real reward models and real language models and you get the same two curves, in the same
@@ -155,13 +162,6 @@
 			/> The failure has a shape, and the shape has parameters. That is a good deal better than knowing
 			it can happen, and still nowhere near being able to see the peak from the inside.
 		</p>
-	</Prose>
-
-	<Goodhart />
-
-	<UnderTheHood slug="taste" block="goodhart" />
-
-	<Prose>
 		<h2 class="h2">The leash</h2>
 		<p>
 			So the optimizer must be stopped, and the question is what to charge it for. Not distance in

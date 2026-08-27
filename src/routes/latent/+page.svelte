@@ -139,11 +139,10 @@
 			deliberately cruel waist, chosen so the whole map fits on one page.
 		</p>
 		<p>
-			The blur is the <em>loss</em>, not the architecture, and the field spent a decade on the
-			difference. Ask for the answer that minimises squared error and you have asked for an average,
-			and an average of several plausible digits is a smudge of all of them. Every sharp generative
-			model since has attacked that clause rather than the network. Adversarial training replaced
-			the pixel-by-pixel score with a second network paid to say whether the result looks real<Cite
+			That blur belongs to the loss rather than to the hourglass, and the distinction is most of
+			what the last decade of generative modelling has been about. Every sharp model since has
+			attacked the clause rather than the network. Adversarial training replaced the pixel-by-pixel
+			score with a second network paid to say whether the result looks real<Cite
 				id="goodfellow-gan-2014"
 			/>; diffusion models, which is what the image generators you have used are, sidestep the
 			averaging by learning to remove a little noise at a time, so the model commits gradually
@@ -151,13 +150,13 @@
 			question changed.
 		</p>
 		<p>
-			The plate below does exactly that, with one twist held in reserve. In ink you see the map as
-			the model knows it: anonymous points, arranged purely by reconstruction convenience. In
-			images, each digit is printed at its own latent address, so the map reads like an atlas of
-			handwriting — and the slider decides how many get printed. And the twist, which works over
-			either view: colorize tints everything by its true label, information the network has never
-			seen, not in any gradient, not once. If the bottleneck's two numbers carry nothing about
-			digit-kind, the tints will fall like confetti.
+			The plate below puts the whole map on one page, with one twist held in reserve. In ink you see
+			the map as the model knows it: anonymous points, arranged purely by reconstruction
+			convenience. In images, each digit is printed at its own latent address, so the map reads like
+			an atlas of handwriting — and the slider decides how many get printed. And the twist, which
+			works over either view: colorize tints everything by its true label, information the network
+			has never seen, not in any gradient, not once. If the bottleneck's two numbers carry nothing
+			about digit-kind, the tints will fall like confetti.
 		</p>
 	</Prose>
 
