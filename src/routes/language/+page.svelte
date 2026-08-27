@@ -231,8 +231,8 @@
 			pairs: q finds u, h learns to trail t and s. Only then do word shapes appear, and the whole
 			schedule runs slower. The word-piece scribe skipped all of it, because that layer of
 			regularity was already cashed into the vocabulary by three hundred merges: <em>the</em>,
-			<em>said</em> and <em>little</em> arrive as single indivisible tokens, and spelling them is not
-			a problem the model ever has. Same corpus, coarser atoms, longer reach — the same ninety-six-slot
+			<em>said</em> and <em>little</em> arrive whole, leading space and all, as one token each, and spelling
+			them is not a problem the model ever has. Same corpus, coarser atoms, longer reach — the same ninety-six-slot
 			window now holds about two hundred and thirty characters instead of ninety-six.
 		</p>
 		<p>
