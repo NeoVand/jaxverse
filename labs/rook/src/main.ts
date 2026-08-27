@@ -1,4 +1,4 @@
-// Lab 7 — Rook: legality emerges from next-token prediction.
+// Lab 8 — Rook: legality emerges from next-token prediction.
 //
 // The token stream in this zip is ~360k tokens of real chess games in UCI
 // notation; token 0 is <game>, the fresh-board marker. The model (model.ts,

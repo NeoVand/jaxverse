@@ -1,4 +1,4 @@
-# Lab 7 · Rook
+# Lab 8 · Rook
 
 Pretrain a small chess language model on real games and watch legality emerge, judged by chess.js.
 

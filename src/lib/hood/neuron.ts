@@ -88,7 +88,7 @@ optState = newOptState;`
 			],
 			lab: {
 				file: 'neuron.zip',
-				note: 'A 60-line MLP fitting a sine wave in your browser: pytree params, valueAndGrad, optax Adam, live canvas plot'
+				note: 'A 140-line MLP fitting a sine wave in your browser: pytree params, valueAndGrad, optax Adam, live canvas plot'
 			}
 		}
 	]
