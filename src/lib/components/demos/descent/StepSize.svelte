@@ -4,7 +4,7 @@
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import Slider from '$lib/components/ui/Slider.svelte';
 
-	// Three 1-D landscapes. On θ² one update is θ ← (1 − 2γ)θ, so |1 − 2γ|
+	// Three 1-D landscapes. On θ² one update is θ ← (1 − 2η)θ, so |1 − 2η|
 	// decides the fate; the double well adds a second minimum to hop into;
 	// |θ| has a kink, so the (sub)gradient step never shrinks near the bottom.
 	interface Curve {
@@ -59,7 +59,7 @@
 	const PAD_B = 24;
 
 	let curveId = $state<Curve['id']>('quad');
-	let gamma = $state(0.3);
+	let eta = $state(0.3);
 	let auto = $state(false);
 	let k = $state(0);
 	let thetas = $state<number[]>([CURVES[0].theta0]);
@@ -136,7 +136,7 @@
 	function stepOnce() {
 		const cur = thetas[thetas.length - 1];
 		if (Math.abs(cur) > limit) return;
-		const next = cur - gamma * curve.df(cur);
+		const next = cur - eta * curve.df(cur);
 		thetas = [...thetas, next].slice(-(KEEP + 1));
 		k += 1;
 		if (Math.abs(next) > limit) auto = false;
@@ -166,11 +166,11 @@
 	id="stepsize"
 	live
 	title="Too big, too small"
-	caption="Three regimes of one dial on θ²: below γ = 0.5 the ball eases in, near 0.5 it drops almost in one step, past 1.0 every hop bounces it out of the bowl. On the double well a bold γ hops between valleys; on |θ| the slope never softens, so the ball strides across the kink forever."
+	caption="Three regimes of one dial on θ²: below η = 0.5 the ball eases in, near 0.5 it drops almost in one step, past 1.0 every hop bounces it out of the bowl. On the double well a bold η hops between valleys; on |θ| the slope never softens, so the ball strides across the kink forever."
 >
 	{#snippet status()}
 		<span>
-			k = {k} · γ = {gamma.toFixed(2)} · θ = {theta.toFixed(2)}
+			k = {k} · η = {eta.toFixed(2)} · θ = {theta.toFixed(2)}
 			{#if diverged}<span style="color: var(--bad);">· diverged</span>{/if}
 		</span>
 	{/snippet}
@@ -305,8 +305,8 @@
 
 		<div class="mx-auto mt-3 max-w-[640px]">
 			<Slider
-				label="step size γ"
-				bind:value={gamma}
+				label="step size η"
+				bind:value={eta}
 				min={0.05}
 				max={1.15}
 				step={0.01}

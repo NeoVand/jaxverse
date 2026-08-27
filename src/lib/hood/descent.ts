@@ -26,12 +26,12 @@ export function gradAt(preset: Preset, x: number, y: number): [number, number] {
 				},
 				{
 					title: 'Five optimizers, one switch statement',
-					body: `Every optimizer in this book — and very nearly every optimizer in the field — is a few lines around <code>θ ← θ − γ·(something built from gradients)</code>. SGD uses the gradient raw. Momentum keeps a velocity. Adam keeps two exponential moments and divides one by the square root of the other, which is what makes its stride roughly γ per axis whatever the terrain. Read the Adam case slowly; you will meet it again as <code>optax.adam</code> in every later chapter, doing exactly this to a million parameters at once.`,
+					body: `Every optimizer in this book — and very nearly every optimizer in the field — is a few lines around <code>θ ← θ − η·(something built from gradients)</code>. Plain descent uses the gradient raw. Momentum keeps a velocity. Adam keeps two exponential moments and divides one by the square root of the other, which is what makes its stride roughly η per axis whatever the terrain. Read the Adam case slowly; you will meet it again as <code>optax.adam</code> in every later chapter, doing exactly this to a million parameters at once.`,
 					code: {
 						file: 'src/lib/optim/optimizers.ts',
 						code: `case 'adam':
 case 'adamw': {
-	// moments + bias correction; AdamW adds the γλθ pull.
+	// moments + bias correction; AdamW adds the ηλθ pull.
 	const t = ++st.t;
 	const mc1 = 1 - Math.pow(BETA1, t);
 	const mc2 = 1 - Math.pow(BETA2, t);
@@ -83,7 +83,7 @@ let x = np.array([-1.4]);
 let y = np.array([1.6]);
 for (let t = 0; t <= 2000; t++) {
 	const [loss, [gx, gy]] = vg(x.ref, y.ref); // lend x and y, keep them
-	x = x.sub(gx.mul(2e-3)); // θ ← θ − γ∇ℒ, same as ever
+	x = x.sub(gx.mul(2e-3)); // θ ← θ − η∇ℒ, same as ever
 	y = y.sub(gy.mul(2e-3));
 	if (t % 500 === 0) console.log(t, loss.dataSync()[0]);
 	else loss.dispose();

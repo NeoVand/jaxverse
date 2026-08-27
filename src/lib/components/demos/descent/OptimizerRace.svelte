@@ -64,7 +64,7 @@
 	}
 
 	let presetId = $state<PresetId>('basins');
-	let logGamma = $state(-1.3); // γ ≈ 0.05 — everyone lively, nobody diverges
+	let logEta = $state(-1.3); // η ≈ 0.05 — everyone lively, nobody diverges
 	let running = $state(false);
 	let t = $state(0);
 	let view = $state<'2d' | '3d'>('2d');
@@ -78,7 +78,7 @@
 	});
 	let legend = $state<LegendEntry[]>([]);
 
-	const gamma = $derived(Math.pow(10, logGamma));
+	const eta = $derived(Math.pow(10, logEta));
 	const preset = $derived(presetById(presetId));
 
 	let canvas: HTMLCanvasElement;
@@ -165,8 +165,8 @@
 	const sx3 = new Float32Array((MESH + 1) * (MESH + 1));
 	const sy3 = new Float32Array((MESH + 1) * (MESH + 1));
 
-	function fmtGamma(g: number): string {
-		return g.toPrecision(2);
+	function fmtEta(v: number): string {
+		return v.toPrecision(2);
 	}
 
 	function fmtLoss(v: number): string {
@@ -216,7 +216,7 @@
 	function stepAll(n: number) {
 		const pr = presetById(presetId);
 		const grid = gridFor(presetId);
-		const lr = Math.pow(10, logGamma);
+		const lr = Math.pow(10, logEta);
 		for (let k = 0; k < n; k++) {
 			for (const spec of RUNNERS) {
 				if (!enabled[spec.id]) continue;
@@ -682,10 +682,10 @@
 	id="race"
 	live
 	title="The descent race"
-	caption="Four walkers, one landscape, the same gradient at every point — only the rule for taking the step differs. Click anywhere to drop them there together: on the saddle's ridge, plain descent stalls where the ground flattens, momentum coasts through on stored velocity, and Adam's per-coordinate stride shrugs the geometry off. Raise γ until somebody overshoots; flip to 3-D and drag to see the terrain the contours were hiding."
+	caption="Five walkers, one landscape, the same gradient at every point — only the rule for taking the step differs; three run by default and the legend switches the other two on. Click anywhere to drop them all there together: on the saddle's ridge, plain descent stalls where the ground flattens, momentum coasts through on stored velocity, and Adam's per-coordinate stride shrugs the geometry off. Raise η until somebody overshoots; flip to 3-D and drag to see the terrain the contours were hiding."
 >
 	{#snippet status()}
-		<span>t = {t} · γ = {fmtGamma(gamma)}</span>
+		<span>t = {t} · η = {fmtEta(eta)}</span>
 	{/snippet}
 
 	{#snippet actions()}
@@ -793,12 +793,12 @@
 			</div>
 			<div class="min-w-56 flex-1">
 				<Slider
-					label="learning rate γ"
-					bind:value={logGamma}
+					label="learning rate η"
+					bind:value={logEta}
 					min={-2.5}
 					max={-0.3}
 					step={0.01}
-					format={(v) => fmtGamma(Math.pow(10, v))}
+					format={(v) => fmtEta(Math.pow(10, v))}
 					tone="knob"
 				/>
 			</div>

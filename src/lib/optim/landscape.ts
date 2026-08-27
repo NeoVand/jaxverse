@@ -23,7 +23,7 @@ export interface Preset {
 	xMax: number;
 	yMin: number;
 	yMax: number;
-	/** Default θ₀ — hand-tuned so the race tells its story at the default γ. */
+	/** Default θ₀ — hand-tuned so the race tells its story at the default η. */
 	start: Pt;
 	f(x: number, y: number): number;
 }

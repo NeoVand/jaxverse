@@ -32,16 +32,16 @@ export const OPTIMIZER_LEGEND = [
 ] as const;
 
 /**
- * Per-optimizer stride scaling: one γ slider drives all five. Adaptive
- * methods (Adam/AdamW) and Lion take steps of roughly γ per axis whatever
- * the terrain, while SGD and momentum move as γ·|∇ℒ| — invisible on flat
- * floors at a γ the adaptive pair likes.
+ * Per-optimizer stride scaling: one η slider drives all five. Adaptive
+ * methods (Adam/AdamW) and Lion take steps of roughly η per axis whatever
+ * the terrain, while plain descent and momentum move as η·|∇ℒ| — invisible on
+ * flat floors at an η the adaptive pair likes.
  *
- * At the default γ ≈ 0.05 these land on Gradient Lab's curated race rates
+ * At the default η ≈ 0.05 these land on Gradient Lab's curated race rates
  * (Adam/AdamW 0.1, Lion 0.05), and the SGD/momentum pair is capped where a
  * simulated audit (default start + 120 random drops × 3 presets) shows zero
  * divergence — every racer reaches its basin instead of stalling or blowing
- * up. Momentum's steady-state push is γ·|∇ℒ|/(1−μ) ≈ 10γ, hence ×1.
+ * up. Momentum's steady-state push is η·|∇ℒ|/(1−μ) ≈ 10η, hence ×1.
  */
 export const LR_MULT: Record<OptimizerId, number> = {
 	gd: 2,
@@ -71,15 +71,15 @@ export interface RunnerSpec {
 export const RUNNERS: RunnerSpec[] = [
 	{
 		id: 'gd',
-		label: 'SGD',
+		label: 'Gradient descent',
 		token: RACER_TOKENS.gd,
-		blurb: 'θ ← θ − γ∇ℒ — the raw slope, nothing else'
+		blurb: 'θ ← θ − η∇ℒ — the raw slope, nothing else'
 	},
 	{
 		id: 'momentum',
 		label: 'Momentum',
 		token: RACER_TOKENS.momentum,
-		blurb: 'Polyak heavy ball: v ← μv + ∇ℒ; θ ← θ − γv'
+		blurb: 'Polyak heavy ball: v ← μv + ∇ℒ; θ ← θ − ηv'
 	},
 	{
 		id: 'adam',
@@ -97,7 +97,7 @@ export const RUNNERS: RunnerSpec[] = [
 		id: 'lion',
 		label: 'Lion',
 		token: RACER_TOKENS.lion,
-		blurb: 'sign of blended momentum: every step has magnitude γ per axis'
+		blurb: 'sign of blended momentum: every step has magnitude η per axis'
 	}
 ];
 
@@ -139,18 +139,18 @@ export function stepOptimizer(
 ): { x: number; y: number } {
 	switch (id) {
 		case 'gd':
-			// [gd] θ ← θ − γ∇ℒ — the whole algorithm.
+			// [gd] θ ← θ − η∇ℒ — the whole algorithm.
 			st.t++;
 			return { x: x - lr * gx, y: y - lr * gy };
 		case 'momentum':
-			// [momentum] v ← μv + g; θ ← θ − γv (γ NOT folded into v).
+			// [momentum] v ← μv + g; θ ← θ − ηv (η NOT folded into v).
 			st.vx = MU * st.vx + gx;
 			st.vy = MU * st.vy + gy;
 			st.t++;
 			return { x: x - lr * st.vx, y: y - lr * st.vy };
 		case 'adam':
 		case 'adamw': {
-			// [adam/adamw] moments + bias correction; AdamW adds the γλθ pull.
+			// [adam/adamw] moments + bias correction; AdamW adds the ηλθ pull.
 			const t = ++st.t;
 			const mc1 = 1 - Math.pow(BETA1, t);
 			const mc2 = 1 - Math.pow(BETA2, t);
@@ -165,7 +165,7 @@ export function stepOptimizer(
 			};
 		}
 		case 'lion': {
-			// [lion] direction = sign(β₁m + (1−β₁)g); fixed-size γ steps;
+			// [lion] direction = sign(β₁m + (1−β₁)g); fixed-size η steps;
 			// the buffer updates with its own, slower decay β₂.
 			const cx = LION_BETA1 * st.vx + (1 - LION_BETA1) * gx;
 			const cy = LION_BETA1 * st.vy + (1 - LION_BETA1) * gy;
