@@ -410,6 +410,110 @@ export const papers = {
 		where: 'ICML 2021',
 		url: 'https://arxiv.org/abs/2103.00020',
 		note: 'CLIP — the same contrastive trick with the two views being a picture and its caption, which puts images and text into one shared space and is why you can search a photo library by typing.'
+	},
+	'bengio-2003': {
+		authors: 'Bengio et al.',
+		year: 2003,
+		title: 'A Neural Probabilistic Language Model',
+		where: 'JMLR 3',
+		url: 'https://www.jmlr.org/papers/volume3/bengio03a/bengio03a.pdf',
+		note: 'Twenty years early: learn a vector per word and predict the next one with a neural network, so that a sentence never seen can borrow from a sentence that was.'
+	},
+	'mikolov-2013a': {
+		authors: 'Mikolov et al.',
+		year: 2013,
+		title: 'Efficient Estimation of Word Representations in Vector Space',
+		where: 'ICLR 2013 workshop',
+		url: 'https://arxiv.org/abs/1301.3781',
+		note: 'word2vec. The models are deliberately shallow — the point of the paper is that throwing away the hidden layer let them train on a hundred billion words.'
+	},
+	'mikolov-2013b': {
+		authors: 'Mikolov et al.',
+		year: 2013,
+		title: 'Distributed Representations of Words and Phrases and their Compositionality',
+		where: 'NeurIPS 2013',
+		url: 'https://arxiv.org/abs/1310.4546',
+		note: 'Negative sampling — the loss written out in this chapter — and the paper that put the analogy arithmetic in front of everyone.'
+	},
+	'levy-goldberg-2014': {
+		authors: 'Levy & Goldberg',
+		year: 2014,
+		title: 'Neural Word Embedding as Implicit Matrix Factorization',
+		where: 'NeurIPS 2014',
+		url: 'https://papers.nips.cc/paper_files/paper/2014/hash/b78666971ceae55a8e87efb7cbfd9ad4-Abstract.html',
+		note: 'Shows that skip-gram with negative sampling is quietly factorising a word-by-context table of co-occurrence statistics. The neural part is a way of doing the arithmetic, not the source of the magic.'
+	},
+	'linzen-2016': {
+		authors: 'Linzen',
+		year: 2016,
+		title: 'Issues in evaluating semantic spaces using word analogies',
+		where: 'RepEval 2016',
+		url: 'https://arxiv.org/abs/1606.07736',
+		note: 'The famous analogy result is doing less work than it appears to: the standard scoring rule forbids the answer from being any of the three input words, and much of the accuracy comes from that exclusion rather than from the arithmetic.'
+	},
+	'sennrich-2016': {
+		authors: 'Sennrich, Haddow & Birch',
+		year: 2016,
+		title: 'Neural Machine Translation of Rare Words with Subword Units',
+		where: 'ACL 2016',
+		url: 'https://arxiv.org/abs/1508.07909',
+		note: 'Byte-pair encoding was a data-compression trick from 1994. This is the paper that pointed it at vocabulary, and every tokenizer since is a variation on it.'
+	},
+	'shannon-1951': {
+		authors: 'Shannon',
+		year: 1951,
+		title: 'Prediction and Entropy of Printed English',
+		where: 'Bell System Technical Journal 30(1)',
+		url: 'https://www.princeton.edu/~wbialek/rome/refs/shannon_51.pdf',
+		note: 'The next-token game, played by people, in 1951 — Shannon sat readers down with covered text and had them guess the next letter, and turned their guesses into a measurement of English itself.'
+	},
+	'deletang-2023': {
+		authors: 'Delétang et al.',
+		year: 2023,
+		title: 'Language Modeling Is Compression',
+		where: 'ICLR 2024',
+		url: 'https://arxiv.org/abs/2309.10668',
+		note: 'Takes the identity literally and uses a language model as a general-purpose compressor. It beats the specialist formats — on text, and, oddly, on images and audio it was never trained on.'
+	},
+	'vaswani-2017': {
+		authors: 'Vaswani et al.',
+		year: 2017,
+		title: 'Attention Is All You Need',
+		where: 'NeurIPS 2017',
+		url: 'https://arxiv.org/abs/1706.03762',
+		note: 'The transformer. The title is an argument: everything before it wrapped attention around a recurrent network, and the finding was that you could throw the recurrence away.'
+	},
+	'elhage-2021': {
+		authors: 'Elhage et al.',
+		year: 2021,
+		title: 'A Mathematical Framework for Transformer Circuits',
+		where: 'Anthropic',
+		url: 'https://transformer-circuits.pub/2021/framework/index.html',
+		note: 'Where the residual-stream reading of a transformer is set out carefully: not a pipeline that transforms a vector but a shared channel that every block reads from and adds to.'
+	},
+	'su-2021': {
+		authors: 'Su et al.',
+		year: 2021,
+		title: 'RoFormer: Enhanced Transformer with Rotary Position Embedding',
+		where: 'Neurocomputing 568',
+		url: 'https://arxiv.org/abs/2104.09864',
+		note: 'How position is actually supplied in current models: rotate each query and key by an angle proportional to its position, so what attention sees is the distance between two tokens rather than their absolute slots.'
+	},
+	'kaplan-2020': {
+		authors: 'Kaplan et al.',
+		year: 2020,
+		title: 'Scaling Laws for Neural Language Models',
+		where: 'arXiv preprint',
+		url: 'https://arxiv.org/abs/2001.08361',
+		note: 'Loss falls as a power law in parameters, data and compute, over seven orders of magnitude. The straightness of those lines is the reason anyone was willing to spend the money.'
+	},
+	'hoffmann-2022': {
+		authors: 'Hoffmann et al.',
+		year: 2022,
+		title: 'Training Compute-Optimal Large Language Models',
+		where: 'NeurIPS 2022',
+		url: 'https://arxiv.org/abs/2203.15556',
+		note: 'Chinchilla. Redid the measurement and found the field had been building models far too large for the amount of text it was feeding them — a correction worth more than most architectural ideas of the same period.'
 	}
 } as const satisfies Record<string, Paper>;
 
@@ -458,6 +562,21 @@ export const citationOrder: Partial<Record<string, readonly PaperId[]>> = {
 		'oord-2018',
 		'chen-simclr-2020',
 		'radford-2021'
+	],
+	language: [
+		'bengio-2003',
+		'mikolov-2013a',
+		'mikolov-2013b',
+		'levy-goldberg-2014',
+		'linzen-2016',
+		'sennrich-2016',
+		'shannon-1951',
+		'deletang-2023',
+		'su-2021',
+		'vaswani-2017',
+		'elhage-2021',
+		'kaplan-2020',
+		'hoffmann-2022'
 	],
 	descent: [
 		'polyak-1964',

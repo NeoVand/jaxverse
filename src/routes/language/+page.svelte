@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import ChapterRef from '$lib/components/ui/ChapterRef.svelte';
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
+	import Cite from '$lib/components/ui/Cite.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
@@ -50,9 +51,10 @@
 			many dimensions. Nobody assigns those numbers. They are learned, and they are learned by the
 			very game this chapter is about. Push a word's vector toward the words that tend to sit beside
 			it, pull it away from words drawn at random, and after enough sentences the space arranges
-			itself — animals collecting in one region, names in another, "he" beside "she". This recipe is
-			<em>skip-gram</em>, the heart of word2vec, and it is small enough to run in the page you are
-			reading.
+			itself — animals collecting in one region, names in another, "he" beside "she". The idea that
+			a word should be a learned vector is older than it is famous<Cite id="bengio-2003" />; this
+			particular recipe is <em>skip-gram</em>, the heart of word2vec<Cite id="mikolov-2013a" />, and
+			it is small enough to run in the page you are reading.
 		</p>
 	</Prose>
 
@@ -82,10 +84,20 @@
 			<Math tex={'\\htmlClass{eq-mute}{u^{-}_{k}}'} /> drawn at random, each punished for scoring. Nothing
 			else appears in <Math tex={'\\mathcal{L}'} />, so the only way down is to move the vectors —
 			pull <Math tex={'\\htmlClass{eq-model}{v}'} /> toward
-			<Math tex={'\\htmlClass{eq-world}{u_{+}}'} />, push it off the five impostors. Geometry is not
-			a by-product of this objective; it is the objective. An untrained sigmoid shrugs
+			<Math tex={'\\htmlClass{eq-world}{u_{+}}'} />, push it off the five impostors.<Cite
+				id="mikolov-2013b"
+			/> Geometry is not a by-product of this objective; it is the objective. An untrained sigmoid shrugs
 			<Math tex="\ln 2" /> at each of the six verdicts, so the plate's loss meter starts near 4.2 and
 			falls as the space takes shape.
+		</p>
+		<p>
+			It is worth knowing what this loss is doing underneath, because it is less mysterious than it
+			looks. Run the algebra out and skip-gram with negative sampling turns out to be quietly
+			factorising a plain table of counts — how often each word appears beside each other word,
+			compared with how often chance alone would put them there.<Cite id="levy-goldberg-2014" /> The network
+			is a way of doing that arithmetic one pair at a time, on a corpus far too large to hold the table
+			for. The meaning was in the co-occurrence statistics all along; what the vectors add is that you
+			can carry them around.
 		</p>
 	</Prose>
 
@@ -112,14 +124,23 @@
 			from the company its word keeps — a word barely mentioned barely exists.
 		</p>
 		<p>
+			While we are here: that famous example has always been sold harder than it deserves. The usual
+			way of scoring it forbids the answer from being any of the three words you put in, which
+			quietly removes the most likely wrong answers before the arithmetic is judged — and
+			<em>king</em> is a very likely wrong answer to <em>king − man + woman</em>. Take the rule away
+			and a good deal of the accuracy goes with it.<Cite id="linzen-2016" /> The vectors do carry direction
+			and relation. They carry rather less of it than the party trick implies.
+		</p>
+		<p>
 			One question remains before the real model: vectors for <em>what</em>, exactly? Words are a
 			convenient story, but a vocabulary of English words is both enormous and never enough —
 			someone will always write "unbelievability". Real models predict <em>tokens</em>: word-pieces,
 			fragments like "wag" and "ged", and nobody designs those either. They are grown out of the
-			data by <em>byte-pair encoding</em>, an algorithm of almost embarrassing plainness: start from
-			the raw alphabet, count every adjacent pair in the corpus, fuse the most frequent pair into a
-			new token, repeat. Common words end up as single tokens, rare words shatter into a few, and
-			every entry in the vocabulary is a vote cast by frequency.
+			data by <em>byte-pair encoding</em><Cite id="sennrich-2016" />, an algorithm of almost
+			embarrassing plainness — it was a file-compression trick before anyone pointed it at language:
+			start from the raw alphabet, count every adjacent pair in the corpus, fuse the most frequent
+			pair into a new token, repeat. Common words end up as single tokens, rare words shatter into a
+			few, and every entry in the vocabulary is a vote cast by frequency.
 		</p>
 	</Prose>
 
@@ -228,6 +249,16 @@
 			and the loss chart doubles as a receipt for how much structure the model has taken in.
 		</p>
 		<p>
+			None of which is new. Shannon measured English this way in 1951 by sitting people down with
+			covered text and asking them to guess the next letter, then turning their guesses into a
+			number — somewhere between 0.6 and 1.3 bits per character, which is roughly where a good model
+			sits today.<Cite id="shannon-1951" /> The identity runs the other way too, and recently someone
+			checked: hand a large language model to a compression routine and it beats the specialist formats
+			outright, on text and — stranger — on images and audio it was never trained on.<Cite
+				id="deletang-2023"
+			/> Something that predicts well enough is a compressor, whatever it was built to be.
+		</p>
+		<p>
 			You may also have noticed the scribe's register — sunny, simple, faintly like a bedtime story,
 			whatever you prompt it with. Its whole world is 1.5 million characters of children's stories,
 			so that is the only English in existence for it. A model is its diet. The large models
@@ -264,14 +295,23 @@
 	<Prose>
 		<p>
 			<strong>One:</strong> every token becomes a vector, exactly as words did in the first plate,
-			plus a second vector encoding <em>where</em> it sits — attention has no inherent sense of
-			order, so position must be added by hand. <strong>Two:</strong> each vector is projected three
-			ways, into a <em>query</em> (what am I looking for?), a <em>key</em> (what do I offer?) and a
+			plus a second vector encoding <em>where</em> it sits — attention sees a bag of tokens and has
+			no inherent sense of order, so position has to be supplied. This model does it the plain way,
+			with a learned vector per slot. Current models mostly rotate each query and key by an angle
+			proportional to its position instead, so what attention ends up seeing is how far apart two
+			tokens are rather than which absolute slots they occupy — which is much of why a model can be
+			stretched past the context length it was trained on at all.<Cite id="su-2021" />
+			<strong>Two:</strong>
+			each vector is projected three ways, into a <em>query</em> (what am I looking for?), a
+			<em>key</em>
+			(what do I offer?) and a
 			<em>value</em> (what I would pass along).
 		</p>
 		<p>
 			<strong>Three:</strong> attention itself — and it has earned the chapter's slowest minute,
-			because this single line is most of what the word <em>transformer</em> means:
+			because this single line is most of what the word <em>transformer</em> means<Cite
+				id="vaswani-2017"
+			/>:
 		</p>
 		<Math
 			display
@@ -316,12 +356,25 @@
 		</p>
 		<p>
 			<strong>Four:</strong> each token thinks alone. Its vector is widened fourfold, rectified —
-			negatives clipped to zero, the block's only nonlinearity — and squeezed back to size; most of
-			the parameters live here. Stages two through four form one <em>block</em>, and blocks stack:
-			this model has two, frontier models roughly a hundred. <strong>Five:</strong> the final vector meets
-			one last matrix that turns 96 numbers into one score per token in the vocabulary, and a softmax
-			turns scores into probabilities. Draw one, append it, run the pass again. That loop is all "generating
-			text" has ever meant.
+			negatives clipped to zero — and squeezed back to size; most of the parameters live here.
+			Stages two through four form one <em>block</em>, and blocks stack: this model has two,
+			frontier models roughly a hundred. <strong>Five:</strong> the final vector meets one last matrix
+			that turns 96 numbers into one score per token in the vocabulary, and a softmax turns scores into
+			probabilities. Draw one, append it, run the pass again. That loop is all "generating text" has ever
+			meant.
+		</p>
+		<p>
+			One structural detail is easy to miss in that list, and it changes how the whole thing reads.
+			A block does not hand its output to the next block. It <em>adds</em> to what it was given:
+			attention computes something and adds it in, the little network computes something and adds it
+			in, and the vector for each token runs the entire length of the model, picking up
+			contributions along the way. What travels through a transformer is not a signal being
+			transformed stage by stage but a shared channel — a <em>residual stream</em> — that every
+			block reads from and writes into.<Cite id="elhage-2021" /> It is why depth degrades gracefully rather
+			than catastrophically: a block with nothing useful to say can write approximately nothing and cost
+			the model almost nothing. And it is the reason interpretability work talks about what a particular
+			head <em>writes</em> to the stream, as though the model were a workshop of specialists sharing one
+			notebook. Which, read this way, it is.
 		</p>
 	</Prose>
 
@@ -338,6 +391,16 @@
 			models everyone talks to. They descend the same cross-entropy on the same next-token game, and
 			their loss charts look like yours with more zeros on the axis. What you trained here is not a
 			metaphor for them. It is one of them, small.
+		</p>
+		<p>
+			That the multiplying works is not a hope; it is a measured curve. Loss falls as a power law in
+			parameters, in data and in compute, and it stays a power law across seven orders of magnitude
+			— straight lines on a log plot, straight enough that a run's final loss can be predicted
+			before it starts.<Cite id="kaplan-2020" /> Straight lines are what made the spending defensible.
+			They are also easy to read wrong: for two years the field built models far larger than the text
+			it was feeding them, until the measurement was redone more carefully and the recommended trade between
+			size and data moved sharply toward data.<Cite id="hoffmann-2022" /> A law with the wrong constants
+			still looks like a law.
 		</p>
 		<p>
 			Scale buys a continuation of exactly what you watched: fluency first, then knowledge — because
