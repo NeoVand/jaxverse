@@ -80,8 +80,8 @@
 			<em>edit</em>: change the internal board to say a square is occupied, let the model continue,
 			and its moves change to suit the board you gave it rather than the one the moves implied.<Cite
 				id="li-2023"
-			/> The same probe works on chess models trained exactly the way Rook is, and it recovers more than
-			the position — it recovers an estimate of how strong the player being imitated was.<Cite
+			/> The same probe works on chess models trained the way Rook is, and it recovers more than the position
+			— it recovers an estimate of how strong the player being imitated was.<Cite
 				id="karvonen-2024"
 			/> A sequence model that has only ever seen sentences can end up holding a model of the thing the
 			sentences are about. That is not proof of understanding, and it is a great deal more than memorised
@@ -307,8 +307,8 @@
 			data not a detail of the pipeline but arguably its most important hyperparameter. Feed it
 			problems it has already mastered and you will burn a week of compute on text that teaches
 			nothing, while the reward curve sits reassuringly pinned near the top. Neither number on your
-			dashboard will look broken. The industrial fix is exactly as blunt as it sounds: keep sampling
-			a prompt until its group contains both successes and failures, and drop the prompts that never
+			dashboard will look broken. The industrial fix is as blunt as it sounds: keep sampling a
+			prompt until its group contains both successes and failures, and drop the prompts that never
 			manage both.<Cite id="yu-2025" />
 		</p>
 		<p>
@@ -329,7 +329,7 @@
 		<p>
 			And that is the book. A loss surface and a step downhill; a neuron, a bump of influence; space
 			bent until classes come apart; a map that draws itself; a game of guess-the-next-word; a
-			policy beating to windward because nobody told it it couldn't; a judge fitted to your own eye
+			policy beating to windward with nothing to go on but a clock; a judge fitted to your own eye
 			and then broken by an optimizer — and here, all of it at once, teaching a pocket of numbers to
 			play chess it was never taught. None of it stayed mysterious once you could watch the
 			gradients move. That was the point.

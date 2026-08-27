@@ -287,9 +287,9 @@
 			With one bill, which this book will not hide. DPO never generates anything, so it can never
 			discover a response better than the ones already in its dataset; all it can do is re-weight
 			what is already there. To get reliably better than your data, the model has to produce, be
-			judged, and update. That gap has been measured, and it is exactly where you would expect it:
-			widest when the good responses are rare in the dataset, which is the case anyone actually
-			cares about.<Cite id="tajwar-2024" /> There is no way around the loop.
+			judged, and update. That gap has been measured, and it falls where you would expect: widest
+			when the good responses are rare in the dataset, which is the case anyone actually cares
+			about.<Cite id="tajwar-2024" /> There is no way around the loop.
 		</p>
 
 		<h2 class="h2">What you just did to yourself</h2>

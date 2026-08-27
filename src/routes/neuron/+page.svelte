@@ -89,8 +89,7 @@
 	<Prose>
 		<h2 class="h2">The bend is the whole point</h2>
 		<p>
-			It is worth pausing on why <Math tex={'\\htmlClass{eq-op}{\\sigma}'} /> must be there at all. Strip
-			it out and a neuron is just <Math
+			Strip <Math tex={'\\htmlClass{eq-op}{\\sigma}'} /> out and a neuron is just <Math
 				tex={'\\htmlClass{eq-model}{w}x + \\htmlClass{eq-model-2}{b}'}
 			/> — a line. Stack a hundred all-linear layers and the stack collapses: a line of a line is still
 			a line, so the deepest such network can be multiplied out into a single matrix wearing a hundred
@@ -118,12 +117,11 @@
 			The bottom row — gelu<Cite id="hendrycks-gimpel-2016" />, silu<Cite id="elfwing-2017" />, mish<Cite
 				id="misra-2019"
 			/> — sands the corner off and keeps a little slope slightly below zero, which is one reason the
-			transformer era settled on them. Silu is worth a footnote of its own: it was found twice, first
-			by researchers building reinforcement learners, then again by an automated search over candidate
-			formulas that reported it as a discovery under a different name.<Cite
-				id="ramachandran-2017"
-			/> That is roughly the state of the art here. Nobody derives an activation from first principles;
-			they are found, measured, and kept if they win.
+			transformer era settled on them. Silu arrived twice: once from researchers building reinforcement
+			learners, and again, years later, out of an automated search over candidate formulas that reported
+			it as a discovery under a different name.<Cite id="ramachandran-2017" /> That is roughly the state
+			of the art here. Nobody derives an activation from first principles; they are found, measured, and
+			kept if they win.
 		</p>
 		<p>
 			None of this changes what networks <em>can</em> express — the universal approximation theorem is
@@ -213,8 +211,8 @@
 			decade made a mess of the lesson. Take a network that reads photographs well, shuffle the
 			labels so every answer is now noise, and train it again — it fits all of them, perfectly,
 			memorising the lot.<Cite id="zhang-2017" /> Its capacity to overfit is total. Hand back the real
-			labels and the very same network generalizes. Whatever holds it honest, it is not a shortage of
-			room.
+			labels and the very same network generalizes. Whatever stops it from memorising the real ones too,
+			it is not a shortage of room.
 		</p>
 		<p>
 			Stranger still is what happens if you keep growing it. Test error rises as the textbook

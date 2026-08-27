@@ -142,10 +142,10 @@
 			rule about what a boat can do and a number that counts time.
 		</p>
 		<p>
-			This is worth pausing on, because it is the difference between this world and a maze. In a
-			maze the best policy is the shortest path, which is the answer you already knew before the
-			learner started, so watching it arrive teaches you only that the code works. Here the best
-			policy is a manoeuvre with a name, and the learner has no idea it has a name.
+			That is the difference between this world and a maze. In a maze the best policy is the
+			shortest path, which is the answer you already knew before the learner started, so watching it
+			arrive teaches you only that the code works. Here the best policy is a manoeuvre with a name,
+			and the learner has no idea it has a name.
 		</p>
 		<p>
 			Now spin the compass rose. The wind is the only thing that changes, and the entire field
@@ -185,12 +185,11 @@
 			The fix is the one <PlateRef id="pendulum" lower /> uses on a much harder problem: one passage in
 			five starts not at the mooring but at a random patch of water. Practising what you can already almost
 			do is how the gradient stays informative, and with that one change every wind direction is learnable.
-			It is worth knowing that this is not a detail of the demo. Where an episode begins is part of the
-			algorithm rather than part of the problem<Cite id="kakade-langford-2002" />, and the strongest
-			version of the idea runs it backwards on purpose: start the agent beside the goal, where
-			succeeding is nearly free, and walk the start states away as it improves.<Cite
-				id="florensa-2017"
-			/> Somebody had to find that out, and the only symptom was a curve that looked fine.
+			This is not a detail of the demo. Where an episode begins is part of the algorithm rather than part
+			of the problem<Cite id="kakade-langford-2002" />, and the strongest version of the idea runs
+			it backwards on purpose: start the agent beside the goal, where succeeding is nearly free, and
+			walk the start states away as it improves.<Cite id="florensa-2017" /> Somebody had to find that
+			out, and the only symptom was a curve that looked fine.
 		</p>
 		<p>
 			Which is also your invitation to break it. Switch on <em>edit</em> and redesign the sea under a
@@ -213,7 +212,7 @@
 			reads six numbers through hand-crafted gauges, and five pushes are available, fifty times a second.
 		</p>
 		<p>
-			Read the next two paragraphs as the honest subject of this section, because they are not
+			Read the next two paragraphs as the real subject of this section, because they are not
 			apparatus notes — they are what reinforcement learning is actually like once the world stops
 			fitting on a page. The update rule does not change. Everything else does.
 		</p>
@@ -267,11 +266,10 @@
 			never seen.
 		</p>
 		<p>
-			And it is worth saying out loud that nothing on this page has touched your GPU. The policies
-			are a few dozen numbers, the gradients a few multiplications, hundreds of passages a second in
-			plain TypeScript. The hard part of reinforcement learning was never the compute. It is the
-			credit — and, as the chart showed you, getting the agent to stumble into anything worth
-			assigning credit for.
+			And nothing on this page has touched your GPU. The policies are a few dozen numbers, the
+			gradients a few multiplications, hundreds of passages a second in plain TypeScript. The hard
+			part of reinforcement learning was never the compute. It is the credit — and, as the chart
+			showed you, getting the agent to stumble into anything worth assigning credit for.
 		</p>
 		<p>
 			The table of roses you trained is not a toy version of a policy. It <em>is</em> a policy — the same

@@ -149,8 +149,8 @@
 			That threshold is not a quirk of this parabola. Close enough up, every smooth valley looks
 			like one, and the number that decides the fate of the step is how fast the slope itself
 			changes — the <em>sharpness</em> of the tightest direction. Gradient descent holds together
-			while the stride stays under two divided by that sharpness, and flies apart above it, exactly
-			as the bowl did at <Math tex={'\\htmlClass{eq-knob}{\\eta} = 1'} />.
+			while the stride stays under two divided by that sharpness, and flies apart above it, just as
+			the bowl did at <Math tex={'\\htmlClass{eq-knob}{\\eta} = 1'} />.
 		</p>
 		<p>
 			Which makes what real networks do with that rule genuinely odd. Train one by gradient descent

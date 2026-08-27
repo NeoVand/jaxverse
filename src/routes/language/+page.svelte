@@ -91,13 +91,12 @@
 			falls as the space takes shape.
 		</p>
 		<p>
-			It is worth knowing what this loss is doing underneath, because it is less mysterious than it
-			looks. Run the algebra out and skip-gram with negative sampling turns out to be quietly
-			factorising a plain table of counts — how often each word appears beside each other word,
-			compared with how often chance alone would put them there.<Cite id="levy-goldberg-2014" /> The network
-			is a way of doing that arithmetic one pair at a time, on a corpus far too large to hold the table
-			for. The meaning was in the co-occurrence statistics all along; what the vectors add is that you
-			can carry them around.
+			What that loss is doing underneath is less mysterious than it looks. Run the algebra out and
+			skip-gram with negative sampling turns out to be quietly factorising a plain table of counts —
+			how often each word appears beside each other word, compared with how often chance alone would
+			put them there.<Cite id="levy-goldberg-2014" /> The network is a way of doing that arithmetic one
+			pair at a time, on a corpus far too large to hold the table for. The meaning was in the co-occurrence
+			statistics all along; what the vectors add is that you can carry them around.
 		</p>
 	</Prose>
 

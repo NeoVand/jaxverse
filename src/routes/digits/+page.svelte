@@ -158,8 +158,8 @@
 	<Prose>
 		<h2 class="h2">What the machine actually receives</h2>
 		<p>
-			It is worth pausing on what the model is given, because it is not what you see. You see a 7 —
-			two strokes, a sharp corner, a thing with a top. It receives a list:
+			What the model is given is not what you see. You see a 7 — two strokes, a sharp corner, a
+			thing with a top. It receives a list:
 			<code>0.00, 0.00, 0.31, 0.89, 0.94, …</code> — 784 numbers in a fixed order, and nothing else.
 			It is not told that pixel 215 sits directly above pixel 243; adjacency, stroke, corner, loop —
 			every visual notion has to be rediscovered statistically, from which brightnesses rise and
@@ -230,7 +230,7 @@
 			it confuses digits that share a skeleton, the same pairs you would confuse squinting at a bad fax.
 		</p>
 		<p>
-			It is also worth knowing how far the machine's idea of a 7 is from yours. Take an image it
+			The machine's idea of a 7 is further from yours than its mistakes suggest. Take an image it
 			reads correctly and confidently, compute which direction in pixel space would most reduce that
 			confidence, and step a little way along it — a change so small that the two pictures are
 			indistinguishable side by side. The verdict flips, often to a confident wrong answer. These

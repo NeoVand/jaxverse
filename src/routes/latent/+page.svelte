@@ -35,11 +35,13 @@
 			is bent there, because the whole point of the place is to be a plain coordinate system.
 		</p>
 		<p>
-			The idea is older than it looks, and it has a linear ancestor worth knowing about. Take every
-			bend out of both halves — leave the encoder and decoder as plain matrices — and the best this
-			machine can do is <em>principal component analysis</em>: the two directions along which the
-			data varies most, a technique from 1901. Everything a deep autoencoder buys over that, it buys
-			with the bends.<Cite id="hinton-salakhutdinov-2006" />
+			The idea is older than it looks, and it has a linear ancestor. Take every bend out of both
+			halves — leave the encoder and decoder as plain matrices — and the best this machine can do is <em
+				>principal component analysis</em
+			>: the two directions along which the data varies most, a technique from 1901. Everything a
+			deep autoencoder buys over that, it buys with the bends.<Cite
+				id="hinton-salakhutdinov-2006"
+			/>
 		</p>
 	</Prose>
 
@@ -137,15 +139,16 @@
 			deliberately cruel waist, chosen so the whole map fits on one page.
 		</p>
 		<p>
-			It is worth being clear about where the softness comes from, because the field spent a decade
-			on it. The blur is the <em>loss</em>, not the architecture. Ask for the answer that minimises
-			squared error and you have asked for an average, and an average of several plausible digits is
-			a smudge of all of them. Every sharp generative model since has attacked that clause rather
-			than the network. Adversarial training replaced the pixel-by-pixel score with a second network
-			paid to say whether the result looks real<Cite id="goodfellow-gan-2014" />; diffusion models,
-			which is what the image generators you have used are, sidestep the averaging by learning to
-			remove a little noise at a time, so the model commits gradually instead of hedging in one
-			shot.<Cite id="ho-2020" /> The hourglass survives inside both. Only the question changed.
+			The blur is the <em>loss</em>, not the architecture, and the field spent a decade on the
+			difference. Ask for the answer that minimises squared error and you have asked for an average,
+			and an average of several plausible digits is a smudge of all of them. Every sharp generative
+			model since has attacked that clause rather than the network. Adversarial training replaced
+			the pixel-by-pixel score with a second network paid to say whether the result looks real<Cite
+				id="goodfellow-gan-2014"
+			/>; diffusion models, which is what the image generators you have used are, sidestep the
+			averaging by learning to remove a little noise at a time, so the model commits gradually
+			instead of hedging in one shot.<Cite id="ho-2020" /> The hourglass survives inside both. Only the
+			question changed.
 		</p>
 		<p>
 			The plate below does exactly that, with one twist held in reserve. In ink you see the map as
@@ -291,19 +294,18 @@
 			billion items that is the difference between an index and an impossibility.
 		</p>
 		<p>
-			It is also worth being clear about why the map only ties. Nothing in the loss ever asked for
-			digits of a kind to sit together. The encoder was paid to rebuild pixels, so it kept what
-			rebuilding needs — shape, but also slant, weight, size — and two 7s in different hands can
-			still land apart because they genuinely differ in what the decoder must draw. Kind-ness came
-			out as a side effect, and side effects tie. If you want a space where <em>same kind</em> is
-			near by construction, you have to say so in the loss: show the model two views of the same
-			thing and require it to pull them together while pushing everything else away.<Cite
-				id="oord-2018"
-			/> That is <em>contrastive learning</em>, and it is how modern encoders are actually trained.
-			For images the two views are two crops of one photograph<Cite id="chen-simclr-2020" />; for
-			the encoder behind every search-your-photos-by-typing feature, the two views are a picture and
-			its caption, which lands images and text in one shared space<Cite id="radford-2021" />. It is
-			the same geometry you have been reading all chapter, with the arrangement asked for out loud
+			The reason the map only ties is in the loss. Nothing in it ever asked for digits of a kind to
+			sit together. The encoder was paid to rebuild pixels, so it kept what rebuilding needs —
+			shape, but also slant, weight, size — and two 7s in different hands can still land apart
+			because they genuinely differ in what the decoder must draw. Kind-ness came out as a side
+			effect, and side effects tie. If you want a space where <em>same kind</em> is near by
+			construction, you have to say so in the loss: show the model two views of the same thing and
+			require it to pull them together while pushing everything else away.<Cite id="oord-2018" /> That
+			is <em>contrastive learning</em>, and it is how modern encoders are actually trained. For
+			images the two views are two crops of one photograph<Cite id="chen-simclr-2020" />; for the
+			encoder behind every search-your-photos-by-typing feature, the two views are a picture and its
+			caption, which lands images and text in one shared space<Cite id="radford-2021" />. It is the
+			same geometry you have been reading all chapter, with the arrangement asked for out loud
 			instead of hoped for.
 		</p>
 		<p>

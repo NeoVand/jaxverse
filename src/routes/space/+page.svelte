@@ -88,11 +88,11 @@
 			report.
 		</p>
 		<p>
-			The creasing bends slip out of that argument, and it is worth knowing why they do not help.
-			relu <em>folds</em> the plane — a continuous map, but not a reversible one — and a fold can perfectly
-			well bring an inside out. What stops it here is duller than topology: two units give the layer two
-			creases, and you cannot enclose a bounded region with two straight cuts. You need three to make
-			a triangle. Switch the activation and watch it fail the other way.
+			The creasing bends slip out of that argument, and still do not help. relu <em>folds</em> the plane
+			— a continuous map, but not a reversible one — and a fold can perfectly well bring an inside out.
+			What stops it here is duller than topology: two units give the layer two creases, and you cannot
+			enclose a bounded region with two straight cuts. You need three to make a triangle. Switch the activation
+			and watch it fail the other way.
 		</p>
 		<p>
 			Then you gave it one more dimension, and the impossible became easy. With three hidden units
@@ -143,7 +143,7 @@
 			like two interlocked surfaces, push it through a trained network, and measure the topology of what
 			comes out at every layer — the holes close one after another, until by the last hidden layer the
 			two classes are two plain blobs. Networks with a folding bend get there in fewer layers than smooth
-			ones, for exactly the reason the creases gave two sections ago.<Cite id="naitzat-2020" />
+			ones, for the reason the creases gave two sections ago.<Cite id="naitzat-2020" />
 		</p>
 		<p>
 			Every chapter from here is this chapter wearing different clothes. Handwritten digits live in
