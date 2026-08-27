@@ -166,8 +166,9 @@
 			/> — only the corpus is now chosen on purpose. For Rook the mapping is direct. The “instruction”
 			is the game so far; the “good response” is what a competent player did next. Where a frontier lab
 			curates tens of thousands of demonstrations, we curate 2,381 games played by a greedy little bot
-			that grabs material whenever it can. Its style is loud: 38% of its moves are captures, against about
-			8% in random play, and one game in twenty ends in checkmate.
+			that grabs material whenever it can, and half the time gives check when it cannot. Its style is
+			loud: 38% of its moves are captures, against 12% in the random-play corpus underneath, and one game
+			in twenty ends in checkmate rather than one in seventy.
 		</p>
 		<p>
 			One paragraph of honesty before the button. Fine-tuning shifts <em>style</em>, and it charges
