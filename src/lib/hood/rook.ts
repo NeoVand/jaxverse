@@ -89,7 +89,7 @@ params = applyUpdates(params, updates);`
 			],
 			lab: {
 				file: 'rook.zip',
-				note: 'Pretrain a small Rook on real games in your browser, watch the legal-move rate emerge, then fine-tune on the curated corpus'
+				note: 'Pretrain a small Rook on 360k tokens of real games in your browser; every hundred steps it samples a game from the empty board and lets chess.js count how many plies survive before the first illegal one. Watch that number climb.'
 			}
 		}
 	]

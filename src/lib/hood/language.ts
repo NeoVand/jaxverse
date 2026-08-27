@@ -81,7 +81,7 @@ return nn.logSoftmax(logits, -1);`
 			],
 			lab: {
 				file: 'language.zip',
-				note: "A tiny GPT trained on this book's story corpus in your browser — attention, sampling, and the loss curve in the console"
+				note: "A tiny GPT trained on this book's story corpus in your browser — attention, sampling, and a specimen of its own writing every few hundred steps, with the uniform-guess loss printed beside the real one so the number means something"
 			}
 		}
 	]
