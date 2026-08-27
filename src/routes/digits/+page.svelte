@@ -260,10 +260,11 @@
 		<p>
 			What you just trained is not a toy version of the real thing; it is the real thing, small.
 			This exact recipe — pixels in, softmax out, cross-entropy pushed downhill — was reading the
-			amounts on a sizable share of American bank checks by the late 1990s, and sorting mail by ZIP
-			code a decade before that.<Cite id="lecun-1990" /> Scaled up, it reads street signs for cars and
-			flags tumors on scans. Whenever the world hands you questions paired with answers, supervised learning
-			is the tool you reach for first, and usually the tool that wins.
+			amounts on several million American bank checks a day by the late 1990s<Cite
+				id="lecun-1998"
+			/>, and sorting mail by ZIP code a decade before that.<Cite id="lecun-1990" /> Scaled up, it reads
+			street signs for cars and flags tumors on scans. Whenever the world hands you questions paired with
+			answers, supervised learning is the tool you reach for first, and usually the tool that wins.
 		</p>
 		<p>
 			Its price is hiding in that phrase: <em>paired with answers</em>. Every label in this chapter
