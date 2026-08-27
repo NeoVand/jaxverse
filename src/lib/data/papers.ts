@@ -338,6 +338,78 @@ export const papers = {
 		where: 'NeurIPS 1989',
 		url: 'https://proceedings.neurips.cc/paper_files/paper/1989/hash/53c3bce66e43be4f209556518c2fcb54-Abstract.html',
 		note: 'The postal-code reader, trained by backpropagation on zip codes off real US mail — the first convincing demonstration that this recipe works on pixels.'
+	},
+	'hinton-salakhutdinov-2006': {
+		authors: 'Hinton & Salakhutdinov',
+		year: 2006,
+		title: 'Reducing the Dimensionality of Data with Neural Networks',
+		where: 'Science 313(5786)',
+		url: 'https://www.cs.toronto.edu/~hinton/absps/science.pdf',
+		note: 'The paper that made deep autoencoders work, and the one that shows what the waist buys over its linear ancestor: strip every bend out of an autoencoder and the best it can do is principal component analysis.'
+	},
+	'kingma-welling-2014': {
+		authors: 'Kingma & Welling',
+		year: 2014,
+		title: 'Auto-Encoding Variational Bayes',
+		where: 'ICLR 2014',
+		url: 'https://arxiv.org/abs/1312.6114',
+		note: 'The variational autoencoder, and the reparameterisation that makes it trainable — sample the noise outside the network so the gradient has a path through the sampling step rather than into it.'
+	},
+	'rezende-2014': {
+		authors: 'Rezende, Mohamed & Wierstra',
+		year: 2014,
+		title: 'Stochastic Backpropagation and Approximate Inference in Deep Generative Models',
+		where: 'ICML 2014',
+		url: 'https://arxiv.org/abs/1401.4082',
+		note: 'The same idea, arrived at independently and published within months. It happens more often than the textbooks admit.'
+	},
+	'higgins-2017': {
+		authors: 'Higgins et al.',
+		year: 2017,
+		title: 'β-VAE: Learning Basic Visual Concepts with a Constrained Variational Framework',
+		where: 'ICLR 2017',
+		url: 'https://openreview.net/forum?id=Sy2fzU9gl',
+		note: "Where the β in this chapter's loss comes from. Turn the rent up and the map gets tidier and the rebuilds get worse; the paper is an argument about what the tidiness is worth."
+	},
+	'goodfellow-gan-2014': {
+		authors: 'Goodfellow et al.',
+		year: 2014,
+		title: 'Generative Adversarial Networks',
+		where: 'NeurIPS 2014',
+		url: 'https://arxiv.org/abs/1406.2661',
+		note: 'The first widely used answer to the blur: stop scoring a rebuild against its original pixel by pixel, and train a second network to say whether it looks real.'
+	},
+	'ho-2020': {
+		authors: 'Ho, Jain & Abbeel',
+		year: 2020,
+		title: 'Denoising Diffusion Probabilistic Models',
+		where: 'NeurIPS 2020',
+		url: 'https://arxiv.org/abs/2006.11239',
+		note: 'The answer that won. Learn to remove a little noise at a time and the model never has to average over everything an address could mean — it commits, gradually.'
+	},
+	'oord-2018': {
+		authors: 'van den Oord, Li & Vinyals',
+		year: 2018,
+		title: 'Representation Learning with Contrastive Predictive Coding',
+		where: 'arXiv preprint',
+		url: 'https://arxiv.org/abs/1807.03748',
+		note: 'The contrastive loss in the form nearly everything since uses it: score the true partner against a crowd of impostors.'
+	},
+	'chen-simclr-2020': {
+		authors: 'Chen et al.',
+		year: 2020,
+		title: 'A Simple Framework for Contrastive Learning of Visual Representations',
+		where: 'ICML 2020',
+		url: 'https://arxiv.org/abs/2002.05709',
+		note: 'Two crops of one photograph should land in the same place; two crops of different photographs should not. That, done carefully enough, is most of what a modern image encoder learns.'
+	},
+	'radford-2021': {
+		authors: 'Radford et al.',
+		year: 2021,
+		title: 'Learning Transferable Visual Models From Natural Language Supervision',
+		where: 'ICML 2021',
+		url: 'https://arxiv.org/abs/2103.00020',
+		note: 'CLIP — the same contrastive trick with the two views being a picture and its caption, which puts images and text into one shared space and is why you can search a photo library by typing.'
 	}
 } as const satisfies Record<string, Paper>;
 
@@ -375,6 +447,17 @@ export const citationOrder: Partial<Record<string, readonly PaperId[]>> = {
 		'szegedy-2014',
 		'goodfellow-adv-2015',
 		'lecun-1990'
+	],
+	latent: [
+		'hinton-salakhutdinov-2006',
+		'kingma-welling-2014',
+		'rezende-2014',
+		'higgins-2017',
+		'goodfellow-gan-2014',
+		'ho-2020',
+		'oord-2018',
+		'chen-simclr-2020',
+		'radford-2021'
 	],
 	descent: [
 		'polyak-1964',

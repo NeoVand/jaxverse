@@ -62,7 +62,7 @@ export const chapters: Chapter[] = [
 		title: 'The Hidden Map',
 		kicker: 'Representation learning',
 		deck: 'Squeeze every digit through two numbers and back. No labels, no answers — yet a map of meaning appears on its own.',
-		minutes: 10,
+		minutes: 12,
 		live: true
 	},
 	{
