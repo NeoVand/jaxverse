@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import FlatPlaces from '$lib/components/demos/descent/FlatPlaces.svelte';
 	import OptimizerRace from '$lib/components/demos/descent/OptimizerRace.svelte';
 	import StepSize from '$lib/components/demos/descent/StepSize.svelte';
 	import ChapterRef from '$lib/components/ui/ChapterRef.svelte';
@@ -202,6 +203,11 @@
 			/> What actually costs a training run its time is not being trapped at the bottom of the wrong bowl.
 			It is crawling across ground that is nearly level in almost every direction at once.
 		</p>
+	</Prose>
+
+	<FlatPlaces />
+
+	<Prose>
 		<p>
 			Some of this can be checked directly. Take a network's random starting weights and its trained
 			ones, draw the straight line between them in parameter space, and read the loss along it: it

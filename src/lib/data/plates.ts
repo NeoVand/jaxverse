@@ -10,7 +10,7 @@ import { getContext, setContext } from 'svelte';
 
 export const plateOrder: Record<string, readonly string[]> = {
 	home: ['field'],
-	descent: ['race', 'stepsize'],
+	descent: ['race', 'stepsize', 'flat'],
 	neuron: ['neuron', 'atlas', 'workshop'],
 	space: ['layer', 'rings', 'tangles'],
 	digits: ['dataset', 'pipeline', 'softmax', 'classifier', 'drawpad', 'inside'],
