@@ -103,7 +103,7 @@
 			apart, and a network needs enough width to provide that room.
 		</p>
 		<p>
-			Now the thesis of this whole book, in one place. The network is a
+			Now the thesis of this whole book, stated in full. The network is a
 			<em>smooth, continuous transformation</em> — that is all it is allowed to be, because gradient
 			descent can only search by feel, and feel requires differentiability. The data arrived tangled
 			by some process in the world. Learning succeeds when the network discovers a smooth map that

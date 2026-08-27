@@ -28,9 +28,9 @@
 			answer for helpfulness. Score this paragraph for tact. Score this ornament for beauty. Each of
 			those is a goal you can recognize in a heartbeat and cannot express as arithmetic, and no
 			verifier anywhere will settle it for you. This chapter is about what you do then. The answer
-			is the most consequential idea in how the assistant you have probably talked to was made, and
-			it arrives with a failure mode attached that you are going to inflict on yourself, on purpose,
-			about six minutes from now.
+			is the most consequential idea in how any assistant you have used was built, and it arrives
+			with a failure mode attached that you are going to inflict on yourself, on purpose, about six
+			minutes from now.
 		</p>
 	</Prose>
 

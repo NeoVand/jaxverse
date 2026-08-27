@@ -290,14 +290,13 @@
 	<Prose>
 		<h2 class="h2">Where the judge works today</h2>
 		<p>
-			The loop you just ran is not a toy version of something else — it is the something else, at
-			reduced scale. When today's models are trained to write code, the verifier is a bank of unit
-			tests: the program compiles and passes, or it does not, and no amount of confident prose
-			changes the verdict. That is a move being legal or not, wearing different clothes. In
-			mathematics, the judge checks the final answer, or a proof checker walks the argument line by
-			line. Same iteration, exactly: sample a group of attempts from one problem, let the verifier
-			score each, standardize within the group, reinforce what held up. The graders got bigger; the
-			gradient did not change.
+			The loop you just ran is the loop, at reduced scale. When today's models are trained to write
+			code, the verifier is a bank of unit tests: the program compiles and passes, or it does not,
+			and no amount of confident prose changes the verdict. That is a move being legal or not,
+			wearing different clothes. In mathematics, the judge checks the final answer, or a proof
+			checker walks the argument line by line. Same iteration, exactly: sample a group of attempts
+			from one problem, let the verifier score each, standardize within the group, reinforce what
+			held up. The graders got bigger; the gradient did not change.
 		</p>
 		<p>
 			This is also why the verifiable domains are the ones moving fastest, and you have already felt

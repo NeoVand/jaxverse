@@ -272,11 +272,11 @@
 			showed you, getting the agent to stumble into anything worth assigning credit for.
 		</p>
 		<p>
-			The table of roses you trained is not a toy version of a policy. It <em>is</em> a policy — the same
-			mathematical object the phrase always means — and nothing in REINFORCE ever looked inside it. The
-			update touched only two things: the probability the policy assigned to an action, and the return
-			that followed. The pendulum's weights sat in the same seat. Any object that can assign probabilities
-			and accept gradients can sit there.
+			The table of roses you trained is a policy in the full sense of the word — the same
+			mathematical object the phrase always means — and nothing in REINFORCE ever looked inside it.
+			The update touched only two things: the probability the policy assigned to an action, and the
+			return that followed. The pendulum's weights sat in the same seat. Any object that can assign
+			probabilities and accept gradients can sit there.
 		</p>
 		<p>
 			So swap the table for a neural network. Let the state be a conversation so far, the action a

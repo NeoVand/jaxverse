@@ -49,10 +49,10 @@
 			<ChapterRef slug="reward" />.)
 		</p>
 		<p>
-			All of it rests on one requirement, and that requirement is the quiet thesis of this whole
-			book. The walker is blind: no map, no view of the valley, only the tilt of the ground directly
-			under its feet. If the landscape had cliffs and teleports — if a whisker of change in some
-			knob could throw the loss anywhere at all — that local tilt would tell it nothing, and no
+			All of it rests on one requirement, and that requirement is the premise the rest of this book
+			is built on. The walker is blind: no map, no view of the valley, only the tilt of the ground
+			directly under its feet. If the landscape had cliffs and teleports — if a whisker of change in
+			some knob could throw the loss anywhere at all — that local tilt would tell it nothing, and no
 			amount of walking would help. So we build our machines entirely from smooth parts, arranged so
 			the loss turns gently whenever a knob turns: the landscape is <em>differentiable</em>, and
 			that is the price of admission. On smooth ground, a blind walker feeling only the slope
