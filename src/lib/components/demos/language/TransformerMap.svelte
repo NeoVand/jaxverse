@@ -55,7 +55,7 @@
 	caption="The whole machine as a map. Each token rides its own lane; attention is the only place lanes touch, and the curves only ever point backwards. Every lane ends in a guess — the map follows the last one, whose belief names the next token."
 >
 	<svg
-		viewBox="0 0 660 214"
+		viewBox="0 0 660 216"
 		class="mx-auto block w-full max-w-[950px]"
 		role="img"
 		aria-label="The transformer as a map. Four tokens — once, upon, a, time — each become a vector plus a position, then travel left to right through a block where attention lets each token read the earlier ones and an MLP lets each think alone. The block repeats. The last token's vector becomes one score per vocabulary token, a softmax turns the scores into a belief, and the tallest bar is the prediction: the token 'there'."
