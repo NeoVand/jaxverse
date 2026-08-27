@@ -397,6 +397,194 @@ body {
 	text-decoration-color: var(--accent);
 }
 
+/* ── citations ────────────────────────────────────────────────────────────
+   A source is a raised numeral that goes straight to the paper. It has to be
+   small enough that a sentence carrying three of them still reads as a
+   sentence, and legible enough to aim at, which is a narrower window than it
+   sounds: the numeral is set in the mono face at 62% so its digits keep their
+   width, and it gets a hit area larger than its ink. */
+
+.cite {
+	position: relative;
+	display: inline-block;
+	white-space: nowrap;
+}
+
+.cite-mark {
+	font-family: var(--font-mono);
+	font-size: 0.62em;
+	font-variant-numeric: tabular-nums;
+	line-height: 1;
+	vertical-align: 0.4em;
+	/* the numeral belongs to the word before it, so it hugs — and it carries no
+	   side padding at all, or a following comma is pushed off its own word */
+	margin-left: 0.08em;
+	padding-block: 0.5em;
+	color: var(--accent);
+	text-decoration: none;
+	transition: color 120ms ease;
+}
+
+/* the prose link style would draw an underline under a superscript, which
+   reads as a strikethrough on the line above */
+.chapter-prose .cite-mark {
+	text-decoration: none;
+}
+
+.cite-mark:hover {
+	color: var(--ink);
+}
+
+/* Two numerals in a row need a hair of air, or they read as one number. */
+.cite + .cite .cite-mark {
+	margin-left: 0.18em;
+}
+
+/* The record, for readers who have a pointer to open it with. Touch devices
+   get no card — the tap follows the link, and the chapter's own list at the
+   foot of the page says the same thing in full. */
+.cite-card {
+	display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.cite-card {
+		position: absolute;
+		bottom: calc(100% + 0.5rem);
+		left: 50%;
+		z-index: 30;
+		display: flex;
+		width: 20rem;
+		max-width: 74vw;
+		flex-direction: column;
+		gap: 0.2rem;
+		translate: -50% 0.25rem;
+		border: 1px solid var(--line);
+		border-radius: 6px;
+		background: var(--surface);
+		padding: 0.7rem 0.8rem;
+		box-shadow: 0 12px 28px -14px rgb(0 0 0 / 0.4);
+		opacity: 0;
+		pointer-events: none;
+		white-space: normal;
+		transition:
+			opacity 120ms ease,
+			translate 120ms ease;
+	}
+
+	.cite:hover .cite-card,
+	.cite:focus-within .cite-card {
+		opacity: 1;
+		translate: -50% 0;
+	}
+}
+
+.cite-card-authors {
+	font-family: var(--font-sans);
+	font-size: 11px;
+	font-weight: 560;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--ink-3);
+}
+
+.cite-card-title {
+	font-family: var(--font-serif);
+	font-size: 14.5px;
+	font-style: italic;
+	font-variation-settings: 'opsz' 14;
+	line-height: 1.35;
+	color: var(--ink);
+}
+
+.cite-card-where {
+	font-family: var(--font-mono);
+	font-size: 10.5px;
+	line-height: 1.4;
+	color: var(--ink-3);
+}
+
+/* ── the chapter's list of sources ── */
+
+.refs {
+	display: flex;
+	list-style: none;
+	flex-direction: column;
+	gap: 1.15rem;
+	margin: 0;
+	padding: 0;
+}
+
+.ref {
+	display: grid;
+	grid-template-columns: 1.6rem 1fr;
+	align-items: baseline;
+	gap: 0.6rem;
+}
+
+.ref-n {
+	font-size: 11px;
+	text-align: right;
+	color: var(--ink-3);
+}
+
+.ref-body {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+}
+
+.ref-title {
+	font-family: var(--font-serif);
+	font-size: 1.0125rem;
+	font-variation-settings: 'opsz' 16;
+	line-height: 1.35;
+	color: var(--ink);
+	text-decoration: underline;
+	text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+	text-underline-offset: 3px;
+	transition: text-decoration-color 120ms ease;
+}
+
+.ref-title:hover {
+	text-decoration-color: var(--accent);
+}
+
+/* the arrow rides with the last word so it can never wrap alone onto a line */
+.ref-out {
+	display: inline;
+	margin-left: 0.22em;
+	vertical-align: -0.08em;
+	color: var(--ink-3);
+}
+
+.ref-meta {
+	font-family: var(--font-sans);
+	font-size: 12.5px;
+	line-height: 1.5;
+	color: var(--ink-3);
+}
+
+.ref-src {
+	font-family: var(--font-mono);
+	font-size: 11.5px;
+}
+
+.ref-note {
+	margin-top: 0.2rem;
+	font-family: var(--font-serif);
+	font-size: 14.5px;
+	font-style: italic;
+	font-variation-settings: 'opsz' 14;
+	line-height: 1.55;
+	color: var(--ink-2);
+}
+
+/* a citation jumped to from its numeral should say so for a moment */
+.ref:target .ref-title {
+	text-decoration-color: var(--accent);
+}
+
 /* A caption is set small so it stays subordinate to the figure, and small
    type needs a short measure — but a 78ch measure on a 72rem plate left
    nearly half the plate empty and turned a long caption into a tall column

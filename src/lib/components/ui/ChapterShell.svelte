@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import type { Pathname } from '$app/types';
 	import { ArrowLeft, ArrowRight } from 'lucide-svelte';
+	import References from '$lib/components/ui/References.svelte';
 	import { chapterBySlug, chapters, neighbors, type Chapter } from '$lib/data/chapters';
 	import { progress } from '$lib/data/progress.svelte';
 	import { setChapter } from '$lib/data/plates';
@@ -95,6 +96,8 @@
 	</header>
 
 	{@render children()}
+
+	<References {slug} />
 
 	<nav class="rail-prose mt-20" aria-label="Chapter navigation">
 		<div class="grid grid-cols-1 gap-3 border-t border-line-soft pt-6 sm:grid-cols-2">

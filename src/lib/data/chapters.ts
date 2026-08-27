@@ -26,7 +26,7 @@ export const chapters: Chapter[] = [
 		title: 'The Descent',
 		kicker: 'Optimization',
 		deck: 'Learning is falling downhill on a landscape of error. Meet the loss surface, the gradient, and the little step rule the rest of this book repeats.',
-		minutes: 8,
+		minutes: 10,
 		live: true
 	},
 	{
