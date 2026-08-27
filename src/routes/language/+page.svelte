@@ -239,8 +239,8 @@
 			There is a colder way to say what happened: the model compressed the corpus. Cross-entropy is
 			literally a size — a nat is <Math tex="1/\ln 2 \approx 1.44" /> bits — and the plate reports
 			<em>bits per character</em> beside its loss so that the two vocabularies can be compared at
-			all. Guessing uniformly among 69 characters costs 6.10 bits per character. The tokenizer alone
-			drops that to 3.52, before a single gradient step, purely by making the guesses coarser.
+			all. Guessing uniformly among 69 characters costs 6.11 bits per character. The tokenizer alone
+			drops that to 3.53, before a single gradient step, purely by making the guesses coarser.
 			Training then takes it under 1.6, which is better than <code>gzip -9</code> manages on the
 			same text (2.42) and close to <code>brotli</code> (1.87). The honest asterisk: those two ship a
 			self-contained file, while the scribe's bits assume you already have its weights — and a complete
