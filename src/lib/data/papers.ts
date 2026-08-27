@@ -233,6 +233,46 @@ export const papers = {
 		where: 'ICLR 2020',
 		url: 'https://arxiv.org/abs/1912.02292',
 		note: 'The same second descent in real deep networks — in model size, in training time, and, uncomfortably, in dataset size.'
+	},
+	'olah-2014': {
+		authors: 'Olah',
+		year: 2014,
+		title: 'Neural Networks, Manifolds, and Topology',
+		where: 'colah.github.io',
+		url: 'https://colah.github.io/posts/2014-03-NN-Manifolds-Topology/',
+		note: 'The essay that made the rubber-sheet picture stick, and the source of the tangled-rings example this chapter runs live.'
+	},
+	'fefferman-2016': {
+		authors: 'Fefferman, Mitter & Narayanan',
+		year: 2016,
+		title: 'Testing the Manifold Hypothesis',
+		where: 'Journal of the AMS 29(4)',
+		url: 'https://arxiv.org/abs/1310.0425',
+		note: 'The supposition that real data of very high dimension lies close to a surface of far lower dimension, treated for once as a claim that can be tested rather than assumed.'
+	},
+	'bengio-2013': {
+		authors: 'Bengio, Courville & Vincent',
+		year: 2013,
+		title: 'Representation Learning: A Review and New Perspectives',
+		where: 'IEEE TPAMI 35(8)',
+		url: 'https://arxiv.org/abs/1206.5538',
+		note: 'The case, made before it was obvious, that the useful output of a deep network is the coordinates it invents rather than the answer it prints.'
+	},
+	'naitzat-2020': {
+		authors: 'Naitzat, Zhitnikov & Lim',
+		year: 2020,
+		title: 'Topology of deep neural networks',
+		where: 'JMLR 21',
+		url: 'https://arxiv.org/abs/2004.06093',
+		note: 'Measures the holes in the data — literally, by counting them — at every layer of a trained network, and watches them close. Networks with a folding bend simplify the topology far faster than smooth ones.'
+	},
+	'alain-bengio-2016': {
+		authors: 'Alain & Bengio',
+		year: 2016,
+		title: 'Understanding intermediate layers using linear classifier probes',
+		where: 'ICLR 2017 workshop',
+		url: 'https://arxiv.org/abs/1610.01644',
+		note: 'Hang a bare linear classifier off each hidden layer and see how well it does. Separability rises layer by layer, which is the untangling of this chapter measured in a number.'
 	}
 } as const satisfies Record<string, Paper>;
 
@@ -260,6 +300,7 @@ export const citationOrder: Partial<Record<string, readonly PaperId[]>> = {
 		'belkin-2019',
 		'nakkiran-2019'
 	],
+	space: ['olah-2014', 'fefferman-2016', 'bengio-2013', 'alain-bengio-2016', 'naitzat-2020'],
 	descent: [
 		'polyak-1964',
 		'kingma-ba-2015',

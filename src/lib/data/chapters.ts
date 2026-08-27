@@ -44,7 +44,7 @@ export const chapters: Chapter[] = [
 		title: 'Bending Space',
 		kicker: 'Representation',
 		deck: 'Why does deep learning work at all? Because a network is a smooth deformation of space — watch it untangle spirals until a straight line can tell them apart.',
-		minutes: 12,
+		minutes: 13,
 		live: true
 	},
 	{
