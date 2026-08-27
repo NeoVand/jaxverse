@@ -119,11 +119,11 @@
 		<p>
 			The last three — gelu<Cite id="hendrycks-gimpel-2016" />, silu<Cite id="elfwing-2017" />, mish<Cite
 				id="misra-2019"
-			/> — sands the corner off and keeps a little slope slightly below zero, which is one reason the
-			transformer era settled on them. Silu arrived twice: once from researchers building reinforcement
-			learners, and again, years later, out of an automated search over candidate formulas that reported
-			it as a discovery under a different name.<Cite id="ramachandran-2017" /> That is roughly how this
-			corner of the field works. Nobody derives an activation from first principles; they are found, measured,
+			/> — sand the corner off and keep a little slope slightly below zero, which is one reason the transformer
+			era settled on them. Silu arrived twice: once from researchers building reinforcement learners,
+			and again the same year, out of an automated search over candidate formulas that reported it as
+			a discovery under a different name.<Cite id="ramachandran-2017" /> That is roughly how this corner
+			of the field works. Nobody derives an activation from first principles; they are found, measured,
 			and kept if they win.
 		</p>
 		<p>
