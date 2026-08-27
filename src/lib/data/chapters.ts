@@ -98,7 +98,7 @@ export const chapters: Chapter[] = [
 		title: 'Rook',
 		kicker: 'Everything at once',
 		deck: 'One small language model learns chess three ways: pretrained on games, fine-tuned on better ones, then sharpened by verifiable reward. The modern pipeline, in miniature.',
-		minutes: 15,
+		minutes: 17,
 		live: true
 	}
 ];

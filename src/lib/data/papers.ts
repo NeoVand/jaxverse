@@ -627,6 +627,78 @@ export const papers = {
 		where: 'ICML 2024',
 		url: 'https://arxiv.org/abs/2404.14367',
 		note: 'The bill for skipping the loop, itemised: methods that sample from the policy being trained beat methods that only re-weight a fixed dataset, and the gap widens exactly where the good responses are rare in that dataset.'
+	},
+	'lambert-2024': {
+		authors: 'Lambert et al.',
+		year: 2024,
+		title: 'Tülu 3: Pushing Frontiers in Open Language Model Post-Training',
+		where: 'arXiv preprint',
+		url: 'https://arxiv.org/abs/2411.15124',
+		note: 'Where the phrase reinforcement learning from verifiable rewards is coined, in the course of writing down a full post-training recipe openly enough to reproduce.'
+	},
+	'guo-2025': {
+		authors: 'Guo et al.',
+		year: 2025,
+		title: 'DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning',
+		where: 'arXiv preprint',
+		url: 'https://arxiv.org/abs/2501.12948',
+		note: 'Verifiable reward applied to mathematics and code at full scale, with almost no demonstrations — and the model grows longer deliberations on its own, because longer ones score better.'
+	},
+	'toshniwal-2022': {
+		authors: 'Toshniwal et al.',
+		year: 2022,
+		title: 'Chess as a Testbed for Language Model State Tracking',
+		where: 'AAAI 2022',
+		url: 'https://arxiv.org/abs/2102.13249',
+		note: "Exactly this chapter's setup, studied on purpose: a transformer fed nothing but move strings, asked afterwards where the pieces are."
+	},
+	'li-2023': {
+		authors: 'Li et al.',
+		year: 2023,
+		title: 'Emergent World Representations: Exploring a Sequence Model Trained on a Synthetic Task',
+		where: 'ICLR 2023',
+		url: 'https://arxiv.org/abs/2210.13382',
+		note: "Othello-GPT. Train on move lists alone, then read the board out of the activations — and, decisively, edit the board in the activations and watch the model's moves change to match."
+	},
+	'karvonen-2024': {
+		authors: 'Karvonen',
+		year: 2024,
+		title: 'Emergent World Models and Latent Variable Estimation in Chess-Playing Language Models',
+		where: 'COLM 2024',
+		url: 'https://arxiv.org/abs/2403.15498',
+		note: 'The same experiment in chess, on models trained the way Rook is. The board is recoverable from the residual stream — and so, uncomfortably, is an estimate of how strong the player being imitated is.'
+	},
+	'ruoss-2024': {
+		authors: 'Ruoss et al.',
+		year: 2024,
+		title: 'Amortized Planning with Large-Scale Transformers: A Case Study on Chess',
+		where: 'NeurIPS 2024',
+		url: 'https://arxiv.org/abs/2402.04494',
+		note: 'How far the text-only approach goes when you stop being polite about scale: grandmaster-level blitz from a transformer with no search at all.'
+	},
+	'shao-2024': {
+		authors: 'Shao et al.',
+		year: 2024,
+		title: 'DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models',
+		where: 'arXiv preprint',
+		url: 'https://arxiv.org/abs/2402.03300',
+		note: "Where GRPO is introduced: drop the value network and let a group of samples from the same prompt be each other's baseline."
+	},
+	'baker-2025': {
+		authors: 'Baker et al.',
+		year: 2025,
+		title: 'Monitoring Reasoning Models for Misbehavior and the Risks of Promoting Obfuscation',
+		where: 'arXiv preprint',
+		url: 'https://arxiv.org/abs/2503.11926',
+		note: 'Models trained against test suites learn to defeat the test suites — and punishing them for saying so out loud teaches them to hide it rather than to stop.'
+	},
+	'yu-2025': {
+		authors: 'Yu et al.',
+		year: 2025,
+		title: 'DAPO: An Open-Source LLM Reinforcement Learning System at Scale',
+		where: 'arXiv preprint',
+		url: 'https://arxiv.org/abs/2503.14476',
+		note: 'The industrial answer to the dead group this chapter runs into: keep sampling until a prompt produces both successes and failures, and throw away the prompts that cannot.'
 	}
 } as const satisfies Record<string, Paper>;
 
@@ -708,6 +780,18 @@ export const citationOrder: Partial<Record<string, readonly PaperId[]>> = {
 		'schulman-2017',
 		'rafailov-2023',
 		'tajwar-2024'
+	],
+	rook: [
+		'lambert-2024',
+		'guo-2025',
+		'toshniwal-2022',
+		'li-2023',
+		'karvonen-2024',
+		'ouyang-2022',
+		'shao-2024',
+		'baker-2025',
+		'yu-2025',
+		'ruoss-2024'
 	],
 	descent: [
 		'polyak-1964',

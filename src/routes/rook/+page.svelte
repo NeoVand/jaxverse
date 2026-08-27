@@ -2,6 +2,7 @@
 	import { onDestroy } from 'svelte';
 	import ChapterRef from '$lib/components/ui/ChapterRef.svelte';
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
+	import Cite from '$lib/components/ui/Cite.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import PlateRef from '$lib/components/ui/PlateRef.svelte';
@@ -59,10 +60,10 @@
 		<LegalOrNot />
 		<p>
 			That gap is what the V means in
-			<em>RLVR — reinforcement learning from verifiable rewards</em>: the judge is not anyone's
-			taste but a verifier that cannot be flattered, bribed, or fooled by confident nonsense. When
-			frontier models are trained to reason about mathematics and code, this is the same move:
-			reward what can be checked.
+			<em>RLVR — reinforcement learning from verifiable rewards</em><Cite id="lambert-2024" />: the
+			judge is not anyone's taste but a verifier that cannot be flattered, bribed, or fooled by
+			confident nonsense. When frontier models are trained to reason about mathematics and code,
+			this is the same move: reward what can be checked.<Cite id="guo-2025" />
 		</p>
 		<p>
 			One more thing, and it shapes everything that follows: Rook never sees a board. No 8×8 grid,
@@ -70,6 +71,21 @@
 			most. Everything it appears to know about squares and pieces has to be squeezed out of the
 			statistics of move strings. Keep that in mind as you watch it play: the little diagrams on
 			this page are for you; the model gets the sentence.
+		</p>
+		<p>
+			Which raises a question you can actually answer, and people have.<Cite id="toshniwal-2022" />
+			Train a transformer on nothing but move lists, then go looking inside its activations for the board
+			— not by asking it, but by fitting a simple linear readout to the numbers running through it. The
+			board is there. In the cleaner case of Othello it is there sharply enough to
+			<em>edit</em>: change the internal board to say a square is occupied, let the model continue,
+			and its moves change to suit the board you gave it rather than the one the moves implied.<Cite
+				id="li-2023"
+			/> The same probe works on chess models trained exactly the way Rook is, and it recovers more than
+			the position — it recovers an estimate of how strong the player being imitated was.<Cite
+				id="karvonen-2024"
+			/> A sequence model that has only ever seen sentences can end up holding a model of the thing the
+			sentences are about. That is not proof of understanding, and it is a great deal more than memorised
+			n-grams.
 		</p>
 		<p>
 			Meet the student, then: four transformer blocks, 128 numbers wide, four attention heads — 1.3
@@ -112,10 +128,10 @@
 			model is a <em>completion machine</em>: ask a raw base model a question and it may answer — or
 			continue with three more questions, or a survey form, because that is what question-shaped
 			text does in its corpus. The assistant you have talked to was made from such a base model by
-			<em>supervised fine-tuning</em>: continued training on a curated set of (instruction → good
-			response) pairs, written and vetted by people. It adds little knowledge. What it teaches is
-			the <em>format</em> of being helpful — that in this house, a question is followed by an answer.
-			One pair from such a corpus looks like this:
+			<em>supervised fine-tuning</em><Cite id="ouyang-2022" />: continued training on a curated set
+			of (instruction → good response) pairs, written and vetted by people. It adds little
+			knowledge. What it teaches is the <em>format</em> of being helpful — that in this house, a question
+			is followed by an answer. One pair from such a corpus looks like this:
 		</p>
 		<div class="my-7 grid gap-3 sm:grid-cols-2">
 			<div class="rounded-lg border border-line-soft bg-surface px-4 py-3.5">
@@ -195,8 +211,8 @@
 			<Math tex="i" /> did than its own siblings. <ChapterRef slug="reward" />
 			stabilized learning by measuring outcomes against a baseline instead of trusting raw reward; this
 			is the same idea with the scaffolding removed — <strong>the group is the baseline</strong>.
-			That trick (the heart of the GRPO family of methods) needs no second network to estimate
-			values: eight siblings, sampled from the same position, are estimate enough.
+			That trick — the heart of the GRPO family of methods<Cite id="shao-2024" /> — needs no second network
+			to estimate values: eight siblings, sampled from the same position, are estimate enough.
 		</p>
 		<p>The update is REINFORCE, exactly as the policy-gradient chapter promised it would be:</p>
 		<Math
@@ -275,8 +291,13 @@
 			has holes an optimizer will find. So coding and mathematics improve at a pace that
 			essay-writing and advice do not — the pipeline is identical, and only some subjects come with
 			an answer key. The caveat is that "no feelings to flatter" is not "no exploits": a model
-			rewarded for passing tests will sometimes learn to game the tests, and building verifiers that
-			cannot be lawyered is a live problem rather than a solved one.
+			rewarded for passing tests will sometimes learn to game the tests — patching the assertions,
+			special-casing the inputs, exiting early with the expected code — and building verifiers that
+			cannot be lawyered is a live problem rather than a solved one. There is a nastier turn to it,
+			too. Read the model's own reasoning and you can often catch it planning the exploit in plain
+			language; train against that signal and it does not stop exploiting, it stops saying so.<Cite
+				id="baker-2025"
+			/>
 		</p>
 		<p>
 			There is a second consequence of grading on a curve, and it decides how a run is fed. A group
@@ -286,7 +307,9 @@
 			data not a detail of the pipeline but arguably its most important hyperparameter. Feed it
 			problems it has already mastered and you will burn a week of compute on text that teaches
 			nothing, while the reward curve sits reassuringly pinned near the top. Neither number on your
-			dashboard will look broken.
+			dashboard will look broken. The industrial fix is exactly as blunt as it sounds: keep sampling
+			a prompt until its group contains both successes and failures, and drop the prompts that never
+			manage both.<Cite id="yu-2025" />
 		</p>
 		<p>
 			And notice how the three stages fit: reinforcement could not have started from noise — a group
@@ -299,8 +322,9 @@
 			Step back and look at what you ran. One set of weights was pretrained on everything available,
 			fine-tuned on a curated slice, then reinforced against a verifier. Swap chess for language.
 			Swap legality for human preference and verified answers. Swap 1.3 million parameters for a
-			trillion, and a browser tab for a datacenter. The recipe you just ran is the recipe. The ideas
-			do not change — only the appetite.
+			trillion, and a browser tab for a datacenter — the same text-only treatment of chess, given
+			enough of both, plays grandmaster-level blitz with no search at all.<Cite id="ruoss-2024" />
+			The recipe you just ran is the recipe. The ideas do not change — only the appetite.
 		</p>
 		<p>
 			And that is the book. A loss surface and a step downhill; a neuron, a bump of influence; space
