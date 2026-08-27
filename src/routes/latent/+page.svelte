@@ -31,15 +31,21 @@
 			<Math tex={'\\htmlClass{eq-model-2}{D} : \\mathbb{R}^{2} \\to \\mathbb{R}^{784}'} /> takes those
 			two numbers and tries to repaint the digit they came from. Between the halves sits the
 			<em>bottleneck</em> — the width-2 waist of an hourglass — and every digit must pass through it.
-			The waist is the only place in this book where a layer carries no non-linearity at all: nothing
-			is bent there, because the whole point of the place is to be a plain coordinate system.
+			Nothing is bent at the waist, the way it is at every other hidden layer: the point of the place
+			is to be a plain coordinate system, a map you read off directly rather than through a squashing
+			function.
 		</p>
 		<p>
 			The idea is older than it looks, and it has a linear ancestor. Take every bend out of both
 			halves — leave the encoder and decoder as plain matrices — and the best this machine can do is <em
 				>principal component analysis</em
-			>: the two directions along which the data varies most, a technique from 1901. Everything a
-			deep autoencoder buys over that, it buys with the bends.<Cite
+			>: the plane along which the data varies most, a technique from 1901. Not exactly, in fact.
+			Training lands the machine on that plane but not on the axes drawn across it — any two
+			directions spanning the plane cost the loss the same, so nothing in the objective prefers the
+			principal ones — and every flat place on the way there that is not the bottom is a saddle.<Cite
+				id="plaut-2018"
+			/>
+			Everything a deep autoencoder buys over that, it buys with the bends.<Cite
 				id="hinton-salakhutdinov-2006"
 			/>
 		</p>

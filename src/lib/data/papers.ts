@@ -339,6 +339,14 @@ export const papers = {
 		url: 'https://proceedings.neurips.cc/paper_files/paper/1989/hash/53c3bce66e43be4f209556518c2fcb54-Abstract.html',
 		note: 'The postal-code reader, trained by backpropagation on zip codes off real US mail — the first convincing demonstration that this recipe works on pixels.'
 	},
+	'plaut-2018': {
+		authors: 'Plaut',
+		year: 2018,
+		title: 'From Principal Subspaces to Principal Components with Linear Autoencoders',
+		where: 'arXiv preprint',
+		url: 'https://arxiv.org/abs/1804.10253',
+		note: 'What a linear autoencoder actually finds. Baldi and Hornik proved in 1989 that its loss has a single minimum — the projection onto the principal subspace — and that every other critical point is a saddle; what it does not have is any preference among the axes drawn across that subspace. This note shows how to get the principal ones back out of the weights afterwards.'
+	},
 	'hinton-salakhutdinov-2006': {
 		authors: 'Hinton & Salakhutdinov',
 		year: 2006,
@@ -738,6 +746,7 @@ export const citationOrder: Partial<Record<string, readonly PaperId[]>> = {
 		'lecun-1990'
 	],
 	latent: [
+		'plaut-2018',
 		'hinton-salakhutdinov-2006',
 		'kingma-welling-2014',
 		'rezende-2014',
