@@ -83,7 +83,7 @@
 		<circle cx="484" cy="54" r="1.7" fill="var(--ink-3)" />
 
 		<!-- the digit as it arrives, and as it comes back -->
-		{#each [{ dx: 0, blur: false, name: 'x', sub: '28 × 28 pixels' }, { dx: 450, blur: true, name: 'D(E(x))', sub: 'the rebuild' }] as tile (tile.dx)}
+		{#each [{ dx: 0, blur: false, name: 'x', sub: '28 × 28 px' }, { dx: 450, blur: true, name: 'D(E(x))', sub: 'the rebuild' }] as tile (tile.dx)}
 			<rect
 				x={6 + tile.dx}
 				y="60"
