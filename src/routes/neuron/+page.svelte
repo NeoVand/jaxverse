@@ -69,8 +69,8 @@
 			on the left as a circuit — the ultramarine edge carries <Math
 				tex={'\\htmlClass{eq-model}{w}'}
 			/>, the violet edge carries <Math tex={'\\htmlClass{eq-model-2}{b}'} />, and the blue-cyan
-			edge on the way out carries the amplitude <Math tex={'\\htmlClass{eq-model-3}{v}'} />, and the
-			teal disk between them plots whichever <Math tex={'\\htmlClass{eq-op}{\\sigma}'} /> is selected
+			edge on the way out carries the amplitude <Math tex={'\\htmlClass{eq-model-3}{v}'} />, with
+			the teal disk between them plotting whichever <Math tex={'\\htmlClass{eq-op}{\\sigma}'} /> is selected
 			— and on the right as
 			<Math
 				tex={'\\htmlClass{eq-model-3}{v}\\,\\htmlClass{eq-op}{\\sigma}(\\htmlClass{eq-model}{w}x + \\htmlClass{eq-model-2}{b})'}
@@ -105,10 +105,13 @@
 			twice — the function solid, its derivative dashed. Wherever the dashed curve hugs zero, learning
 			goes quiet. The two classics saturate at both ends, which is how deep sigmoid networks starved for
 			decades — the <em>vanishing gradient</em>, and a large part of why the field spent those
-			decades shallow.<Cite id="glorot-bengio-2010" /> relu<Cite id="nair-hinton-2010" /> is silent across
-			its entire left half instead, which sounds worse and is not: on the right it never saturates at
-			all, so a gradient can cross ten layers without being multiplied down to nothing. The cost is that
-			a unit driven far enough left stops receiving gradient and is called
+			decades shallow.<Cite id="glorot-bengio-2010" />
+		</p>
+		<p>
+			relu<Cite id="nair-hinton-2010" /> is silent across its entire left half instead, which sounds worse
+			and is not: on the right it never saturates at all, so a gradient can cross ten layers without being
+			multiplied down to nothing. The cost is that a unit driven far enough left stops receiving gradient
+			and is called
 			<em>dead</em>; its leaky cousin<Cite id="maas-2013" /> keeps a trickle flowing on purpose. That
 			half of relu's units are silent at any moment turns out to be part of the appeal rather than a defect
 			— the network computes on a changing, sparse subset of itself.<Cite id="glorot-2011" />
@@ -119,9 +122,9 @@
 			/> — sands the corner off and keeps a little slope slightly below zero, which is one reason the
 			transformer era settled on them. Silu arrived twice: once from researchers building reinforcement
 			learners, and again, years later, out of an automated search over candidate formulas that reported
-			it as a discovery under a different name.<Cite id="ramachandran-2017" /> That is roughly the state
-			of the art here. Nobody derives an activation from first principles; they are found, measured, and
-			kept if they win.
+			it as a discovery under a different name.<Cite id="ramachandran-2017" /> That is roughly how this
+			corner of the field works. Nobody derives an activation from first principles; they are found, measured,
+			and kept if they win.
 		</p>
 		<p>
 			None of this changes what networks <em>can</em> express — the universal approximation theorem is
@@ -211,8 +214,8 @@
 			decade made a mess of the lesson. Take a network that reads photographs well, shuffle the
 			labels so every answer is now noise, and train it again — it fits all of them, perfectly,
 			memorising the lot.<Cite id="zhang-2017" /> Its capacity to overfit is total. Hand back the real
-			labels and the very same network generalizes. Whatever stops it from memorising the real ones too,
-			it is not a shortage of room.
+			labels and the very same network generalizes. Whatever stops it from doing the same to those, it
+			is not a shortage of room.
 		</p>
 		<p>
 			Stranger still is what happens if you keep growing it. Test error rises as the textbook
