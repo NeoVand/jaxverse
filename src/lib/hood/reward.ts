@@ -98,12 +98,18 @@ gz[b] = w * ((b === a ? 1 : 0) - probs[b]) + (beta / eps.length) * dH;`
 					code: {
 						file: 'src/lib/optim-rl/dpole.worker.ts',
 						code: `// each hall: own θ, own baseline, own curriculum, own rng
-async function round() {
-	const eps = collectEpisodes(theta, curriculum, rand, BATCH);
-	dpoleReinforceUpdate(theta, baseline, eps, lr);
-	fitness = 0.9 * fitness + 0.1 * scoreOf(eps);
-	postMessage({ kind: 'report', fitness, theta, finds });
-	setTimeout(round, 0); // yield, then keep practicing
+const BATCHES_PER_ROUND = 6; // 48 episodes ≈ 25 ms per report
+
+function round() {
+	for (let b = 0; b < BATCHES_PER_ROUND; b++) {
+		const batch: DpoleEpisode[] = [];
+		// the curriculum picks each start on its own: half hanging, a quarter
+		// balanced, a quarter replaying one of this hall's own deliveries
+		for (let i = 0; i < 8; i++) batch.push(curriculum.next(theta, rand));
+		dpoleReinforceUpdate(theta, baseline, batch, lr);
+	}
+	postMessage({ type: 'report', theta, score: deliverEMA + 0.5 * drillEMA, finds });
+	setTimeout(round, 0); // yield to the page, then keep practising
 }`
 					}
 				},
