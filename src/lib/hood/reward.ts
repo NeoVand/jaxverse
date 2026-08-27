@@ -45,7 +45,7 @@ for (let t = 0; t < p.states.length; t++) {
 				},
 				{
 					title: 'The line that made it learnable at all',
-					body: `The least glamorous three lines in the chapter, and without them it does not work. A wind makes a uniform policy drift downwind, so a harbour to windward is somewhere a random walk essentially never reaches; on some wind bearings the learner never found it and settled instead for sailing onto a shoal, which was cheaper than running out of clock. Starting one passage in five from a random patch of water fixes it completely — measured across five seeds and all eight wind directions, every run arrives. There is a unit test asserting the <em>failure</em> without it, so if that ever stops happening the constant can go.`,
+					body: `The least glamorous three lines in the chapter, and without them it does not work. A wind makes a uniform policy drift downwind, so a harbour to windward is somewhere a random walk essentially never reaches; on some wind bearings the learner never found it and settled instead for sailing onto a shoal, which was cheaper than running out of clock. Starting one passage in five from a random patch of water fixes it completely — across three seeds and all eight wind directions, every combination brings the boat home more than eighty-five times in a hundred. There is a unit test asserting the <em>failure</em> without it, so if that ever stops happening the constant can go.`,
 					code: {
 						file: 'src/lib/optim-rl/chart.ts',
 						code: `const from = scatter > 0 && rand() < scatter
