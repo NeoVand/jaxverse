@@ -30,7 +30,7 @@
 			Cover the next word of a sentence with your thumb and guess it. "The little dog wagged his
 			____" is barely a puzzle; "my favorite word is ____" is a coin toss over a dictionary. Guess,
 			uncover, compare, score yourself; slide one word to the right and play again. That game is
-			this chapter's entire subject — and the claim worth sitting with is that nothing else is
+			this chapter's entire subject — and the claim it has to make good on is that nothing else is
 			needed. A large language model is this game, won at scale.
 		</p>
 	</Prose>

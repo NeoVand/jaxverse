@@ -98,7 +98,7 @@
 			Then you gave it one more dimension, and the impossible became easy. With three hidden units
 			the deformation can <em>lift</em> — raise the inner disk out of the page like a tent pole
 			under a napkin — and in three dimensions a flat plane slides between them cleanly. This is the
-			move Christopher Olah's essay made unforgettable<Cite id="olah-2014" />, and it generalizes:
+			picture Christopher Olah's essay is famous for<Cite id="olah-2014" />, and it generalizes:
 			data tangled like linked rings or knotted strings needs room — extra dimensions — to be taken
 			apart, and a network needs enough width to provide that room.
 		</p>
@@ -106,16 +106,20 @@
 			Now the thesis of this whole book, in one place. The network is a
 			<em>smooth, continuous transformation</em> — that is all it is allowed to be, because gradient
 			descent can only search by feel, and feel requires differentiability. The data arrived tangled
-			by some process in the world — and that it arrived tangled rather than scattered is itself a
-			supposition, with a name. The <em>manifold hypothesis</em> holds that data of enormous nominal
-			size, a photograph with a million pixels, in fact lies on or near a surface of far smaller
-			dimension, because whatever generated it had far fewer knobs than pixels.<Cite
-				id="fefferman-2016"
-			/> Learning succeeds when the network discovers a smooth map that
+			by some process in the world. Learning succeeds when the network discovers a smooth map that
 			<em>undoes the tangle</em> — approximately inverts it — so that in the new coordinates the classes
 			are linearly separable. When no such smooth un-tangling exists in the space it has, the network
 			fails, honestly and legibly, the way it just did. Width and depth are not magic: they are degrees
 			of freedom for the deformation.
+		</p>
+		<p>
+			That the data arrives tangled rather than merely scattered is itself a supposition, and it has
+			a name. The <em>manifold hypothesis</em> holds that data of enormous nominal size — a
+			photograph with a million pixels — in fact lies on or near a surface of far smaller dimension,
+			because whatever generated it had far fewer knobs than it has pixels.<Cite
+				id="fefferman-2016"
+			/>
+			Everything in this chapter assumes it. So does most of the field.
 		</p>
 	</Prose>
 

@@ -42,7 +42,7 @@
 			why the rule subtracts them. The <em>learning rate</em>
 			<Math tex={'\\htmlClass{eq-knob}{\\eta}'} /> sets the stride: how far to trust each reading of the
 			slope before stopping to feel the ground again. The direction is the world's to give; the stride
-			is yours to choose; there is nothing else in the rule. (Other books write that stride
+			is yours to choose. There is nothing else in the rule. (Other books write that stride
 			<Math tex="\alpha" />, and some write <Math tex="\gamma" />. This one keeps
 			<Math tex={'\\htmlClass{eq-knob}{\\eta}'} /> throughout, because
 			<Math tex="\gamma" /> has a different job waiting for it in
@@ -178,7 +178,7 @@
 			train by, and in <a href={resolve('/neuron')}>the next chapter</a> you will watch this same subtraction
 			sculpt a real neural network, live, as you read.
 		</p>
-		<p>Two things do change on the way up, and the usual account of each is worth correcting.</p>
+		<p>Two things do change on the way up.</p>
 		<p>
 			The first is noise. Every gradient on this page was exact: the landscape is a formula, so the
 			slope at a point can simply be computed. No real training run can afford that. The loss is an
@@ -187,9 +187,9 @@
 			the ground is slightly wrong. That is the <em>S</em> in SGD, and the licence for it is older
 			than neural networks: Robbins and Monro showed in 1951<Cite id="robbins-monro-1951" /> that a walker
 			stepping on noisy estimates still converges, provided its steps shrink neither too fast nor too
-			slowly. The noise is not merely survivable. A rough gradient is a cheap gradient, so the same compute
-			buys hundreds of times more steps, and the jitter shakes the walker off the first flat place it
-			stumbles into.
+			slowly. The noise is not merely survivable. A rough gradient is a cheap gradient — a few dozen examples
+			rather than a few million — so the same compute buys thousands of steps for the price of one, and
+			the jitter shakes the walker off the first flat place it stumbles into.
 		</p>
 		<p>
 			The second is the shape of the ground. The picture of a walker stranded in a shallow valley,
@@ -229,8 +229,8 @@
 		<p>
 			That is the whole trick, and you have now held every part of it: a smooth function, a score
 			for wrongness, and a walk downhill taken one step at a time. Everything from here on — telling
-			digits apart, drawing a map of meaning, learning chess from applause — is this same walker,
-			set loose on richer ground.
+			digits apart, drawing a map of meaning, learning chess from a rulebook nobody showed it — is
+			this same walker, set loose on richer ground.
 		</p>
 	</Prose>
 </ChapterShell>

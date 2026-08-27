@@ -238,7 +238,7 @@ export const papers = {
 		authors: 'Olah',
 		year: 2014,
 		title: 'Neural Networks, Manifolds, and Topology',
-		where: 'colah.github.io',
+		where: 'Essay',
 		url: 'https://colah.github.io/posts/2014-03-NN-Manifolds-Topology/',
 		note: 'The essay that made the rubber-sheet picture stick, and the source of the tangled-rings example this chapter runs live.'
 	},
