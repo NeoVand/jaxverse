@@ -16,7 +16,10 @@ export interface ActivationSpec {
 	label: string;
 	/** Short name used inside formulas, e.g. `a = v·gelu(wx + b)`. */
 	code: string;
-	/** Year the function entered the neural-net literature. */
+	/** The year beside the name in the field guide. For sigmoid that is the
+	 *  logistic curve's own — Verhulst's population mathematics, a century
+	 *  before anyone built a network. For the rest it is the year the function
+	 *  arrived in one. */
 	year: string;
 	/** Compact KaTeX formula for the field-guide tile. */
 	tex: string;
