@@ -141,7 +141,7 @@ for (let k = 0; k <= n; k++)          // k = n is "refuse everyone"
 			],
 			lab: {
 				file: 'reward.zip',
-				note: 'The sailing chart as a terminal script — watch a policy that has never heard of tacking work out how to beat to windward, no GPU required'
+				note: 'The sailing chart, printed rather than drawn — watch a policy that has never heard of tacking work out how to beat to windward, no GPU required'
 			}
 		}
 	]

@@ -150,7 +150,7 @@ for (let i = 0; i < N_GENES; i++) {
 			ui: [],
 			lab: {
 				file: 'taste.zip',
-				note: 'Fit a Bradley–Terry judge to synthetic preferences, over-optimize against it, and watch the gold reward turn over — a terminal script, no GPU required'
+				note: 'Fit a Bradley–Terry judge to synthetic preferences, over-optimize against it, and watch the gold reward turn over — all in text, and no GPU required'
 			}
 		}
 	]

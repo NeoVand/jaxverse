@@ -94,7 +94,7 @@ for (let t = 0; t <= 2000; t++) {
 			ui: [],
 			lab: {
 				file: 'descent.zip',
-				note: 'The optimizer race as a terminal script: five update rules descending Rosenbrock, first by hand, then with jax-js grad'
+				note: 'The optimizer race in plain text: five update rules descending the Rosenbrock valley, first by hand, then with jax-js grad'
 			}
 		}
 	]
