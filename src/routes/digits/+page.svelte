@@ -118,12 +118,13 @@
 			The minus log is what turns a probability into a complaint. It is zero when
 			<Math tex={'\\htmlClass{eq-out}{p_{\\htmlClass{eq-world}{y}}} = 1'} /> — perfect confidence in the
 			right answer costs nothing — and it climbs slowly at first, then without limit as the probability
-			approaches zero. Nine parts in ten, the blind guess of an untrained model, costs
-			<Math tex="-\log 0.1 \approx 2.30" />; a tepid but correct 0.6 costs 0.51; a confident 0.99
-			costs 0.01; and a confident, <em>wrong</em> 0.01 costs 4.61. That asymmetry is the whole
-			design. Cross-entropy is often called the model's <em>surprise</em> at the truth, and being
-			loudly, specifically wrong is the most surprising thing it can do — so that is where the
-			gradient pushes hardest. Every digit in the plate below carries its own surprise, and the
+			approaches zero. One part in ten, which is where an untrained model spreading its belief evenly
+			over ten classes starts, costs <Math tex="-\log 0.1 \approx 2.30" />; a tepid but correct 0.6
+			costs 0.51; a confident 0.99 costs 0.01; and a confident, <em>wrong</em> 0.01 costs 4.61. That
+			asymmetry is the whole design. Cross-entropy is often called the model's <em>surprise</em> at
+			the truth, and being loudly, specifically wrong is the most surprising thing it can do — so
+			that is where the gradient pushes hardest. Every digit in the plate below carries its own
+			surprise, and the
 			<span class="num">loss</span> in the header is simply their average.
 		</p>
 		<p>
