@@ -99,12 +99,17 @@
 			Legality was not the only thing that condensed, and the rest can be checked rather than argued
 			about.<Cite id="toshniwal-2022" /> Fit the simplest readout you can build — one linear layer, no
 			bend — to the numbers running through a trained model, and ask it where the pieces are. They are
-			in there, more clearly with every block. In the cleaner case of Othello the same probe finds the
-			board sharply enough to
-			<em>edit</em>: change the board inside the activations, let the model carry on, and its moves
-			follow the board you planted rather than the one its own moves implied.<Cite id="li-2023" /> On
-			chess models trained the way Rook is, the readout recovers more than the position — it recovers
-			an estimate of how strong the player being imitated was.<Cite id="karvonen-2024" />
+			in there, more clearly with every block. In the cleaner case of Othello the board comes out sharply
+			enough to <em>edit</em>: change it inside the activations, let the model carry on, and its
+			moves follow the board you planted rather than the one its own moves implied.<Cite
+				id="li-2023"
+			/> That first result needed a probe with a bend in it, and what fixed it was the question rather
+			than the model — ask each square <em>black or white</em> and a straight readout struggles; ask
+			it
+			<em>mine or theirs</em> and one works fine.<Cite id="nanda-2023" /> Which is why the plate below
+			is drawn from the side to move's point of view. On chess models trained the way Rook is, the readout
+			recovers more than the position — it recovers an estimate of how strong the player being imitated
+			was.<Cite id="karvonen-2024" />
 		</p>
 	</Prose>
 

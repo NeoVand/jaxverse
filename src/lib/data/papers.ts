@@ -685,6 +685,14 @@ export const papers = {
 		url: 'https://arxiv.org/abs/2210.13382',
 		note: "Othello-GPT. Train on move lists alone, then read the board out of the activations — and, decisively, edit the board in the activations and watch the model's moves change to match."
 	},
+	'nanda-2023': {
+		authors: 'Nanda, Lee & Wattenberg',
+		year: 2023,
+		title: 'Emergent Linear Representations in World Models of Self-Supervised Sequence Models',
+		where: 'arXiv preprint',
+		url: 'https://arxiv.org/abs/2309.00941',
+		note: "The follow-up that changed what the Othello result means. Li et al. needed a probe with a bend in it; ask each square 'mine or theirs' instead of 'black or white' and a straight line finds the board. The model's picture of the world is relative to whoever is about to move — which is how this chapter's probe reads it too."
+	},
 	'karvonen-2024': {
 		authors: 'Karvonen',
 		year: 2024,
@@ -814,6 +822,7 @@ export const citationOrder: Partial<Record<string, readonly PaperId[]>> = {
 		'guo-2025',
 		'toshniwal-2022',
 		'li-2023',
+		'nanda-2023',
 		'karvonen-2024',
 		'ouyang-2022',
 		'shao-2024',
