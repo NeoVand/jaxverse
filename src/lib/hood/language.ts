@@ -6,7 +6,7 @@ export const language: HoodChapter = {
 	blocks: [
 		{
 			id: 'transformer',
-			lesson: 'Lesson 5a — a transformer, whole, in jax-js',
+			lesson: 'a transformer, whole, in jax-js',
 			lede: `The scribe is a complete GPT-style transformer — embeddings, positional table, causal self-attention, MLP blocks, a language-model head — in one readable file, <code>src/lib/llm/model.ts</code>, trained by the same <code>valueAndGrad</code>-plus-Adam loop as every MLP before it. It runs in its own worker and asks for WebGPU by name: a transformer is the first model in this book big enough that nothing less will do.`,
 			ml: [
 				{
@@ -49,7 +49,7 @@ export const language: HoodChapter = {
 		},
 		{
 			id: 'attention',
-			lesson: 'Lesson 5b — the attention block, undissolved',
+			lesson: 'the attention block, undissolved',
 			ml: [
 				{
 					title: 'The attention block, undissolved',

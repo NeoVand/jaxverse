@@ -6,7 +6,7 @@ export const digits: HoodChapter = {
 	blocks: [
 		{
 			id: 'training',
-			lesson: 'Lesson 3a — batches, and held-out truth',
+			lesson: 'batches, and held-out truth',
 			lede: `Ten thousand real images raise the questions toy data never asks: how do you feed a GPU efficiently, and how do you keep yourself honest about memorization? The chapter's plates share one engine and one set of weights — train here and every other plate feels it — which is also this book's first taste of treating a model as <em>infrastructure</em>.`,
 			ml: [
 				{
@@ -45,7 +45,7 @@ loss = np.mean(np.sum(logp.mul(y), -1).neg()); // −log p_y, averaged`
 		},
 		{
 			id: 'saliency',
-			lesson: 'Lesson 3b — gradients of the input',
+			lesson: 'gradients of the input',
 			ml: [
 				{
 					title: 'The evidence map is a gradient with respect to pixels',

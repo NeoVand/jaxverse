@@ -5,7 +5,7 @@ export const latent: HoodChapter = {
 	blocks: [
 		{
 			id: 'waist',
-			lesson: 'Lesson 4a — the reparameterization trick',
+			lesson: 'the reparameterization trick',
 			lede: `The autoencoder is the same MLP engine again — the hourglass is just a layer list that narrows and widens — but the variational waist earns its own lesson. Sampling is not differentiable; the <em>reparameterization trick</em> makes it so, and it is three lines here.`,
 			ml: [
 				{
@@ -54,7 +54,7 @@ function waist(h: any, eps: any | null): { z: any; kl: any | null } {
 		},
 		{
 			id: 'halves',
-			lesson: 'Lesson 4b — running half a network',
+			lesson: 'running half a network',
 			lede: `The chapter breaks the network in half on purpose: the map plots <code>encode(x)</code>, the manifold plots <code>decode(z)</code>, and each half is its own worker op.`,
 			ml: [
 				{

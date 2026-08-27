@@ -5,7 +5,7 @@ export const descent: HoodChapter = {
 	blocks: [
 		{
 			id: 'gradient',
-			lesson: 'Lesson 0a — the gradient, by hand first',
+			lesson: 'the gradient, by hand first',
 			lede: `A confession to open the course: <em>nothing in this chapter uses jax-js.</em> Two coordinates and a scalar loss need no tensor library, and seeing the algorithms as bare arithmetic once — every moment buffer a named variable — is the best preparation for meeting them again wrapped in <code>grad</code> and <code>jit</code>.`,
 			ml: [
 				{
@@ -61,7 +61,7 @@ case 'adamw': {
 		},
 		{
 			id: 'jax',
-			lesson: 'Lesson 0b — where jax-js enters',
+			lesson: 'where jax-js enters',
 			ml: [
 				{
 					title: 'Where jax-js enters',

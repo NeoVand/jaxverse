@@ -5,7 +5,7 @@ export const rook: HoodChapter = {
 	blocks: [
 		{
 			id: 'engine',
-			lesson: 'Lesson 7a — one engine, three diets',
+			lesson: 'one engine, three diets',
 			lede: `Rook is the course's final exam: everything from the previous seven lessons, running as one system. The transformer is the scribe's architecture at 1.3 million parameters, and the three training stages are <em>one engine with three diets</em>, not three models.`,
 			ml: [
 				{
@@ -50,7 +50,7 @@ export async function loadRookWaypoint(step: number): Promise<Float32Array> {
 		},
 		{
 			id: 'rlvr',
-			lesson: 'Lesson 7b — RLVR: chapter 6, compiled by chapter 5',
+			lesson: 'RLVR: chapter 6, compiled by chapter 5',
 			ml: [
 				{
 					title: 'RLVR: chapter 6, compiled by chapter 5',
@@ -74,7 +74,7 @@ params = applyUpdates(params, updates);`
 		},
 		{
 			id: 'arena',
-			lesson: 'Lesson 7c — weights as hot-swappable state',
+			lesson: 'weights as hot-swappable state',
 			ml: [
 				{
 					title: 'The arena: weights as hot-swappable state',

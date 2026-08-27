@@ -5,7 +5,7 @@ export const reward: HoodChapter = {
 	blocks: [
 		{
 			id: 'reinforce',
-			lesson: 'Lesson 6a — REINFORCE in nine lines, and the world around it',
+			lesson: 'REINFORCE in nine lines, and the world around it',
 			lede: `An honest interlude in the jax course: <em>neither plate in this chapter uses jax-js</em>, and the reason is worth more than another code sample. Both policies are tiny — a table of logits, a 5 × 33 matrix — and both worlds must be stepped in lockstep with learning. When each "tensor op" is thirty multiplications, the cost of dispatching to a GPU dwarfs the arithmetic itself. jax earns its keep when the maths outweighs the bookkeeping; here it would not, so the chapter is plain TypeScript, and REINFORCE is laid bare because of it.`,
 			ml: [
 				{
@@ -69,7 +69,7 @@ reinforceUpdate(sea, theta, baseline, p, lr, opts.entropy);`
 		},
 		{
 			id: 'pendulum',
-			lesson: 'Lesson 6b — when the update rule is the easy part',
+			lesson: 'when the update rule is the easy part',
 			ml: [
 				{
 					title: 'Same rule, engineered signal',

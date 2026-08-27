@@ -5,7 +5,7 @@ export const taste: HoodChapter = {
 	blocks: [
 		{
 			id: 'judge',
-			lesson: 'Lesson 7a — a reward model is two forward passes and a subtraction',
+			lesson: 'a reward model is two forward passes and a subtraction',
 			lede: `Another chapter with no jax-js in it, and again the absence is the lesson. The judge here is 401 parameters and the whole training set is a few dozen clicks; dispatching that to a GPU would cost more in bookkeeping than the arithmetic is worth. What the smallness lets you see is that <em>nothing about the mechanism changes with scale</em>. A frontier reward model is this file with more zeros.`,
 			ml: [
 				{
@@ -64,7 +64,7 @@ export const taste: HoodChapter = {
 		},
 		{
 			id: 'goodhart',
-			lesson: 'Lesson 7b — differentiating through a die roll, the easy way',
+			lesson: 'differentiating through a die roll, the easy way',
 			ml: [
 				{
 					title: 'Reparameterization, because the judge is differentiable',
@@ -116,7 +116,7 @@ export const taste: HoodChapter = {
 		},
 		{
 			id: 'leash',
-			lesson: 'Lesson 7c — a penalty with a closed-form answer',
+			lesson: 'a penalty with a closed-form answer',
 			ml: [
 				{
 					title: 'One step, two forces',

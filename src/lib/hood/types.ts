@@ -23,7 +23,13 @@ export interface HoodSection {
 export interface HoodBlock {
 	/** Anchor id, referenced from the chapter page: <UnderTheHood block="…" /> */
 	id: string;
-	/** The lesson this block contributes to the jax-js course. */
+	/**
+	 * What this block teaches, with no numeral in it: "params as a tree,
+	 * valueAndGrad, jit". The "Lesson 4b — " in front is composed at render
+	 * time from the chapter's own number and the block's place in it, so
+	 * inserting a chapter or a block renumbers the whole course at once — the
+	 * contract <ChapterRef> and <PlateRef> already keep for the visible book.
+	 */
 	lesson: string;
 	/** Optional invitation paragraph shown as soon as the hood opens (HTML). */
 	lede?: string;

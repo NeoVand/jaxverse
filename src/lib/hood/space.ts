@@ -5,7 +5,7 @@ export const space: HoodChapter = {
 	blocks: [
 		{
 			id: 'device',
-			lesson: 'Lesson 2a — where the arithmetic actually runs',
+			lesson: 'where the arithmetic actually runs',
 			lede: `Same engine as the last chapter, new question: where does the arithmetic happen? jax-js initializes against whatever the machine offers — WebGPU if the browser grants it, WASM if not, plain CPU as the floor — and the plate's telemetry strip tells you which one you got.`,
 			ml: [
 				{
@@ -46,7 +46,7 @@ defaultDevice(device as 'webgpu' | 'wasm' | 'cpu');`
 		},
 		{
 			id: 'middle',
-			lesson: 'Lesson 2b — reading the middle of a network',
+			lesson: 'reading the middle of a network',
 			lede: `A trained network is not a sealed pipe. The middle view of this plate is nothing more than asking the engine for its hidden activations and plotting them.`,
 			ml: [
 				{

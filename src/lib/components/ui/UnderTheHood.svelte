@@ -9,6 +9,7 @@
 	import { base } from '$app/paths';
 	import { highlight } from '$lib/hood/highlight';
 	import { hood } from '$lib/hood';
+	import { chapterBySlug } from '$lib/data/chapters';
 
 	interface Props {
 		slug: string;
@@ -17,6 +18,18 @@
 	let { slug, block }: Props = $props();
 
 	const entry = $derived(hood[slug]?.blocks.find((b) => b.id === block));
+
+	// "Lesson 4b — running half a network": the numeral from the chapter
+	// registry, the letter from the block's place in that chapter, so the
+	// course renumbers itself the way the plates and chapters already do.
+	// The cover is not a chapter and has no numeral to speak.
+	const lesson = $derived.by(() => {
+		if (!entry) return '';
+		const n = chapterBySlug.get(slug)?.n;
+		const i = hood[slug]?.blocks.indexOf(entry) ?? -1;
+		const letter = 'abcdefgh'[i];
+		return n === undefined || !letter ? entry.lesson : `Lesson ${n}${letter} — ${entry.lesson}`;
+	});
 	let open = $state(false);
 	let tab = $state<'ml' | 'ui'>('ml');
 
@@ -42,7 +55,7 @@
 				/>
 				<span class="eyebrow" style="color: var(--accent);">Under the hood</span>
 				<span class="font-serif text-[15px] italic" style="font-variation-settings: 'opsz' 14;">
-					{entry.lesson}
+					{lesson}
 				</span>
 				{#if !open}
 					<span class="num ml-auto text-[10.5px] text-ink-3">the code this plate runs</span>
