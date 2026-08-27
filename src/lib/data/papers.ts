@@ -347,6 +347,14 @@ export const papers = {
 		url: 'https://proceedings.neurips.cc/paper_files/paper/1989/hash/53c3bce66e43be4f209556518c2fcb54-Abstract.html',
 		note: 'The postal-code reader, trained by backpropagation on zip codes off real US mail — the first convincing demonstration that this recipe works on pixels.'
 	},
+	'pearson-1901': {
+		authors: 'Pearson',
+		year: 1901,
+		title: 'On Lines and Planes of Closest Fit to Systems of Points in Space',
+		where: 'Philosophical Magazine 2(11)',
+		url: 'https://zenodo.org/records/1430636',
+		note: 'Principal component analysis, fourteen pages and no matrices — Pearson works it out in the language of best-fitting lines and planes through a cloud of points, which is still the most useful way to picture what it does.'
+	},
 	'plaut-2018': {
 		authors: 'Plaut',
 		year: 2018,
@@ -795,6 +803,7 @@ export const citationOrder: Partial<Record<string, readonly PaperId[]>> = {
 		'lecun-1990'
 	],
 	latent: [
+		'pearson-1901',
 		'plaut-2018',
 		'hinton-salakhutdinov-2006',
 		'kingma-welling-2014',

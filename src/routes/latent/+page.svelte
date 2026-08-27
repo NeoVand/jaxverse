@@ -39,10 +39,12 @@
 			The idea is older than it looks, and it has a linear ancestor. Take every bend out of both
 			halves — leave the encoder and decoder as plain matrices — and the best this machine can do is <em
 				>principal component analysis</em
-			>: the plane along which the data varies most, a technique from 1901. Not exactly, in fact.
-			Training lands the machine on that plane but not on the axes drawn across it — any two
-			directions spanning the plane cost the loss the same, so nothing in the objective prefers the
-			principal ones — and every flat place on the way there that is not the bottom is a saddle.<Cite
+			>: the plane along which the data varies most — which is what Pearson went looking for in
+			1901, under exactly that description: lines and planes of closest fit.<Cite
+				id="pearson-1901"
+			/> Not quite PCA, in fact. Training lands the machine on that plane but not on the axes drawn across
+			it — any two directions spanning the plane cost the loss the same, so nothing in the objective prefers
+			the principal ones — and every flat place on the way there that is not the bottom is a saddle.<Cite
 				id="plaut-2018"
 			/>
 			Everything a deep autoencoder buys over that, it buys with the bends.<Cite
