@@ -106,8 +106,9 @@
 			tex={'\\mathcal{L}(\\htmlClass{eq-model}{\\theta}) \\;=\\; -\\log \\htmlClass{eq-out}{p_{\\htmlClass{eq-world}{y}}}, \\qquad \\htmlClass{eq-out}{p_{\\htmlClass{eq-world}{y}}} \\;=\\; \\htmlClass{eq-op}{\\operatorname{softmax}}_{\\htmlClass{eq-world}{y}}\\!\\big(f(\\htmlClass{eq-world}{x};\\htmlClass{eq-model}{\\theta})\\big)'}
 		/>
 		<p>
-			Read it term by term. <Math tex={'\\htmlClass{eq-world}{y}'} /> is the true label, the answer written
-			on the form by whoever held the pen; it never changes, and it selects exactly one of the ten bars.
+			Take the two symbols in turn. <Math tex={'\\htmlClass{eq-world}{y}'} /> is the true label, the answer
+			written on the form by whoever held the pen; it never changes, and it selects exactly one of the
+			ten bars.
 			<Math tex={'\\htmlClass{eq-out}{p_{\\htmlClass{eq-world}{y}}}'} /> is the height of that one bar
 			— the probability the model was willing to place on the truth. The nine other bars appear nowhere
 			in the formula, and yet they are punished all the same: they share one unit of belief with

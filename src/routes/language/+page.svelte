@@ -73,7 +73,7 @@
 			tex={'\\mathcal{L} \\;=\\; -\\log \\htmlClass{eq-op}{\\sigma}\\big(\\htmlClass{eq-model}{v}^{\\top}\\htmlClass{eq-world}{u_{+}}\\big) \\;-\\; \\sum_{k=1}^{5} \\log\\Big(1 - \\htmlClass{eq-op}{\\sigma}\\big(\\htmlClass{eq-model}{v}^{\\top}\\htmlClass{eq-mute}{u^{-}_{k}}\\big)\\Big)'}
 		/>
 		<p>
-			Read it term by term. <Math tex={'\\htmlClass{eq-model}{v}'} /> is the centre word's row of the
+			Take it in two halves. <Math tex={'\\htmlClass{eq-model}{v}'} /> is the centre word's row of the
 			table — the dense vector everything here is about — and
 			<Math tex={'\\htmlClass{eq-world}{u_{+}}'} /> belongs to the neighbor actually seen beside it. The
 			sigmoid
