@@ -42,7 +42,7 @@
 			</li>
 			<li>
 				<a href="https://github.com/shaack/cm-chessboard" rel="external">cm-chessboard</a>
-				by Stefan Haack (MIT) — every board in <em>Everything at Once</em>, wearing the
+				by Stefan Haack (MIT) — every board in the <em>Rook</em> chapter, wearing the
 				<a
 					href="https://github.com/lichess-org/lila/tree/master/public/piece/staunty"
 					rel="external">Staunty</a
