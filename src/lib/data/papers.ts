@@ -571,6 +571,62 @@ export const papers = {
 		where: 'DeepMind',
 		url: 'https://deepmind.google/discover/blog/specification-gaming-the-flip-side-of-ai-ingenuity/',
 		note: 'A long, funny, slightly alarming collection of agents that got exactly what was asked for. The boat that farms turbo pickups in a circle instead of finishing the race is the canonical one.'
+	},
+	'christiano-2017': {
+		authors: 'Christiano et al.',
+		year: 2017,
+		title: 'Deep Reinforcement Learning from Human Preferences',
+		where: 'NeurIPS 2017',
+		url: 'https://arxiv.org/abs/1706.03741',
+		note: 'The whole loop in its first modern form, on Atari games and simulated robots: collect comparisons, fit a reward model to them, optimise against it. About a thousand human judgements bought behaviours nobody could have written a reward for.'
+	},
+	'stiennon-2020': {
+		authors: 'Stiennon et al.',
+		year: 2020,
+		title: 'Learning to Summarize from Human Feedback',
+		where: 'NeurIPS 2020',
+		url: 'https://arxiv.org/abs/2009.01325',
+		note: 'The paper that moved the loop onto language and showed it beating supervised fine-tuning outright. It also reports how often the human labellers agreed with each other, which is the number everything downstream is built on.'
+	},
+	'ouyang-2022': {
+		authors: 'Ouyang et al.',
+		year: 2022,
+		title: 'Training Language Models to Follow Instructions with Human Feedback',
+		where: 'NeurIPS 2022',
+		url: 'https://arxiv.org/abs/2203.02155',
+		note: 'InstructGPT — the pipeline in this chapter, run at product scale, and the reason the assistant you have talked to answers instructions rather than continuing them.'
+	},
+	'gao-2023': {
+		authors: 'Gao, Schulman & Hilton',
+		year: 2023,
+		title: 'Scaling Laws for Reward Model Overoptimization',
+		where: 'ICML 2023',
+		url: 'https://arxiv.org/abs/2210.10760',
+		note: "The two curves in this chapter's Goodhart plate, measured properly and at scale: proxy reward keeps rising with distance travelled while true reward peaks and turns over, and where it turns over is predictable from the size of the reward model."
+	},
+	'schulman-2017': {
+		authors: 'Schulman et al.',
+		year: 2017,
+		title: 'Proximal Policy Optimization Algorithms',
+		where: 'arXiv preprint',
+		url: 'https://arxiv.org/abs/1707.06347',
+		note: 'PPO, and the clipped objective drawn in the fence plate. Its whole appeal is that it buys most of what a principled trust region buys for the price of a min and a clamp.'
+	},
+	'rafailov-2023': {
+		authors: 'Rafailov et al.',
+		year: 2023,
+		title: 'Direct Preference Optimization: Your Language Model is Secretly a Reward Model',
+		where: 'NeurIPS 2023',
+		url: 'https://arxiv.org/abs/2305.18290',
+		note: 'DPO. The subtitle is the whole heist, and the algebra fits on a page.'
+	},
+	'tajwar-2024': {
+		authors: 'Tajwar et al.',
+		year: 2024,
+		title: 'Preference Fine-Tuning of LLMs Should Leverage Suboptimal, On-Policy Data',
+		where: 'ICML 2024',
+		url: 'https://arxiv.org/abs/2404.14367',
+		note: 'The bill for skipping the loop, itemised: methods that sample from the policy being trained beat methods that only re-weight a fixed dataset, and the gap widens exactly where the good responses are rare in that dataset.'
 	}
 } as const satisfies Record<string, Paper>;
 
@@ -643,6 +699,15 @@ export const citationOrder: Partial<Record<string, readonly PaperId[]>> = {
 		'kakade-langford-2002',
 		'florensa-2017',
 		'krakovna-2020'
+	],
+	taste: [
+		'christiano-2017',
+		'stiennon-2020',
+		'gao-2023',
+		'ouyang-2022',
+		'schulman-2017',
+		'rafailov-2023',
+		'tajwar-2024'
 	],
 	descent: [
 		'polyak-1964',

@@ -89,7 +89,7 @@ export const chapters: Chapter[] = [
 		title: 'Teaching Taste',
 		kicker: 'Preference learning',
 		deck: 'Some things can be checked. Most can’t. Fit a judge to nothing but which-of-these-two, watch an optimizer take it apart — then meet the one idea that stops it.',
-		minutes: 14,
+		minutes: 16,
 		live: true
 	},
 	{

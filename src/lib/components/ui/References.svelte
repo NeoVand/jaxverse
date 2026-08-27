@@ -17,21 +17,21 @@
 {#if list.length}
 	<section class="rail-prose mt-20" aria-labelledby="sources-{slug}">
 		<h2 class="eyebrow mb-5 border-t border-line-soft pt-6" id="sources-{slug}">Sources</h2>
-		<ol class="refs">
+		<ol class="sources">
 			{#each list as id, i (id)}
 				{@const paper = papers[id]}
-				<li class="ref" id={refAnchor(id)}>
-					<span class="ref-n num">{i + 1}</span>
-					<span class="ref-body">
-						<a class="ref-title" href={paper.url} target="_blank" rel="noopener noreferrer">
-							{paper.title}<ArrowUpRight class="ref-out" size={13} />
+				<li class="source" id={refAnchor(id)}>
+					<span class="source-n num">{i + 1}</span>
+					<span class="source-body">
+						<a class="source-title" href={paper.url} target="_blank" rel="noopener noreferrer">
+							{paper.title}<ArrowUpRight class="source-out" size={13} />
 						</a>
-						<span class="ref-meta">
+						<span class="source-meta">
 							{paper.authors} · {paper.year} · {paper.where} ·
-							<span class="ref-src">{sourceLabel(paper.url)}</span>
+							<span class="source-where">{sourceLabel(paper.url)}</span>
 						</span>
 						{#if paper.note}
-							<span class="ref-note">{paper.note}</span>
+							<span class="source-note">{paper.note}</span>
 						{/if}
 					</span>
 				</li>

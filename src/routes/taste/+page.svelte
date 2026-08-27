@@ -2,6 +2,7 @@
 	import { resolve } from '$app/paths';
 	import ChapterRef from '$lib/components/ui/ChapterRef.svelte';
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
+	import Cite from '$lib/components/ui/Cite.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
 	import PlateRef from '$lib/components/ui/PlateRef.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
@@ -61,11 +62,11 @@
 	<Prose>
 		<h2 class="h2">From verdicts to a number</h2>
 		<p>
-			Now turn that pile of comparisons into a score, which sounds like alchemy and is in fact a
-			century old. Posit that every ornament has a hidden worth <Math
-				tex={'\\htmlClass{eq-model}{r_\\phi}(y)'}
-			/>, and that a person prefers stochastically according to the <em>gap</em> between two worths, squashed
-			into a probability:
+			Now turn that pile of comparisons into a score, which sounds like alchemy and is in fact
+			ordinary statistics from 1952. Bradley and Terry were analysing taste tests. Posit that every
+			ornament has a hidden worth <Math tex={'\\htmlClass{eq-model}{r_\\phi}(y)'} />, and that a
+			person prefers stochastically according to the <em>gap</em> between two worths, squashed into a
+			probability:
 		</p>
 		<Math
 			display
@@ -93,7 +94,10 @@
 			probability-this-deal-closes spreadsheet ever built. The exotic-sounding <em>reward model</em>
 			at the heart of modern alignment is the oldest, most boring shape in statistics, pointed at pairs
 			of essays instead of pairs of chess players — and the mystique evaporates the moment you can see
-			the two forward passes and the subtraction.
+			the two forward passes and the subtraction. Bolting a neural network onto that shape and optimising
+			against the result is barely older than this book's readers: it was first done on Atari games and
+			simulated robots, where about a thousand human comparisons bought behaviours nobody could have written
+			a reward function for.<Cite id="christiano-2017" />
 		</p>
 		<p>
 			One number below is worth more than the rest. It is easy to score a model on data it was
@@ -115,10 +119,12 @@
 		</p>
 		<p>
 			Your judge is not your taste. It is four hundred parameters fitted to a few dozen of your
-			clicks, and away from those clicks it is guessing. Where you never voted, it extrapolates, and
-			extrapolation from a small sample is not opinion but arithmetic accident. There are regions of
-			ornament space where the judge is confidently, splendidly wrong, and neither of you has any
-			idea where they are.
+			clicks, and away from those clicks it is guessing. Nor is the industrial version any purer:
+			when this is done for real, the people supplying the comparisons agree with each other only
+			about three times in four,<Cite id="stiennon-2020" /> so the judge is fitted to a noisy majority
+			and inherits its noise as a ceiling. Where you never voted, it extrapolates, and extrapolation from
+			a small sample is not opinion but arithmetic accident. There are regions of ornament space where
+			the judge is confidently, splendidly wrong, and neither of you has any idea where they are.
 		</p>
 		<p>
 			An optimizer will find them. Not out of malice — it has no model of your intentions and no
@@ -126,7 +132,9 @@
 			through whichever hole is nearest. <strong>Goodhart's law</strong>: when a measure becomes a
 			target, it ceases to be a good measure. The Soviet nail factory judged by the weight of nails
 			produced a few enormous useless ones; judged by count, a million tiny useless ones. Neither
-			factory was malfunctioning. Both were optimizing exactly what they were told.
+			factory was malfunctioning. Both were optimizing exactly what they were told. (That factory is
+			a cartoon from a Soviet satirical magazine rather than a documented plant, which does not make
+			it less exact.)
 		</p>
 		<p>
 			The plate below turns an optimizer loose on your judge with no restraint of any kind, and
@@ -136,6 +144,16 @@
 			computed a million times a second. The other is yours, and every point of it costs you a
 			click. Watch where they part company, and notice that nothing on the first curve marks the
 			spot.
+		</p>
+		<p>
+			This is not a quirk of a four-hundred-parameter judge on a toy space. Run the same experiment
+			with real reward models and real language models and you get the same two curves, in the same
+			arrangement, reliably enough to fit an equation to: the proxy climbs steadily with distance
+			travelled while the true score rises, peaks and turns over — and where it turns over moves
+			predictably with how large the reward model is and how much data it was fitted to.<Cite
+				id="gao-2023"
+			/> The failure has a shape, and the shape has parameters. That is a good deal better than knowing
+			it can happen, and still nowhere near being able to see the peak from the inside.
 		</p>
 	</Prose>
 
@@ -172,7 +190,9 @@
 			tex={'\\max_{\\htmlClass{eq-model}{\\theta}}\\; \\mathbb{E}_{y \\sim \\htmlClass{eq-model}{\\pi_\\theta}}\\big[\\, \\htmlClass{eq-model}{r_\\phi}(y) \\,\\big] \\;-\\; \\htmlClass{eq-knob}{\\beta}\\, \\htmlClass{eq-op}{\\mathrm{KL}}\\big(\\htmlClass{eq-model}{\\pi_\\theta} \\,\\|\\, \\htmlClass{eq-mute}{\\pi_{\\text{ref}}}\\big)'}
 		/>
 		<p>
-			In English: score as high as you can <em>while remaining recognizable</em>.
+			This is the objective the assistant you have talked to was actually trained on<Cite
+				id="ouyang-2022"
+			/>. In English: score as high as you can <em>while remaining recognizable</em>.
 			<Math tex={'\\htmlClass{eq-knob}{\\beta}'} /> is the length of the leash — the exchange rate between
 			reward points and strangeness. Push it to infinity and the policy never moves. Push it to zero and
 			you get the previous plate. Everything worth having is in between.
@@ -211,8 +231,9 @@
 			not stumble. You sawed off the branch you were standing on.
 		</p>
 		<p>
-			So the question becomes: what is the biggest step that is still safe? PPO's answer is
-			disarmingly cheap. Weight each action by the ratio between what the new policy thinks of it
+			So the question becomes: what is the biggest step that is still safe? PPO's answer<Cite
+				id="schulman-2017"
+			/> is disarmingly cheap. Weight each action by the ratio between what the new policy thinks of it
 			and what the policy that collected the data thought — <Math
 				tex={'\\rho = \\htmlClass{eq-model}{\\pi_\\theta} / \\htmlClass{eq-mute}{\\pi_{\\theta_{\\text{old}}}}'}
 			/> — and then compute both the honest objective and a fenced one, and always take whichever is worse
@@ -258,14 +279,17 @@
 			/>, which touches rewards only through a <em>difference</em> between two responses to the same
 			prompt. Same prompt, same <Math tex="Z" />, and the uncomputable term annihilates itself. What
 			is left is one supervised loss on preference pairs that provably targets the same optimum — no
-			reward model to train, no sampling, no rollouts, no critic. That is <strong>DPO</strong>, and
-			the whole four-model circus collapses into ordinary fine-tuning.
+			reward model to train, no sampling, no rollouts, no critic. That is <strong>DPO</strong><Cite
+				id="rafailov-2023"
+			/>, and the whole four-model circus collapses into ordinary fine-tuning.
 		</p>
 		<p>
 			With one bill, which this book will not hide. DPO never generates anything, so it can never
-			discover a response better than the ones already in its dataset. To get reliably better than
-			your data, the model has to produce, be judged, and update — which is the loop, and there is
-			no way around the loop.
+			discover a response better than the ones already in its dataset; all it can do is re-weight
+			what is already there. To get reliably better than your data, the model has to produce, be
+			judged, and update. That gap has been measured, and it is exactly where you would expect it:
+			widest when the good responses are rare in the dataset, which is the case anyone actually
+			cares about.<Cite id="tajwar-2024" /> There is no way around the loop.
 		</p>
 
 		<h2 class="h2">What you just did to yourself</h2>

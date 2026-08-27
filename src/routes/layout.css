@@ -506,7 +506,7 @@ body {
 
 /* ── the chapter's list of sources ── */
 
-.refs {
+.sources {
 	display: flex;
 	list-style: none;
 	flex-direction: column;
@@ -515,26 +515,26 @@ body {
 	padding: 0;
 }
 
-.ref {
+.source {
 	display: grid;
 	grid-template-columns: 1.6rem 1fr;
 	align-items: baseline;
 	gap: 0.6rem;
 }
 
-.ref-n {
+.source-n {
 	font-size: 11px;
 	text-align: right;
 	color: var(--ink-3);
 }
 
-.ref-body {
+.source-body {
 	display: flex;
 	flex-direction: column;
 	gap: 0.15rem;
 }
 
-.ref-title {
+.source-title {
 	font-family: var(--font-serif);
 	font-size: 1.0125rem;
 	font-variation-settings: 'opsz' 16;
@@ -546,31 +546,31 @@ body {
 	transition: text-decoration-color 120ms ease;
 }
 
-.ref-title:hover {
+.source-title:hover {
 	text-decoration-color: var(--accent);
 }
 
 /* the arrow rides with the last word so it can never wrap alone onto a line */
-.ref-out {
+.source-out {
 	display: inline;
 	margin-left: 0.22em;
 	vertical-align: -0.08em;
 	color: var(--ink-3);
 }
 
-.ref-meta {
+.source-meta {
 	font-family: var(--font-sans);
 	font-size: 12.5px;
 	line-height: 1.5;
 	color: var(--ink-3);
 }
 
-.ref-src {
+.source-where {
 	font-family: var(--font-mono);
 	font-size: 11.5px;
 }
 
-.ref-note {
+.source-note {
 	margin-top: 0.2rem;
 	font-family: var(--font-serif);
 	font-size: 14.5px;
@@ -581,7 +581,7 @@ body {
 }
 
 /* a citation jumped to from its numeral should say so for a moment */
-.ref:target .ref-title {
+.source:target .source-title {
 	text-decoration-color: var(--accent);
 }
 
