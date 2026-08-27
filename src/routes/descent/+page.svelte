@@ -172,10 +172,10 @@
 		<h2 class="h2">The picture is honest</h2>
 		<p>
 			A fair objection: real models do not have two knobs. The first network you will train has a
-			few hundred; the transformer that plays chess in the last chapter has 1.3 million; the models
-			in the news have billions. Nobody can draw those landscapes. But nothing on this page was a
-			cartoon of the algorithm — the rule you have been racing is, line for line, the rule they all
-			train by, and in <a href={resolve('/neuron')}>the next chapter</a> you will watch this same subtraction
+			few hundred; the model that plays chess in the last chapter has 1.3 million; the models in the
+			news have billions. Nobody can draw those landscapes. But nothing on this page was a cartoon
+			of the algorithm — the rule you have been racing is, line for line, the rule they all train
+			by, and in <a href={resolve('/neuron')}>the next chapter</a> you will watch this same subtraction
 			sculpt a real neural network, live, as you read.
 		</p>
 		<p>Two things do change on the way up.</p>

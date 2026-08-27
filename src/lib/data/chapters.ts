@@ -70,7 +70,7 @@ export const chapters: Chapter[] = [
 		n: 5,
 		title: 'The Next Token',
 		kicker: 'Self-supervised learning',
-		deck: 'Predict what comes next: the simplest game in the world, and the one behind every large language model. Train one, live, on this book’s own words.',
+		deck: 'Predict what comes next: the simplest game in the world, and the one behind every large language model. Train one, live, on three hundred thousand words of children’s stories.',
 		minutes: 15,
 		live: true
 	},
