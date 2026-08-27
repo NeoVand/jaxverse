@@ -80,7 +80,7 @@ export const chapters: Chapter[] = [
 		title: 'Learning from Reward',
 		kicker: 'Reinforcement learning',
 		deck: 'No examples, no answers — only consequences. Watch a policy discover a path through a world that only ever says “more” or “less”.',
-		minutes: 10,
+		minutes: 12,
 		live: true
 	},
 	{

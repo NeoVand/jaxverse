@@ -514,6 +514,63 @@ export const papers = {
 		where: 'NeurIPS 2022',
 		url: 'https://arxiv.org/abs/2203.15556',
 		note: 'Chinchilla. Redid the measurement and found the field had been building models far too large for the amount of text it was feeding them — a correction worth more than most architectural ideas of the same period.'
+	},
+	'minsky-1961': {
+		authors: 'Minsky',
+		year: 1961,
+		title: 'Steps Toward Artificial Intelligence',
+		where: 'Proceedings of the IRE 49(1)',
+		url: 'https://courses.csail.mit.edu/6.803/pdf/steps.pdf',
+		note: 'Where the credit-assignment problem is named and stated, decades before anyone could do much about it. Still one of the best-written papers in the field.'
+	},
+	'williams-1992': {
+		authors: 'Williams',
+		year: 1992,
+		title:
+			'Simple Statistical Gradient-Following Algorithms for Connectionist Reinforcement Learning',
+		where: 'Machine Learning 8',
+		url: 'https://people.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf',
+		note: 'REINFORCE, in its original form, with the baseline already in it — including the proof that subtracting one cannot bias the estimate.'
+	},
+	'sutton-2000': {
+		authors: 'Sutton et al.',
+		year: 2000,
+		title: 'Policy Gradient Methods for Reinforcement Learning with Function Approximation',
+		where: 'NeurIPS 1999',
+		url: 'https://proceedings.neurips.cc/paper_files/paper/1999/hash/464d828b85b0bed98e80ade0a5c43b0f-Abstract.html',
+		note: 'The policy gradient theorem stated in general, and the result that lets a learned value function stand in for the return without breaking the gradient.'
+	},
+	'sutton-barto-2018': {
+		authors: 'Sutton & Barto',
+		year: 2018,
+		title: 'Reinforcement Learning: An Introduction (2nd edition)',
+		where: 'MIT Press',
+		url: 'https://web.stanford.edu/class/psych209/Readings/SuttonBartoIPRLBook2ndEd.pdf',
+		note: 'The book, given away by its authors. If any single chapter of this one leaves you wanting the whole subject properly, it is this one.'
+	},
+	'kakade-langford-2002': {
+		authors: 'Kakade & Langford',
+		year: 2002,
+		title: 'Approximately Optimal Approximate Reinforcement Learning',
+		where: 'ICML 2002',
+		url: 'https://www.cs.cmu.edu/~./jcl/papers/aoarl/Final.pdf',
+		note: 'Makes the case that where you start an episode is part of the algorithm, not part of the problem: scattering the start states is what keeps the gradient informative when the goal is somewhere a wanderer never reaches.'
+	},
+	'florensa-2017': {
+		authors: 'Florensa et al.',
+		year: 2017,
+		title: 'Reverse Curriculum Generation for Reinforcement Learning',
+		where: 'CoRL 2017',
+		url: 'https://arxiv.org/abs/1707.05300',
+		note: 'Start the agent next to the goal, where success is easy and the reward is reachable, and walk the start states backwards as it improves. The catch in this chapter is trained exactly this way.'
+	},
+	'krakovna-2020': {
+		authors: 'Krakovna et al.',
+		year: 2020,
+		title: 'Specification gaming: the flip side of AI ingenuity',
+		where: 'DeepMind',
+		url: 'https://deepmind.google/discover/blog/specification-gaming-the-flip-side-of-ai-ingenuity/',
+		note: 'A long, funny, slightly alarming collection of agents that got exactly what was asked for. The boat that farms turbo pickups in a circle instead of finishing the race is the canonical one.'
 	}
 } as const satisfies Record<string, Paper>;
 
@@ -577,6 +634,15 @@ export const citationOrder: Partial<Record<string, readonly PaperId[]>> = {
 		'elhage-2021',
 		'kaplan-2020',
 		'hoffmann-2022'
+	],
+	reward: [
+		'minsky-1961',
+		'sutton-2000',
+		'williams-1992',
+		'sutton-barto-2018',
+		'kakade-langford-2002',
+		'florensa-2017',
+		'krakovna-2020'
 	],
 	descent: [
 		'polyak-1964',

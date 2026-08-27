@@ -2,6 +2,7 @@
 	import { resolve } from '$app/paths';
 	import ChapterRef from '$lib/components/ui/ChapterRef.svelte';
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
+	import Cite from '$lib/components/ui/Cite.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
 	import PlateRef from '$lib/components/ui/PlateRef.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
@@ -34,10 +35,10 @@
 			The trouble is the timing. Suppose reaching a harbour takes forty separate decisions and the
 			score arrives only at the end — you got there, this is what it cost. Which of the forty was
 			the mistake? The third, which pointed too high? The nineteenth, which stood on too long? This
-			is the <em>credit assignment problem</em>, and it is the reason this paradigm is hard.
-			Supervised learning is told the right action at every step; self-supervised learning finds the
-			answer printed in the data. Here the answer exists nowhere. It has to be <em>discovered</em>,
-			by acting, and then divided fairly among the actions that led to it.
+			is the <em>credit assignment problem</em><Cite id="minsky-1961" />, and it is the reason this
+			paradigm is hard. Supervised learning is told the right action at every step; self-supervised
+			learning finds the answer printed in the data. Here the answer exists nowhere. It has to be
+			<em>discovered</em>, by acting, and then divided fairly among the actions that led to it.
 		</p>
 		<p>
 			What the agent learns is a <em>policy</em>: a rule <Math
@@ -49,8 +50,8 @@
 				tex={'J(\\htmlClass{eq-model}{\\theta}) = \\mathbb{E}\\,[\\text{return}]'}
 			/>. But the world between the parameters and the reward is physics and dice; you cannot
 			differentiate through it. The escape is one of the loveliest results in the field, the
-			<em>policy gradient theorem</em>, whose simplest form is an algorithm called
-			<em>REINFORCE</em>:
+			<em>policy gradient theorem</em><Cite id="sutton-2000" />, whose simplest form is an algorithm
+			called <em>REINFORCE</em><Cite id="williams-1992" />:
 		</p>
 		<Math
 			display
@@ -64,6 +65,17 @@
 			we can differentiate, weighted by the return <Math tex={'\\htmlClass{eq-world}{G_t}'} /> that actually
 			happened. And the update is the same little rule as ever — parameters, plus a step along a gradient
 			— walking uphill this time, because <Math tex="J" /> is something to maximize.
+		</p>
+		<p>
+			There is a catch inside that expectation, and it is the reason this paradigm burns through so
+			much experience. The estimate is <em>unbiased</em> — average enough episodes and it points the
+			right way — but one episode is a dreadful sample of it. A single number, the return,
+			multiplies the gradient of <em>every</em> action taken; a lucky passage praises the third leg
+			that pointed too high along with the twenty that were sound, and an unlucky one condemns the
+			lot together. Set that beside <ChapterRef slug="digits" lower />, where every single example
+			handed back a full gradient telling each parameter which way to move. Here a whole episode
+			hands back one scalar. Nearly everything built on top of REINFORCE since exists to get more
+			signal out of that scalar, or to need fewer of them.
 		</p>
 		<p>
 			The return itself needs one refinement. To split a late score among early actions, we credit
@@ -81,7 +93,7 @@
 			never means anything else — which is exactly why the stride in every update rule in this book
 			is written
 			<Math tex={'\\htmlClass{eq-knob}{\\eta}'} />. Two knobs, two letters, and from here on they
-			sit side by side in the same equations.
+			sit side by side in the same equations.<Cite id="sutton-barto-2018" />
 		</p>
 
 		<h2 class="h2">A harbour you cannot sail to</h2>
@@ -173,8 +185,12 @@
 			The fix is the one <PlateRef id="pendulum" lower /> uses on a much harder problem: one passage in
 			five starts not at the mooring but at a random patch of water. Practising what you can already almost
 			do is how the gradient stays informative, and with that one change every wind direction is learnable.
-			It is worth knowing that this is not a detail of the demo. Somebody had to find that out, and the
-			only symptom was a curve that looked fine.
+			It is worth knowing that this is not a detail of the demo. Where an episode begins is part of the
+			algorithm rather than part of the problem<Cite id="kakade-langford-2002" />, and the strongest
+			version of the idea runs it backwards on purpose: start the agent beside the goal, where
+			succeeding is nearly free, and walk the start states away as it improves.<Cite
+				id="florensa-2017"
+			/> Somebody had to find that out, and the only symptom was a curve that looked fine.
 		</p>
 		<p>
 			Which is also your invitation to break it. Switch on <em>edit</em> and redesign the sea under a
@@ -207,9 +223,14 @@
 			what a catcher would ask for: arrive slowly, links near vertical, cart clear of the rail's
 			ends. Up high, every calm tick inside the cones pays rent. Everything else is fines — spin
 			beyond what an honest pump needs, energy beyond what the top requires, loitering against a
-			bumper — because a stack spun like a propeller <em>looks</em> upright twice per revolution, and
-			without the fines a policy happily farms those moments forever. Every one of those clauses is scar
-			tissue from a policy that found the loophole first.
+			bumper — because a stack spun like a propeller <em>looks</em> upright twice per revolution,
+			and without the fines a policy happily farms those moments forever. Every one of those clauses
+			is scar tissue from a policy that found the loophole first — which is the ordinary experience
+			of writing a reward, not an unlucky one. The canonical example is a boat in a racing game that
+			discovered it could score more by circling forever through a patch of pickups than by
+			finishing the course, and there is a long, funny, faintly alarming catalogue of the rest.<Cite
+				id="krakovna-2020"
+			/>
 		</p>
 		<p>
 			And the practice regime is the chart's scatter, grown up. Half the headless practice swings up
@@ -235,7 +256,9 @@
 			followed it, minus a <em>baseline</em>: the running average of how episodes usually go from
 			that moment. The difference is called the <em>advantage</em>, and it makes "good" mean
 			<em>better than usual</em> — a push followed by ten seconds of height teaches nothing once that
-			height is normal, but the same push while the stack usually dangles is news.
+			height is normal, but the same push while the stack usually dangles is news. This is the cheapest
+			of the repairs to that one noisy scalar: subtracting a baseline leaves the average gradient exactly
+			where it was, and narrows the spread around it. Free, in the only currency that matters here.
 		</p>
 		<p>
 			Notice that your shoves were never outside the lesson: a disturbance the policy survives
