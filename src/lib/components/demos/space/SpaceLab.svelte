@@ -303,7 +303,7 @@
 		}
 	}
 
-	// the γ slider acts on the LIVE run, debounced (Adam moments reset — honest cost)
+	// the η slider acts on the LIVE run, debounced (Adam moments reset — honest cost)
 	let lrTimer: ReturnType<typeof setTimeout> | undefined;
 	$effect(() => {
 		const lr = 10 ** logLr;
@@ -1012,7 +1012,7 @@
 				{#if variant === 'free'}
 					<span class="w-48">
 						<Slider
-							label="learning rate γ"
+							label="learning rate η"
 							bind:value={logLr}
 							min={-3}
 							max={-1.4}
