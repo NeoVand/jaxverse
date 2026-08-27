@@ -154,9 +154,11 @@
 			a 784-dimensional input space — one axis per pixel — and a classifier must deform
 			<em>that</em> space until ten regions come apart (<ChapterRef slug="digits" />). An
 			autoencoder will squeeze the deformation through a two-dimensional bottleneck and hand us the
-			map to look at (<ChapterRef slug="latent" />). Even the language model at the end of the book
-			is moving words around a space until the next token sits in a predictable place. The grid you
-			just watched bend is the only mental image you need.
+			map to look at (<ChapterRef slug="latent" />). Even the language model of <ChapterRef
+				slug="language"
+			/>
+			is moving words around a space until the next token sits in a predictable place. The grid you just
+			watched bend is the only mental image you need.
 		</p>
 	</Prose>
 </ChapterShell>

@@ -320,7 +320,7 @@
 			That judge exists, for some questions and not others, and the difference between those two
 			sets is most of what governs where machines are getting rapidly better and where they are not.
 			<a href={resolve('/rook')}>Meet Rook</a> — and watch <PlateRef id="fence" lower /> turn out to be
-			machinery the last chapter barely needs.
+			machinery it barely needs.
 		</p>
 	</Prose>
 </ChapterShell>
