@@ -1,213 +1,532 @@
 <script lang="ts">
 	import Plate from '$lib/components/ui/Plate.svelte';
+	import { parseColor } from '$lib/optim/colormap';
 
-	// The difference between the two kinds of flat place, drawn the only way it
-	// can be drawn once a landscape has more than three axes: not as a surface,
-	// but as the loss along a bundle of straight lines through one point.
+	// The two kinds of flat place, drawn as the two surfaces themselves.
 	//
-	// This is the picture behind the paragraph about saddles, and it is also
-	// how the question is actually asked of a real network — you cannot see a
-	// million-dimensional surface, but you can walk a line across it and write
-	// down what happens, as often as you like.
+	// An earlier version of this figure drew the loss along a bundle of
+	// straight lines through the flat point — defensible, since a real
+	// landscape has a million axes and nobody can look at it, but the picture
+	// came out as two thickets of parabolas that read the same at a glance.
+	// A reader should not have to count strokes to learn the difference
+	// between a bowl and a saddle. So: two patches of actual ground, one
+	// camera, one light, turning slowly.
 	//
-	// Two things this figure has to get right, and an earlier version of it got
-	// both wrong. The first is that a direction going DOWN must look as
-	// emphatic as a direction going up: the loss window is symmetric about the
-	// flat point and the falling curvatures match the rising ones in
-	// magnitude, so the horizon runs through the middle of the panel and each
-	// half belongs to one sign. The second is that the panels differ by three
-	// curves in twenty-four, which is far too little ink to read out of a
-	// tangle — hence the row of marks beneath each one, one per direction and
-	// in the same order, where the count can simply be counted.
+	// Both are quadratic, with the same curvature in magnitude — z = k(x² + y²)
+	// against z = k(x² − y²) — so the only difference between the panels is the
+	// sign on one axis, which is exactly the thing the chapter is about.
+	//
+	// The rim carries the argument. It is the circle of unit radius around the
+	// flat point, so its height at angle θ IS the loss one step out in
+	// direction θ. On the floor that circle is level and entirely above the
+	// point: every direction climbs. On the saddle it is a sine wave through
+	// the point's own height, drawn in ink where it rises and vermilion where
+	// it falls. The dashed ring is that height, held level, to give the eye a
+	// datum to judge "above" and "below" against.
 
-	const SLICES = 24;
+	// ── mesh ──
+	const RINGS = 32; // radial divisions of the disc
+	const SPOKES = 84; // angular divisions
+	const NV = (RINGS + 1) * SPOKES;
+	const NQ = RINGS * SPOKES;
+	const DASHES = SPOKES / 2; // every other datum segment, for a dashed ring
+	const N_ITEMS = NQ + SPOKES + DASHES + 1;
+	const TAU = Math.PI * 2;
 
-	/**
-	 * The three that fall, at index 3, 11 and 19 — spread through the bundle
-	 * rather than adjacent to it. Given by hand rather than drawn from the same
-	 * spread as the rest, so that three domes through one point land at clearly
-	 * different depths instead of on top of one another.
-	 *
-	 * The lean stays well under |2a/3| in each case, which is where a cubic
-	 * turns its own dome back over: these have to fall on BOTH sides of the
-	 * point, or they are drawing a slope rather than a direction that descends.
-	 */
-	const DOWN: Record<number, { a: number; b: number }> = {
-		3: { a: -0.42, b: 0.1 },
-		11: { a: -0.66, b: -0.08 },
-		19: { a: -0.92, b: 0.12 }
-	};
+	const K = 0.55; // curvature amplitude, world units
+	const LIFT = 0.02; // how far the rim floats off the surface it traces
+	const LEVELS = 256; // steps in the lit→shadowed shading ramp
+	const GROW = 0.5; // px pushed outward from a quad's centroid
 
-	/**
-	 * A deterministic stand-in for randomness. Two golden-ratio strides give
-	 * numbers that spread evenly and look unstructured, and — unlike a seeded
-	 * generator — a figure that never trains is identical on every render,
-	 * every reload and every machine.
-	 */
-	const spread = (i: number, k: number) => ((i + 1) * 0.6180339887 + k * 0.3247179572) % 1;
+	/** Light, fixed in the world rather than to the camera: the patch is a lit
+	 *  object on a turntable, so a face keeps its brightness as you walk round. */
+	const L = ((): [number, number, number] => {
+		const v: [number, number, number] = [-0.42, 0.86, 0.3];
+		const n = Math.hypot(...v);
+		return [v[0] / n, v[1] / n, v[2] / n];
+	})();
 
-	interface Slice {
-		d: string;
-		down: boolean;
+	interface Surf {
+		key: string;
+		name: string;
+		sub: string;
+		/** +1 for the floor, −1 for the saddle: the whole difference. */
+		sign: number;
+		/** world lattice, y up */
+		vx: Float32Array;
+		vy: Float32Array;
+		vz: Float32Array;
+		lam: Float32Array;
+		shade: Uint8Array;
+		/** the rim, floated just clear of the surface */
+		rx: Float32Array;
+		ry: Float32Array;
+		rz: Float32Array;
+		/** per rim segment: does the ground rise this way, or fall? */
+		rise: Uint8Array;
+		/** the level ring at the flat point's own height */
+		dx: Float32Array;
+		dy: Float32Array;
+		dz: Float32Array;
+		/** where the flat point sits once the patch is centred in its panel */
+		oy: number;
 	}
 
-	/** The loss along one line: curvature, plus a little third-order lean so
-	 *  the bundle does not come out as a set of perfectly nested mirrors. */
-	function slice(i: number, saddle: boolean): Slice {
-		const down = saddle && i in DOWN;
-		const a = down ? DOWN[i].a : 0.3 + 0.65 * spread(i, 0);
-		const b = down ? DOWN[i].b : (spread(i, 1) - 0.5) * 0.28;
-		let d = '';
-		for (let k = 0; k <= 48; k++) {
-			const t = -1 + (2 * k) / 48;
-			const L = a * t * t + b * t * t * t;
-			d += `${k === 0 ? 'M' : 'L'} ${px(saddle ? 1 : 0, t).toFixed(2)} ${py(L).toFixed(2)} `;
+	function build(key: string, name: string, sub: string, sign: number): Surf {
+		// centre the patch vertically in its panel: the floor lives entirely
+		// above its flat point, the saddle straddles it.
+		const mid = (K + sign * K) / 4;
+		const h = (x: number, z: number) => K * (x * x + sign * z * z);
+
+		const vx = new Float32Array(NV);
+		const vy = new Float32Array(NV);
+		const vz = new Float32Array(NV);
+		for (let r = 0; r <= RINGS; r++) {
+			const rad = r / RINGS;
+			for (let s = 0; s < SPOKES; s++) {
+				const a = (s / SPOKES) * TAU;
+				const x = rad * Math.cos(a);
+				const z = rad * Math.sin(a);
+				const k = r * SPOKES + s;
+				vx[k] = x;
+				vz[k] = z;
+				vy[k] = h(x, z) - mid;
+			}
 		}
-		return { d: d.trim(), down };
+
+		// Lambert, from the analytic normal at each quad's centre. ∇h is exact
+		// here, so the shading owes nothing to the mesh resolution. Kept raw
+		// for now: the two patches are normalised together, further down, so
+		// that equal slopes come out equally bright in both panels.
+		const lam = new Float32Array(NQ);
+		for (let r = 0; r < RINGS; r++) {
+			for (let s = 0; s < SPOKES; s++) {
+				const rad = (r + 0.5) / RINGS;
+				const a = ((s + 0.5) / SPOKES) * TAU;
+				const x = rad * Math.cos(a);
+				const z = rad * Math.sin(a);
+				const nx = -2 * K * x;
+				const nz = -2 * K * sign * z;
+				const nl = Math.hypot(nx, 1, nz);
+				lam[r * SPOKES + s] = Math.max(0, (nx * L[0] + L[1] + nz * L[2]) / nl);
+			}
+		}
+
+		const rx = new Float32Array(SPOKES);
+		const ry = new Float32Array(SPOKES);
+		const rz = new Float32Array(SPOKES);
+		const dx = new Float32Array(SPOKES);
+		const dy = new Float32Array(SPOKES);
+		const dz = new Float32Array(SPOKES);
+		const rise = new Uint8Array(SPOKES);
+		for (let s = 0; s < SPOKES; s++) {
+			const a = (s / SPOKES) * TAU;
+			const x = Math.cos(a);
+			const z = Math.sin(a);
+			const nx = -2 * K * x;
+			const nz = -2 * K * sign * z;
+			const nl = Math.hypot(nx, 1, nz);
+			rx[s] = x + (LIFT * nx) / nl;
+			ry[s] = h(x, z) - mid + LIFT / nl;
+			rz[s] = z + (LIFT * nz) / nl;
+			dx[s] = x;
+			dy[s] = -mid;
+			dz[s] = z;
+			// the sign of the segment, read at its midpoint, against the height
+			// of the flat point itself — which is 0 before the panel is centred
+			const am = ((s + 0.5) / SPOKES) * TAU;
+			rise[s] = h(Math.cos(am), Math.sin(am)) >= 0 ? 1 : 0;
+		}
+
+		return {
+			key,
+			name,
+			sub,
+			sign,
+			vx,
+			vy,
+			vz,
+			lam,
+			shade: new Uint8Array(NQ),
+			rx,
+			ry,
+			rz,
+			rise,
+			dx,
+			dy,
+			dz,
+			oy: -mid
+		};
 	}
 
-	// ── geometry, in viewBox units ──
-	const W = 212;
-	const H = 128;
-	const TOP = 24;
-	const XS = [30, 278] as const;
-	/** Symmetric on purpose: the flat point sits at the middle of the panel, so
-	 *  the half above the horizon belongs to the directions that rise and the
-	 *  half below to the directions that fall. An asymmetric window quietly
-	 *  argues that one of the two matters more. */
-	const SPAN = 1.15;
+	const SURFACES: Surf[] = [
+		build('floor', 'a floor', 'every direction curves up', 1),
+		build('saddle', 'a saddle', 'one of them curves down', -1)
+	];
 
-	const px = (p: number, t: number) => XS[p] + ((t + 1) / 2) * W;
-	const py = (L: number) => TOP + ((SPAN - L) / (2 * SPAN)) * H;
-
-	// ── the tally: one mark per direction, in the bundle's own order ──
-	const TALLY_Y = TOP + H + 17;
-	const PITCH = W / SLICES;
-	/** Half-width and half-height of one mark. */
-	const MW = 3.5;
-	const MH = 2.3;
-
-	/** A quadratic whose apex sits MH past its ends: ∪ for a direction that
-	 *  rises away from the point, ∩ for one that falls. */
-	function mark(p: number, i: number, down: boolean): string {
-		const cx = XS[p] + (i + 0.5) * PITCH;
-		const end = down ? TALLY_Y + MH : TALLY_Y - MH;
-		const ctrl = down ? TALLY_Y - 3 * MH : TALLY_Y + 3 * MH;
-		return `M ${(cx - MW).toFixed(2)} ${end} Q ${cx.toFixed(2)} ${ctrl} ${(cx + MW).toFixed(2)} ${end}`;
+	// One exposure for both patches: the darkest face anywhere sets the far end
+	// of the ramp and the brightest sets the near end, so a slope that catches
+	// the light on the floor reads exactly as bright on the saddle.
+	{
+		let lo = Infinity;
+		let hi = -Infinity;
+		for (const su of SURFACES)
+			for (const v of su.lam) {
+				if (v < lo) lo = v;
+				if (v > hi) hi = v;
+			}
+		const span = Math.max(hi - lo, 1e-6);
+		for (const su of SURFACES)
+			for (let q = 0; q < NQ; q++)
+				su.shade[q] = Math.round((1 - (su.lam[q] - lo) / span) * (LEVELS - 1));
 	}
 
-	const PANELS = [
-		{ key: 'floor', saddle: false, name: 'a floor', sub: 'every direction curves up' },
-		{ key: 'saddle', saddle: true, name: 'a saddle', sub: 'three of the twenty-four do not' }
-	] as const;
+	// ── camera ──
+	let yaw = $state(0.62);
+	let pitch = $state(0.58);
+	let dragging = $state(false);
+	let dragLast: [number, number] | null = null;
+	let canvas: HTMLCanvasElement;
+	let dirty = true;
+	let reducedMotion = false;
 
-	const BUNDLES = PANELS.map((p) => Array.from({ length: SLICES }, (_, i) => slice(i, p.saddle)));
+	function onPointerDown(e: PointerEvent) {
+		dragging = true;
+		dragLast = [e.clientX, e.clientY];
+		(e.target as Element).setPointerCapture(e.pointerId);
+	}
+	function onPointerMove(e: PointerEvent) {
+		if (!dragging || !dragLast) return;
+		yaw += (e.clientX - dragLast[0]) * 0.008;
+		pitch = Math.max(0.12, Math.min(1.15, pitch + (e.clientY - dragLast[1]) * 0.006));
+		dragLast = [e.clientX, e.clientY];
+		dirty = true;
+	}
+	function onPointerUp() {
+		dragging = false;
+		dragLast = null;
+	}
+
+	/** Arrow keys steer too, so the shape is reachable without a mouse. */
+	function onKeyDown(e: KeyboardEvent) {
+		const step = 0.12;
+		if (e.key === 'ArrowLeft') yaw -= step;
+		else if (e.key === 'ArrowRight') yaw += step;
+		else if (e.key === 'ArrowUp') pitch = Math.min(1.15, pitch + step * 0.6);
+		else if (e.key === 'ArrowDown') pitch = Math.max(0.12, pitch - step * 0.6);
+		else return;
+		e.preventDefault();
+		dirty = true;
+	}
+
+	/** Rotate-project a 3-D point (y up); returns [x, y, depth], depth growing
+	 *  toward the viewer. The descent chapter's own convention, kept local so
+	 *  the plates stay decoupled from one another. */
+	function project3(
+		x: number,
+		y: number,
+		z: number,
+		cy: number,
+		sy: number,
+		cp: number,
+		sp: number
+	): [number, number, number] {
+		const x1 = cy * x + sy * z;
+		const z1 = -sy * x + cy * z;
+		return [x1, cp * y - sp * z1, sp * y + cp * z1];
+	}
+
+	// scratch, allocated once
+	const sx = new Float32Array(NV);
+	const sy = new Float32Array(NV);
+	const rsx = new Float32Array(SPOKES);
+	const rsy = new Float32Array(SPOKES);
+	const rsd = new Float32Array(SPOKES);
+	const dsx = new Float32Array(SPOKES);
+	const dsy = new Float32Array(SPOKES);
+	const dsd = new Float32Array(SPOKES);
+	const sd = new Float32Array(NV);
+	const depth = new Float32Array(N_ITEMS);
+	const order = new Uint16Array(N_ITEMS);
+
+	$effect(() => {
+		const ctx = canvas.getContext('2d');
+		if (!ctx) return;
+		reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+		let disposed = false;
+		let raf = 0;
+		let last = performance.now();
+		let lutKey = '';
+		let lut: string[] = [];
+
+		function draw() {
+			if (!ctx) return;
+			const dpr = Math.min(devicePixelRatio || 1, 2);
+			const W = canvas.clientWidth;
+			const H = canvas.clientHeight;
+			if (W === 0 || H === 0) return;
+			if (canvas.width !== Math.round(W * dpr) || canvas.height !== Math.round(H * dpr)) {
+				canvas.width = Math.round(W * dpr);
+				canvas.height = Math.round(H * dpr);
+				dirty = true;
+			}
+
+			const st = getComputedStyle(canvas);
+			const tk = {
+				paper: st.getPropertyValue('--surface').trim(),
+				ink: st.getPropertyValue('--ink').trim(),
+				ink3: st.getPropertyValue('--ink-3').trim(),
+				accent: st.getPropertyValue('--accent').trim(),
+				warm: st.getPropertyValue('--warm').trim()
+			};
+
+			// Lit→shadowed fill ramp. Both ends are mixed from the page's own
+			// two colours, but which of those is the BRIGHT one flips with the
+			// theme, so the ramp is anchored on luminance rather than on the
+			// token names: a face turned toward the light is always the lighter
+			// of the two, in either theme. Neither end reaches the page colour —
+			// a patch that dissolved into the paper would have no silhouette.
+			const lk = `${tk.paper}|${tk.ink}|${tk.accent}`;
+			if (lk !== lutKey) {
+				lutKey = lk;
+				const p = parseColor(tk.paper);
+				const i = parseColor(tk.ink);
+				const a = parseColor(tk.accent);
+				// the ink of the page, cooled toward the accent, so the ground
+				// reads as material rather than as grey
+				const ink: [number, number, number] = [
+					i[0] * 0.78 + a[0] * 0.22,
+					i[1] * 0.78 + a[1] * 0.22,
+					i[2] * 0.78 + a[2] * 0.22
+				];
+				const lum = (c: [number, number, number]) => 0.21 * c[0] + 0.72 * c[1] + 0.07 * c[2];
+				const dark = lum(p) < lum(ink);
+				const mix = (t: number): [number, number, number] => [
+					p[0] + (ink[0] - p[0]) * t,
+					p[1] + (ink[1] - p[1]) * t,
+					p[2] + (ink[2] - p[2]) * t
+				];
+				const bright = dark ? mix(0.6) : mix(0.04);
+				const shadow = dark ? mix(0.05) : mix(0.8);
+				lut = Array.from({ length: LEVELS }, (_, n) => {
+					const w = n / (LEVELS - 1);
+					const c = (k: number) => Math.round(bright[k] + (shadow[k] - bright[k]) * w);
+					return `rgb(${c(0)},${c(1)},${c(2)})`;
+				});
+			}
+
+			ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+			ctx.clearRect(0, 0, W, H);
+			ctx.lineJoin = 'round';
+			ctx.lineCap = 'round';
+
+			const cy = Math.cos(yaw);
+			const syw = Math.sin(yaw);
+			const cp = Math.cos(pitch);
+			const sp = Math.sin(pitch);
+			const panelW = W / 2;
+			const S = Math.min(panelW * 0.35, H * 0.4);
+
+			for (let pi = 0; pi < SURFACES.length; pi++) {
+				const su = SURFACES[pi];
+				const ox = panelW * (pi + 0.5);
+				const oyPx = H * 0.5;
+
+				for (let k = 0; k < NV; k++) {
+					const [px, py, pd] = project3(su.vx[k], su.vy[k], su.vz[k], cy, syw, cp, sp);
+					sx[k] = ox + px * S;
+					sy[k] = oyPx - py * S;
+					sd[k] = pd;
+				}
+				for (let s = 0; s < SPOKES; s++) {
+					const [px, py, pd] = project3(su.rx[s], su.ry[s], su.rz[s], cy, syw, cp, sp);
+					rsx[s] = ox + px * S;
+					rsy[s] = oyPx - py * S;
+					rsd[s] = pd;
+					const [qx, qy, qd] = project3(su.dx[s], su.dy[s], su.dz[s], cy, syw, cp, sp);
+					dsx[s] = ox + qx * S;
+					dsy[s] = oyPx - qy * S;
+					dsd[s] = qd;
+				}
+				const [ax, ay, ad] = project3(0, su.oy, 0, cy, syw, cp, sp);
+				const dotX = ox + ax * S;
+				const dotY = oyPx - ay * S;
+
+				// A saddle folds back on itself in projection, so the exact
+				// axis sweep the race uses for a heightfield does not apply
+				// here. Every piece is small and convex, so ordering them by
+				// the depth of their centre is exact for these surfaces.
+				for (let q = 0; q < NQ; q++) {
+					const r = (q / SPOKES) | 0;
+					const s = q % SPOKES;
+					const s1 = (s + 1) % SPOKES;
+					const k00 = r * SPOKES + s;
+					const k01 = r * SPOKES + s1;
+					const k10 = (r + 1) * SPOKES + s;
+					const k11 = (r + 1) * SPOKES + s1;
+					depth[q] = (sd[k00] + sd[k01] + sd[k10] + sd[k11]) / 4;
+				}
+				for (let s = 0; s < SPOKES; s++)
+					depth[NQ + s] = (rsd[s] + rsd[(s + 1) % SPOKES]) / 2 + 1e-3;
+				for (let d = 0; d < DASHES; d++) {
+					const s = d * 2;
+					depth[NQ + SPOKES + d] = (dsd[s] + dsd[(s + 1) % SPOKES]) / 2;
+				}
+				depth[N_ITEMS - 1] = ad + 2e-3;
+
+				for (let n = 0; n < N_ITEMS; n++) order[n] = n;
+				order.sort((a, b) => depth[a] - depth[b]);
+
+				let fill = -1;
+				for (let n = 0; n < N_ITEMS; n++) {
+					const it = order[n];
+					if (it < NQ) {
+						const r = (it / SPOKES) | 0;
+						const s = it % SPOKES;
+						const s1 = (s + 1) % SPOKES;
+						const ks = [
+							r * SPOKES + s,
+							r * SPOKES + s1,
+							(r + 1) * SPOKES + s1,
+							(r + 1) * SPOKES + s
+						];
+						const ci = su.shade[it];
+						if (ci !== fill) {
+							fill = ci;
+							ctx.fillStyle = lut[ci];
+						}
+						let mx = 0;
+						let my = 0;
+						for (const k of ks) {
+							mx += sx[k] / 4;
+							my += sy[k] / 4;
+						}
+						// each quad inflated half a pixel from its centroid, so
+						// antialiasing never opens paper-coloured seams between
+						// neighbours
+						ctx.beginPath();
+						for (let c = 0; c < 4; c++) {
+							const k = ks[c];
+							const ex = sx[k] - mx;
+							const ey = sy[k] - my;
+							const g = 1 + GROW / (Math.hypot(ex, ey) || 1);
+							if (c === 0) ctx.moveTo(mx + ex * g, my + ey * g);
+							else ctx.lineTo(mx + ex * g, my + ey * g);
+						}
+						ctx.closePath();
+						ctx.fill();
+					} else if (it < NQ + SPOKES) {
+						const s = it - NQ;
+						const s1 = (s + 1) % SPOKES;
+						const up = su.rise[s] === 1;
+						// the book's own pair for a signed quantity: ultramarine
+						// where the ground climbs, vermilion where it drops
+						ctx.strokeStyle = up ? tk.accent : tk.warm;
+						ctx.lineWidth = 2.6;
+						ctx.beginPath();
+						ctx.moveTo(rsx[s], rsy[s]);
+						ctx.lineTo(rsx[s1], rsy[s1]);
+						ctx.stroke();
+						fill = -1;
+					} else if (it < NQ + SPOKES + DASHES) {
+						const s = (it - NQ - SPOKES) * 2;
+						const s1 = (s + 1) % SPOKES;
+						ctx.strokeStyle = tk.ink3;
+						ctx.lineWidth = 1;
+						ctx.globalAlpha = 0.7;
+						ctx.beginPath();
+						ctx.moveTo(dsx[s], dsy[s]);
+						ctx.lineTo(dsx[s1], dsy[s1]);
+						ctx.stroke();
+						ctx.globalAlpha = 1;
+						fill = -1;
+					} else {
+						// a survey mark rather than a dot: a filled disc would
+						// read as a hole punched in the ground
+						ctx.fillStyle = tk.paper;
+						ctx.beginPath();
+						ctx.arc(dotX, dotY, 4.6, 0, TAU);
+						ctx.fill();
+						ctx.strokeStyle = tk.ink;
+						ctx.lineWidth = 1.5;
+						ctx.beginPath();
+						ctx.arc(dotX, dotY, 3.4, 0, TAU);
+						ctx.stroke();
+						fill = -1;
+					}
+				}
+			}
+		}
+
+		function frame(now: number) {
+			if (disposed) return;
+			const dt = Math.min(now - last, 64);
+			last = now;
+			if (!reducedMotion && !dragging) {
+				yaw += dt * 0.00011; // idle orbit, the pace the space chapter turns at
+				dirty = true;
+			}
+			if (dirty) {
+				dirty = false;
+				draw();
+			}
+			raf = requestAnimationFrame(frame);
+		}
+
+		raf = requestAnimationFrame(frame);
+		const ro = new ResizeObserver(() => (dirty = true));
+		ro.observe(canvas);
+		return () => {
+			disposed = true;
+			cancelAnimationFrame(raf);
+			ro.disconnect();
+		};
+	});
 </script>
 
 <Plate
 	id="flat"
 	title="The two kinds of flat"
-	caption="Twenty-four straight lines drawn through one flat point of a loss surface, and the loss along each of them — which is how the question gets asked of a real model, since nobody can look at the surface itself. The dashed horizon is the height of the point; above it the ground rises, below it the ground falls. Left: every line curves upward. The point is the bottom of a bowl, and a walker that arrives is staying. Right: the same point, except that three of the twenty-four turn over instead, and a walker carrying any momentum or any noise will eventually stumble into one of the three. The row of marks under each panel is one per direction in the same order, so the count is there to be checked rather than taken on trust. With two directions to agree on, floors are easy to come by. With a million, a floor is an extraordinary coincidence — and almost every flat place a large network stalls at is the picture on the right."
+	caption="Two patches of ground, each perfectly flat at the marked point in the middle, lit the same way and seen from the same angle. They differ by one sign. Left: the ground curves up whichever way you leave — a floor, and a walker that arrives there is staying. Right: it curves up along one axis and down along the other — a saddle, and a walker carrying any momentum or any noise will eventually find the way off. The heavy circle drawn on each patch is the loss one step out in every direction at once: level and entirely above the point on the floor, a wave that crosses the point's own height four times on the saddle, in ultramarine where the ground rises and vermilion where it falls. The dashed ring holds that height level, to judge the wave against. Now count directions. With two of them to agree, floors are easy to come by; with a million, a floor is an extraordinary coincidence, and almost every flat place a large network stalls at is the picture on the right."
 >
-	<svg
-		viewBox="0 0 520 214"
-		class="mx-auto block w-full max-w-[760px]"
-		role="img"
-		aria-label="Two panels, each showing the loss along twenty-four straight lines drawn through a single flat point of a loss surface. A dashed horizon marks the height of the point, halfway up each panel. In the left panel, labelled a floor, all twenty-four curves rise away from the point into the upper half. In the right panel, labelled a saddle, twenty-one rise and three turn over and fall into the lower half, drawn in vermilion. Beneath each panel is a row of twenty-four small marks, one per direction and in the same order: a cup for a direction that rises, a cap for one that falls. The left row is twenty-four cups; the right row has caps in the fourth, twelfth and twentieth places."
-	>
-		<defs>
-			{#each PANELS as panel, p (panel.key)}
-				<clipPath id="fp-clip-{p}">
-					<rect x={XS[p]} y={TOP} width={W} height={H} rx="3" />
-				</clipPath>
+	<div class="p-4 sm:p-5">
+		<canvas
+			bind:this={canvas}
+			class="block w-full select-none"
+			class:cursor-grab={!dragging}
+			class:cursor-grabbing={dragging}
+			style="aspect-ratio: 76 / 31; touch-action: none;"
+			role="button"
+			tabindex="0"
+			aria-label="Two three-dimensional patches of a loss surface side by side, turning slowly, each flat at a marked point in its centre. The left patch is a shallow round bowl: the ground rises away from the point in every direction, and the circle traced around the point sits level, entirely above it. The right patch is a saddle: the ground rises along one axis and falls along the perpendicular one, and the circle traced around the point rises on two opposite arcs, drawn in ultramarine, and falls on the two arcs between them, drawn in vermilion, crossing the height of the point four times. A dashed ring in each panel marks that height. Both patches turn on their own; drag or press the arrow keys to steer them."
+			onkeydown={onKeyDown}
+			onpointerdown={onPointerDown}
+			onpointermove={onPointerMove}
+			onpointerup={onPointerUp}
+			onpointercancel={onPointerUp}
+		></canvas>
+
+		<div class="mt-1 grid grid-cols-2 gap-4">
+			{#each SURFACES as su (su.key)}
+				<div class="text-center">
+					<div class="label">{su.name}</div>
+					<div class="num text-[10.5px] text-ink-3">{su.sub}</div>
+				</div>
 			{/each}
-		</defs>
+		</div>
 
-		{#each PANELS as panel, p (panel.key)}
-			<rect
-				x={XS[p]}
-				y={TOP}
-				width={W}
-				height={H}
-				rx="3"
-				fill="var(--surface)"
-				stroke="var(--line)"
-				stroke-width="1"
-			/>
-
-			<g clip-path="url(#fp-clip-{p})">
-				<!-- the height of the flat point itself: the line each direction
-				     either leaves upward or leaves downward -->
-				<line
-					x1={XS[p]}
-					y1={py(0)}
-					x2={XS[p] + W}
-					y2={py(0)}
-					stroke="var(--ink-3)"
-					stroke-width="0.8"
-					stroke-dasharray="3 3"
-					opacity="0.6"
-				/>
-
-				<!-- rising lines first, so the ones that fall sit on top of them -->
-				{#each BUNDLES[p].filter((s) => !s.down) as s, i (i)}
-					<path d={s.d} fill="none" stroke="var(--ink-3)" stroke-width="1" opacity="0.4" />
-				{/each}
-				{#each BUNDLES[p].filter((s) => s.down) as s, i (i)}
-					<path
-						d={s.d}
-						fill="none"
-						stroke="var(--warm)"
-						stroke-width="1.7"
-						opacity="0.95"
-						stroke-linecap="round"
-					/>
-				{/each}
-			</g>
-
-			<circle cx={px(p, 0)} cy={py(0)} r="3.1" fill="var(--accent)" />
-
-			<!-- one mark per direction, in the bundle's own order -->
-			{#each BUNDLES[p] as s, i (i)}
-				<path
-					d={mark(p, i, s.down)}
-					fill="none"
-					stroke={s.down ? 'var(--warm)' : 'var(--ink-3)'}
-					stroke-width={s.down ? 1.7 : 1.1}
-					opacity={s.down ? 0.95 : 0.6}
-					stroke-linecap="round"
-				/>
-			{/each}
-
-			<text x={XS[p] + W / 2} y={TOP + H + 42} text-anchor="middle" class="label">{panel.name}</text
-			>
-			<text x={XS[p] + W / 2} y={TOP + H + 55} text-anchor="middle" class="cap dim"
-				>{panel.sub}</text
-			>
-		{/each}
-
-		<text x={XS[0] + W / 2} y="14" text-anchor="middle" class="cap dim">
-			the loss along each direction
-		</text>
-		<text x={XS[1] + W / 2} y="14" text-anchor="middle" class="cap dim">
-			the same point, three ways out
-		</text>
-	</svg>
+		<p class="num mt-3 text-center text-[10.5px] text-ink-3">
+			both patches turn on their own; drag to steer them
+		</p>
+	</div>
 </Plate>
 
 <style>
 	.label {
 		font-family: var(--font-serif);
 		font-style: italic;
-		font-size: 12.5px;
-		fill: var(--ink-2);
-	}
-	.cap {
-		font-family: var(--font-mono);
-		font-size: 8.5px;
-		fill: var(--ink-2);
-	}
-	.dim {
-		fill: var(--ink-3);
+		font-size: 13px;
+		color: var(--ink-2);
 	}
 </style>
