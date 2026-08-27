@@ -12,7 +12,7 @@ export const plateOrder: Record<string, readonly string[]> = {
 	home: ['field'],
 	descent: ['race', 'stepsize'],
 	neuron: ['neuron', 'atlas', 'workshop'],
-	space: ['rings', 'tangles'],
+	space: ['layer', 'rings', 'tangles'],
 	digits: ['dataset', 'pipeline', 'softmax', 'classifier', 'drawpad', 'inside'],
 	latent: ['autoencoder', 'squeeze', 'map', 'manifold', 'neighbors'],
 	language: [

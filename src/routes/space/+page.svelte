@@ -5,6 +5,7 @@
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
+	import LayerDiagram from '$lib/components/demos/space/LayerDiagram.svelte';
 	import SpaceLab from '$lib/components/demos/space/SpaceLab.svelte';
 </script>
 
@@ -41,9 +42,14 @@
 			close together. And when <Math tex={'\\htmlClass{eq-model}{W}'} /> is invertible and the bend is
 			smoothly invertible, as tanh is, the layer gives up even more than that — it becomes a
 			<em>homeomorphism</em>, a deformation with a continuous inverse, the kind of move you could
-			perform on a sheet of soft rubber without ever pressing two parts of it together. A deep
-			network is a chain of such moves, finished by one boring linear classifier:
+			perform on a sheet of soft rubber without ever pressing two parts of it together.
 		</p>
+	</Prose>
+
+	<LayerDiagram />
+
+	<Prose>
+		<p>A deep network is a chain of such moves, finished by one boring linear classifier:</p>
 		<Math
 			display
 			tex={'f(\\htmlClass{eq-world}{x}) \\;=\\; \\underbrace{\\text{linear cut}}_{\\text{trivial}} \\;\\circ\\; \\underbrace{\\htmlClass{eq-op}{\\sigma}(\\htmlClass{eq-model}{W_L} \\cdot) \\circ \\cdots \\circ \\htmlClass{eq-op}{\\sigma}(\\htmlClass{eq-model}{W_1} \\cdot)}_{\\text{the deformation}}\\;(\\htmlClass{eq-world}{x})'}
