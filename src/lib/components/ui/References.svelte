@@ -23,7 +23,12 @@
 				<li class="source" id={refAnchor(id)}>
 					<span class="source-n num">{i + 1}</span>
 					<span class="source-body">
-						<a class="source-title" href={paper.url} target="_blank" rel="noopener noreferrer">
+						<a
+							class="source-title"
+							href={paper.url}
+							target="_blank"
+							rel="external noopener noreferrer"
+						>
 							{paper.title}<ArrowUpRight class="source-out" size={13} />
 						</a>
 						<span class="source-meta">

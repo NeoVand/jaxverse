@@ -28,7 +28,7 @@
 		class="cite-mark"
 		href={paper.url}
 		target="_blank"
-		rel="noopener noreferrer"
+		rel="external noopener noreferrer"
 		aria-describedby={refAnchor(id)}
 		title="{paper.authors} ({paper.year}), {paper.title}"
 	>

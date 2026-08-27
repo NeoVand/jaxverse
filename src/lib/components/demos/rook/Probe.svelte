@@ -47,6 +47,12 @@
 
 	const example = $derived(data?.examples[pick % (data?.examples.length || 1)] ?? null);
 
+	/** Two runs of positions to iterate — the block numbers along the chart's
+	 *  foot, and the chips that switch positions — neither of which needs the
+	 *  value sitting at the index. */
+	const blockNumbers = $derived(data?.layers.map((_, i) => i) ?? []);
+	const exampleNumbers = $derived(data?.examples.map((_, i) => i) ?? []);
+
 	// ── the boards, along the top ──
 	const CELL = 9;
 	const BOARD = CELL * 8;
@@ -182,7 +188,7 @@
 					>
 				{/each}
 
-				{#each data.layers as _, i (i)}
+				{#each blockNumbers as i (i)}
 					<text
 						x={chartX(i, data.layers.length)}
 						y={CY + CH + 14}
@@ -206,7 +212,7 @@
 
 				<span class="flex items-center gap-1.5">
 					<span class="eyebrow">position</span>
-					{#each data.examples as _, i (i)}
+					{#each exampleNumbers as i (i)}
 						<button
 							type="button"
 							class="chip"

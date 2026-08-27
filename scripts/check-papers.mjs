@@ -35,7 +35,7 @@ function readPapers() {
 	const body = src.slice(src.indexOf('export const papers'), src.indexOf('export type PaperId'));
 	const out = [];
 	const entry = /'([a-z0-9-]+)':\s*\{/g;
-	for (let m; (m = entry.exec(body)); ) {
+	for (let m; (m = entry.exec(body));) {
 		const rest = body.slice(m.index);
 		const url = /url:\s*'([^']+)'/.exec(rest.slice(0, rest.indexOf('\n\t},')));
 		if (url) out.push({ id: m[1], url: url[1] });
@@ -74,7 +74,7 @@ const queue = papers.slice();
 const results = [];
 await Promise.all(
 	Array.from({ length: CONCURRENCY }, async () => {
-		for (let next; (next = queue.shift()); ) {
+		for (let next; (next = queue.shift());) {
 			const r = await check(next);
 			results.push(r);
 			const mark = r.state === 'ok' ? '  ok  ' : r.state === 'unsure' ? ' ?    ' : ' FAIL ';
