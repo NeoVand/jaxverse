@@ -588,6 +588,15 @@ export const papers = {
 		url: 'https://deepmind.google/discover/blog/specification-gaming-the-flip-side-of-ai-ingenuity/',
 		note: 'A long, funny, slightly alarming collection of agents that got exactly what was asked for. The boat that farms turbo pickups in a circle instead of finishing the race is the canonical one.'
 	},
+	'zermelo-1929': {
+		authors: 'Zermelo',
+		year: 1929,
+		title:
+			'Die Berechnung der Turnier-Ergebnisse als ein Maximumproblem der Wahrscheinlichkeitsrechnung',
+		where: 'Mathematische Zeitschrift 29',
+		url: 'https://gdz.sub.uni-goettingen.de/dms/resolveppn/?PPN=GDZPPN002370808',
+		note: 'The reward model, twenty-three years before it was named and ninety before anyone pointed it at essays: give every chess player a hidden strength, let the gap between two strengths decide who wins, and fit the strengths to the tournament table. In German, and worth opening for the first page alone.'
+	},
 	'christiano-2017': {
 		authors: 'Christiano et al.',
 		year: 2017,
@@ -791,6 +800,7 @@ export const citationOrder: Partial<Record<string, readonly PaperId[]>> = {
 		'krakovna-2020'
 	],
 	taste: [
+		'zermelo-1929',
 		'christiano-2017',
 		'stiennon-2020',
 		'gao-2023',

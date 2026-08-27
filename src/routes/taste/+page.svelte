@@ -63,10 +63,12 @@
 		<h2 class="h2">From verdicts to a number</h2>
 		<p>
 			Now turn that pile of comparisons into a score, which sounds like alchemy and is in fact
-			ordinary statistics from 1952. Bradley and Terry were analysing taste tests. Posit that every
-			ornament has a hidden worth <Math tex={'\\htmlClass{eq-model}{r_\\phi}(y)'} />, and that a
-			person prefers stochastically according to the <em>gap</em> between two worths, squashed into a
-			probability:
+			ordinary statistics, and older than the name it travels under. Zermelo wrote it down in 1929
+			to rank chess players from a tournament table<Cite id="zermelo-1929" />; Bradley and Terry
+			rediscovered it in 1952 and got their names on it. Posit that every ornament has a hidden
+			worth
+			<Math tex={'\\htmlClass{eq-model}{r_\\phi}(y)'} />, and that a person prefers stochastically
+			according to the <em>gap</em> between two worths, squashed into a probability:
 		</p>
 		<Math
 			display
