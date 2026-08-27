@@ -370,7 +370,9 @@
 
 			<div>
 				<div class="mb-1 flex items-baseline justify-between gap-3">
-					<span class="eyebrow" style="color: var(--good);">the belief · softmax(z / τ)</span>
+					<span class="eyebrow" style="color: var(--good);"
+						>the belief · softmax(z / <span class="sym">τ</span>)</span
+					>
 					<span class="eyebrow text-ink-3">their shape →</span>
 				</div>
 				<div class="grid grid-cols-[1fr_72px] gap-1.5">

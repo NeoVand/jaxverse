@@ -46,12 +46,33 @@
 	const pct = $derived(((value - min) / (max - min)) * 100);
 	const toneColor = $derived(TONES[tone]);
 
+	// The label is set in the eyebrow voice, which is uppercase — and a slider
+	// is very often named for a Greek letter. Uppercasing one turns ρ into Ρ
+	// and β into Β, glyphs a reader cannot tell from Latin P and B, so the
+	// control ends up labelled with a different symbol than the equation it
+	// moves. Split the label and let the symbols keep their own case.
+	const parts = $derived(splitSymbols(label));
+
+	function splitSymbols(text: string): Array<{ text: string; sym: boolean }> {
+		const runs: Array<{ text: string; sym: boolean }> = [];
+		for (const ch of text) {
+			const sym = /[\u0370-\u03ff\u1f00-\u1fff]/.test(ch);
+			const last = runs[runs.length - 1];
+			if (last && last.sym === sym) last.text += ch;
+			else runs.push({ text: ch, sym });
+		}
+		return runs;
+	}
+
 	let uid = $props.id();
 </script>
 
 <div class="slider-root" class:opacity-50={disabled}>
 	<div class="mb-1 flex items-baseline justify-between gap-3">
-		<label for={uid} class="eyebrow cursor-pointer select-none">{label}</label>
+		<label for={uid} class="eyebrow cursor-pointer select-none"
+			>{#each parts as part, i (i)}{#if part.sym}<span class="sym">{part.text}</span
+					>{:else}{part.text}{/if}{/each}</label
+		>
 		<span class="num text-[12px] text-ink">{format(value)}</span>
 	</div>
 	<input

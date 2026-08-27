@@ -880,7 +880,7 @@ body {
 	color: var(--cat-2);
 }
 
-/* knobs you set rather than learn: learning rate γ, discount γ, temperature */
+/* knobs you set rather than learn: learning rate η, discount γ, temperature */
 .eq-knob {
 	color: var(--cat-1);
 }
@@ -893,6 +893,14 @@ body {
 /* masked, ignored, negative-sampled: M, u⁻ */
 .eq-mute {
 	color: var(--ink-3);
+}
+
+/* A Greek letter is a symbol, not a word. Uppercasing one inside an eyebrow
+   turns ρ into Ρ and β into Β and τ into Τ — glyphs indistinguishable from
+   Latin P, B and T, so the label ends up naming a different quantity than the
+   equation it belongs to. Wrap the symbol and it keeps its own case. */
+.sym {
+	text-transform: none;
 }
 
 /* small tracked label — the interface eyebrow voice */

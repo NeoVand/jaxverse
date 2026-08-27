@@ -210,7 +210,9 @@
 					<figure class="hero">
 						<Rosette gene={runs.leashed.gene} size={116} label="The leashed optimizer's ornament" />
 						<figcaption>
-							<span class="eyebrow" style="color: var(--cat-1)">leashed · β = {beta}</span>
+							<span class="eyebrow" style="color: var(--cat-1)"
+								>leashed · <span class="sym">β</span> = {beta}</span
+							>
 							<span class="num"
 								>{runs.leashed.kl.toFixed(1)} nats · r {runs.leashed.proxy.toFixed(2)}</span
 							>
