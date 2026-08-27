@@ -26,18 +26,21 @@ export const rook: HoodChapter = {
 					body: `Exporting a model is walking its tree: <code>tree.leaves</code> gives the arrays in a stable order, and concatenating them into one <code>Float32Array</code> is the whole runtime format — it is how the arena snapshots stages and how the play plate always plays the current weights. The shipped time machine goes one step further: symmetric per-tensor int8, so each five-megabyte snapshot travels as 1.3 MB and dequantizes with one multiply per leaf.`,
 					code: {
 						file: 'src/lib/data/rook.ts',
-						code: `/** Fetch one weight snapshot and dequantize: symmetric per-tensor int8,
- * so f32[i] = i8[i] · scales[leaf], with leaf boundaries from the manifest. */
-export async function loadRookWaypoint(step: number): Promise<Float32Array> {
-	const raw = new Int8Array(await fetchBin(wp.file));
-	const out = new Float32Array(raw.length);
-	let o = 0;
-	for (let leaf = 0; leaf < manifest.leafSizes.length; leaf++) {
-		const scale = wp.scales[leaf];
-		for (let i = 0; i < manifest.leafSizes[leaf]; i++, o++) out[o] = raw[o] * scale;
-	}
-	return out;
-}`
+						code: `/** One weight snapshot, dequantized: symmetric per-tensor int8, so
+ * f32[i] = i8[i] · scales[leaf], with the leaf boundaries from the manifest. */
+const wp = manifest.waypoints.find((w) => w.file === file);
+const res = await fetch(\`\${base}/data/timemachine/\${file}\`);
+const q = new Int8Array(await res.arrayBuffer());
+const flat = new Float32Array(q.length);
+let off = 0;
+for (let li = 0; li < manifest.leafSizes.length; li++) {
+	const s = wp.scales[li];
+	const sz = manifest.leafSizes[li];
+	for (let k = 0; k < sz; k++) flat[off + k] = q[off + k] * s;
+	off += sz;
+}
+if (off !== q.length) throw new Error(\`rook: leafSizes sum \${off} ≠ blob \${q.length}\`);
+return flat;`
 					}
 				}
 			],

@@ -133,11 +133,16 @@ if (m.grad)
 					code: {
 						file: 'src/lib/optim-rl/dpole.worker.ts',
 						code: `// graded by RANK, the one thing a competitor cares about
-const r = (past.rank - rank) / (n - 1);
+const d = socPending.shift();                      // a decision two seconds old
+const r = (d.rank - m.rank) / Math.max(1, n - 1);  // climbed the pool, or fell
 const adv = r - socBase;
-socBase += SOC_BASE_LR * (r - socBase);
-for (let k = 0; k <= n; k++)          // k = n is "refuse everyone"
-	socLogit[k] += SOC_LR * adv * ((k === past.pick ? 1 : 0) - past.probs[k]);`
+socBase += SOC_BASE_LR * (r - socBase);            // "better than my usual"
+for (let c = 0; c < d.cand.length; c++) {
+	const id = d.cand[c];
+	if (id < n) socLogit[id] += SOC_LR * adv * ((id === d.pick ? 1 : 0) - d.probs[c]);
+}
+// and the refusal, which is an action like any other
+socLogit[n] += SOC_LR * adv * ((d.pick === n ? 1 : 0) - d.probs[d.cand.length]);`
 					}
 				}
 			],

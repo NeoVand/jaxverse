@@ -22,6 +22,38 @@ describe('the under-the-hood course', () => {
 	// heading, its source's first line. A lab pointing at another lab in prose
 	// ("the same transformer as Lab 5") is a cross-reference, not a claim about
 	// which lab this is.
+	// Every sample carries the path a reader can go and find it at, and the
+	// course calls them "the real jax-js code from this repository". Names
+	// drift; this notices. Comments are prose and are stripped first, and the
+	// short words below are language, not repository.
+	const LANGUAGE = new Set(
+		(
+			'const let var function return if else for of in new await async import from export type ' +
+			'interface class this true false null undefined number string boolean any void as typeof ' +
+			'instanceof do while switch case break continue try catch finally throw yield delete ' +
+			'extends implements public private readonly static get set Math JSON Object Array Number ' +
+			'String Boolean Promise Set Map Float32Array Float64Array Int32Array Int8Array Uint8Array ' +
+			'Uint16Array length push slice map filter reduce forEach console log'
+		).split(' ')
+	);
+
+	it('quotes code that is actually in the file it points at', () => {
+		for (const [slug, chapter] of Object.entries(hood))
+			for (const block of chapter.blocks)
+				for (const section of [...block.ml, ...block.ui]) {
+					if (!section.code?.file) continue;
+					const src = readFileSync(section.code.file, 'utf8');
+					const body = section.code.code
+						.replace(/\/\*[\s\S]*?\*\//g, '')
+						.replace(/\/\/[^\n]*/g, '');
+					for (const [id] of body.matchAll(/[A-Za-z_$][A-Za-z0-9_$]{2,}/g))
+						if (!LANGUAGE.has(id))
+							expect(src, `${slug}/${block.id}: ${id} is not in ${section.code.file}`).toContain(
+								id
+							);
+				}
+	});
+
 	it('numbers each lab with its own chapter', () => {
 		const TITLES = [
 			/^# Lab (\d+) ·/m,
