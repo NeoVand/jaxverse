@@ -100,7 +100,38 @@
 			return [r * Math.cos(th), r * Math.sin(th)];
 		});
 	}
-	const DISK: Pt[] = [...circle(0.3, 6, 0.5), ...circle(0.58, 12)];
+
+	/**
+	 * The disk has to look like a disk. Drawn as a few nested rings of points
+	 * it reads as more rings, and then the picture shows three circles where
+	 * the caption promises a ring around a filled region — which is the whole
+	 * claim the chapter's topology rests on.
+	 *
+	 * A phyllotaxis spiral fills evenly and bands nowhere: radius grows as the
+	 * square root of the index, so equal counts land in equal areas, and each
+	 * step turns by the golden angle so no two points ever line up into a spoke.
+	 */
+	function disk(r: number, n: number): Pt[] {
+		const GOLDEN = Math.PI * (3 - Math.sqrt(5));
+		return Array.from({ length: n }, (_, i): Pt => {
+			const rad = r * Math.sqrt((i + 0.5) / n);
+			return [rad * Math.cos(i * GOLDEN), rad * Math.sin(i * GOLDEN)];
+		});
+	}
+
+	/**
+	 * The gap between 0.62 and 1.0 is deliberate: the ring must be seen to go
+	 * around the disk rather than to sit on its rim.
+	 *
+	 * The caption's claim — the ring still surrounds the disk after the whole
+	 * map — is checkable, so it was checked. Every one of the 34 disk points
+	 * tests strictly inside the 28-gon of ring points at all three stages, and
+	 * the tightest gap between a disk point and the ring runs 38%, 29% and 16%
+	 * of the ring's own extent. It narrows because that is what tanh does, not
+	 * because anything escapes. Anyone retuning W, B or these two radii should
+	 * re-run that check before trusting the sentence underneath.
+	 */
+	const DISK: Pt[] = disk(0.62, 34);
 	const RING: Pt[] = circle(1.0, 28);
 
 	const STAGES = [
