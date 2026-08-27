@@ -311,7 +311,7 @@
 			the loss · −log σ(v·u₊) − Σ log(1 − σ(v·u₋))
 		</text>
 		<text x="495" y="217" text-anchor="middle" class="cap dim">
-			surprise at the real neighbor, plus whenever a random word scores
+			surprise at the neighbor, one term per random word
 		</text>
 	</svg>
 </Plate>
