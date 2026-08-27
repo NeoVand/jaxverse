@@ -21,8 +21,9 @@ export const taste: HoodChapter = {
 	loss += -Math.log(Math.max(1e-12, p));
 	const dm = p - 1;              // d/d(margin) of −log σ(margin)
 
-	accumulate(j, grads, xw, hw1, hw2, dm);   // winner: push up
-	accumulate(j, grads, al.x, al.h1, al.h2, -dm); // loser: push down
+	// one backward pass per side, with the sign of the margin flipped
+	accumulate(j, grads, aw, dm);   // winner: push up
+	accumulate(j, grads, al, -dm);  // loser: push down
 }`
 					}
 				},

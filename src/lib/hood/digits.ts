@@ -14,11 +14,18 @@ export const digits: HoodChapter = {
 					body: `Each step samples 128 of the 8,000 training rows into one <code>[128, 784]</code> tensor — enough parallel work to keep the GPU busy, small enough to step fifty times a second. The engine reserves a <em>validation tail</em> it never trains on; this chapter sizes that tail to be exactly the 2,000-row test set, so the header's test accuracy is measured on rows the gradient has never seen. The discipline costs three lines and is the difference between a claim and a hope.`,
 					code: {
 						file: 'src/lib/nn/worker.ts',
-						code: `// one minibatch: 128 random training rows, gathered into a single tensor
-const idx = sampleIndices(rng, valStart, c.batchSize);
-const x = np.array(gather(data.x, idx, DIM)).reshape([c.batchSize, DIM]);
-const y = np.array(oneHot(data.y, idx, CLASSES)).reshape([c.batchSize, CLASSES]);
+						code: `// B random rows, drawn only from below valStart — the row where the
+// held-out tail begins, and the reason the test number means anything
+function makeBatch(B: number, lo: number, hi: number, rand: () => number) {
+	const idx: number[] = [];
+	for (let b = 0; b < B; b++) idx.push(lo + Math.floor(rand() * Math.max(1, hi - lo)));
+	for (let b = 0; b < B; b++) xBuf.set(dataX!.subarray(idx[b] * din, (idx[b] + 1) * din), b * din);
+	const x = np.array(xBuf).reshape([B, din]);
+	for (let b = 0; b < B; b++) lBuf[b] = (dataY as Int32Array)[idx[b]];
+	return { x, y: nn.oneHot(np.array(lBuf, { dtype: np.int32 }), dout) };
+}
 
+const { x, y } = makeBatch(B, 0, valStart, rng);
 const [lossVal, grads] = jitStep(tree.ref(params), x.ref, y.ref);`
 					}
 				},

@@ -63,8 +63,9 @@ function waist(h: any, eps: any | null): { z: any; kl: any | null } {
 					code: {
 						file: 'src/lib/components/demos/latent/latent-context.svelte.ts',
 						code: `/** Latent coordinates (n × d): the bottleneck layer of activations(). */
+const k = latentLayerFor(this.depth);
 const acts = await this.engine.activations(x, n, 1024);
-const z = acts[bottleneckIndexFor(this.depth)];
+return { z: acts.layers[k], d: acts.widths[k] };
 
 /** The manifold: enter the network just past the waist, decode addresses. */
 async decode(z: Float32Array, n: number, chunk = 16): Promise<Float32Array> {
