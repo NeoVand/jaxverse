@@ -58,8 +58,8 @@ reinforceUpdate(sea, theta, baseline, p, lr, opts.entropy);`
 			],
 			ui: [
 				{
-					title: 'A policy drawn as a current chart',
-					body: `Eight streaks per cell, one per heading, length and opacity both riding on the probability — so a confident cell reads as a single stroke and an undecided one as a star. Headings whose sails would luff are drawn in vermilion rather than hidden, because watching them fade is watching the policy learn the one rule the world enforces immediately.`
+					title: 'A policy drawn as a rose in every cell',
+					body: `Each cell draws its whole policy as one closed lobe: <code>r(θ) = r₀ + R·Σ<sub>a</sub> p<sub>a</sub> K(θ − θ<sub>a</sub>)</code>, a narrow Gaussian bump per heading summed into a smooth angular density, rather than eight radii joined by straight lines. The kernels are normalized so that a uniform policy comes out a circle — an undecided cell is a disc, a decided one a petal pointing where it means to go — and both the fill and the outline take their opacity from the largest probability in the cell, so conviction reads as weight before you have read direction. Nothing is hidden: a heading that would luff simply has its share of the lobe shrink away, and watching that happen is watching the policy learn the one rule the world enforces immediately.`
 				},
 				{
 					title: 'Soundings',

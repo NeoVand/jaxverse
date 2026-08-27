@@ -69,9 +69,10 @@
 			on the left as a circuit — the ultramarine edge carries <Math
 				tex={'\\htmlClass{eq-model}{w}'}
 			/>, the violet edge carries <Math tex={'\\htmlClass{eq-model-2}{b}'} />, and the blue-cyan
-			edge on the way out carries the amplitude <Math tex={'\\htmlClass{eq-model-3}{v}'} />, with
-			the teal disk between them plotting whichever <Math tex={'\\htmlClass{eq-op}{\\sigma}'} /> is selected
-			— and on the right as
+			edge on the way out carries the amplitude <Math tex={'\\htmlClass{eq-model-3}{v}'} />, while
+			the teal curve on the dial between them is whichever <Math
+				tex={'\\htmlClass{eq-op}{\\sigma}'}
+			/> is selected — and on the right as
 			<Math
 				tex={'\\htmlClass{eq-model-3}{v}\\,\\htmlClass{eq-op}{\\sigma}(\\htmlClass{eq-model}{w}x + \\htmlClass{eq-model-2}{b})'}
 			/>, the one shape it can draw. The third knob, <Math tex={'\\htmlClass{eq-model-3}{v}'} />, is

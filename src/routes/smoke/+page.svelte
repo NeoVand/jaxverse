@@ -228,8 +228,8 @@
 			The visual constitution
 		</h1>
 		<p class="mt-4 font-serif text-[1.15rem] leading-[1.5] text-ink-2 italic">
-			Cool hues live inside the machine, warm hues come from outside it; teal is fixed machinery,
-			green is the verdict, grey is ignored.
+			Cool hues are learned inside the machine; warm hues come from outside it — vermilion from the
+			world, amber from your hand. Teal is fixed machinery, green is the verdict, grey is ignored.
 		</p>
 	</header>
 

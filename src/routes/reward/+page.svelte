@@ -149,12 +149,13 @@
 			and the learner has no idea it has a name.
 		</p>
 		<p>
-			Now spin the compass rose. The wind is the only thing that changes, and the entire field
-			reorganizes underneath a learner that never stopped running — new no-go headings go vermilion,
-			the old route stops paying, and a different zigzag grows in. Turn the wind behind the boat and
-			the zigzag vanishes altogether, because now it can simply go: the policy did not become
-			smarter, the problem became easier, and telling those two apart by looking at a reward curve
-			is most of what applied reinforcement learning actually is.
+			Now spin the compass rose. The wind is the only thing that changes — the vermilion wedge
+			swings round to the headings that can no longer be sailed — and the entire field reorganizes
+			underneath a learner that never stopped running: the old route stops paying, every cell's rose
+			turns, and a different zigzag grows in. Turn the wind behind the boat and the zigzag vanishes
+			altogether, because now it can simply go: the policy did not become smarter, the problem
+			became easier, and telling those two apart by looking at a reward curve is most of what
+			applied reinforcement learning actually is.
 		</p>
 
 		<h2 class="h2">Exploring, and failing to</h2>
