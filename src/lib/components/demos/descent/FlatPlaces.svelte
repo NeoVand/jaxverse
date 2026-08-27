@@ -30,7 +30,9 @@
 	const NV = (RINGS + 1) * SPOKES;
 	const NQ = RINGS * SPOKES;
 	const DASHES = SPOKES / 2; // every other datum segment, for a dashed ring
-	const N_ITEMS = NQ + SPOKES + DASHES + 1;
+	const MARK_N = 29; // samples round the small ring at the flat point, closed
+	const MARK_SEG = MARK_N - 1;
+	const N_ITEMS = NQ + SPOKES + DASHES + MARK_SEG;
 	const TAU = Math.PI * 2;
 
 	const K = 0.55; // curvature amplitude, world units
@@ -68,8 +70,10 @@
 		dx: Float32Array;
 		dy: Float32Array;
 		dz: Float32Array;
-		/** where the flat point sits once the patch is centred in its panel */
-		oy: number;
+		/** the small ring painted on the ground round the flat point */
+		mx: Float32Array;
+		my: Float32Array;
+		mz: Float32Array;
 	}
 
 	function build(key: string, name: string, sub: string, sign: number): Surf {
@@ -119,6 +123,25 @@
 		const dy = new Float32Array(SPOKES);
 		const dz = new Float32Array(SPOKES);
 		const rise = new Uint8Array(SPOKES);
+		// The flat point, marked by a small ring painted on the ground round it
+		// rather than by a dot sitting on top. It lies in the surface, so it
+		// tilts and foreshortens with the patch instead of floating; and being
+		// a circle it reads the same from every angle, where a tick or a cross
+		// turns into a scratch at half the yaws it is seen from.
+		const mx = new Float32Array(MARK_N);
+		const my = new Float32Array(MARK_N);
+		const mz = new Float32Array(MARK_N);
+		for (let t = 0; t < MARK_N; t++) {
+			const ang = (t / (MARK_N - 1)) * TAU;
+			const x = 0.135 * Math.cos(ang);
+			const z = 0.135 * Math.sin(ang);
+			const nx = -2 * K * x;
+			const nz = -2 * K * sign * z;
+			const nl = Math.hypot(nx, 1, nz);
+			mx[t] = x + (LIFT * nx) / nl;
+			my[t] = h(x, z) - mid + LIFT / nl;
+			mz[t] = z + (LIFT * nz) / nl;
+		}
 		for (let s = 0; s < SPOKES; s++) {
 			const a = (s / SPOKES) * TAU;
 			const x = Math.cos(a);
@@ -155,7 +178,9 @@
 			dx,
 			dy,
 			dz,
-			oy: -mid
+			mx,
+			my,
+			mz
 		};
 	}
 
@@ -245,6 +270,9 @@
 	const dsx = new Float32Array(SPOKES);
 	const dsy = new Float32Array(SPOKES);
 	const dsd = new Float32Array(SPOKES);
+	const msx = new Float32Array(MARK_N);
+	const msy = new Float32Array(MARK_N);
+	const msd = new Float32Array(MARK_N);
 	const sd = new Float32Array(NV);
 	const depth = new Float32Array(N_ITEMS);
 	const order = new Uint16Array(N_ITEMS);
@@ -349,9 +377,12 @@
 					dsy[s] = oyPx - qy * S;
 					dsd[s] = qd;
 				}
-				const [ax, ay, ad] = project3(0, su.oy, 0, cy, syw, cp, sp);
-				const dotX = ox + ax * S;
-				const dotY = oyPx - ay * S;
+				for (let k = 0; k < MARK_N; k++) {
+					const [px, py, pd] = project3(su.mx[k], su.my[k], su.mz[k], cy, syw, cp, sp);
+					msx[k] = ox + px * S;
+					msy[k] = oyPx - py * S;
+					msd[k] = pd;
+				}
 
 				// A saddle folds back on itself in projection, so the exact
 				// axis sweep the race uses for a heightfield does not apply
@@ -373,7 +404,10 @@
 					const s = d * 2;
 					depth[NQ + SPOKES + d] = (dsd[s] + dsd[(s + 1) % SPOKES]) / 2;
 				}
-				depth[N_ITEMS - 1] = ad + 2e-3;
+				// per segment, not per ring: a single depth for the whole mark
+				// puts half of it behind the ground it is painted on
+				for (let t = 0; t < MARK_SEG; t++)
+					depth[NQ + SPOKES + DASHES + t] = (msd[t] + msd[t + 1]) / 2 + 2e-3;
 
 				for (let n = 0; n < N_ITEMS; n++) order[n] = n;
 				order.sort((a, b) => depth[a] - depth[b]);
@@ -442,17 +476,15 @@
 						ctx.globalAlpha = 1;
 						fill = -1;
 					} else {
-						// a survey mark rather than a dot: a filled disc would
-						// read as a hole punched in the ground
-						ctx.fillStyle = tk.paper;
-						ctx.beginPath();
-						ctx.arc(dotX, dotY, 4.6, 0, TAU);
-						ctx.fill();
+						const t = it - NQ - SPOKES - DASHES;
 						ctx.strokeStyle = tk.ink;
-						ctx.lineWidth = 1.5;
+						ctx.lineWidth = 1.3;
+						ctx.globalAlpha = 0.75;
 						ctx.beginPath();
-						ctx.arc(dotX, dotY, 3.4, 0, TAU);
+						ctx.moveTo(msx[t], msy[t]);
+						ctx.lineTo(msx[t + 1], msy[t + 1]);
 						ctx.stroke();
+						ctx.globalAlpha = 1;
 						fill = -1;
 					}
 				}
@@ -488,7 +520,7 @@
 <Plate
 	id="flat"
 	title="The two kinds of flat"
-	caption="Two patches of ground, each perfectly flat at the marked point in the middle, lit the same way and seen from the same angle. They differ by one sign. Left: the ground curves up whichever way you leave — a floor, and a walker that arrives there is staying. Right: it curves up along one axis and down along the other — a saddle, and a walker carrying any momentum or any noise will eventually find the way off. The heavy circle drawn on each patch is the loss one step out in every direction at once: level and entirely above the point on the floor, a wave that crosses the point's own height four times on the saddle, in ultramarine where the ground rises and vermilion where it falls. The dashed ring holds that height level, to judge the wave against. Now count directions. With two of them to agree, floors are easy to come by; with a million, a floor is an extraordinary coincidence, and almost every flat place a large network stalls at is the picture on the right."
+	caption="Two patches of ground, each perfectly flat inside the small ring painted at its centre, lit the same way and seen from the same angle. They differ by one sign. Left: the ground curves up whichever way you leave — a floor, and a walker that arrives there is staying. Right: it curves up along one axis and down along the other — a saddle, and a walker carrying any momentum or any noise will eventually find the way off. The heavy circle drawn on each patch is the loss one step out in every direction at once: level and entirely above the point on the floor, a wave that crosses the point's own height four times on the saddle, in ultramarine where the ground rises and vermilion where it falls. The dashed ring holds that height level, to judge the wave against. Now count directions. With two of them to agree, floors are easy to come by; with a million, a floor is an extraordinary coincidence, and almost every flat place a large network stalls at is the picture on the right."
 >
 	<div class="p-4 sm:p-5">
 		<canvas
@@ -499,7 +531,7 @@
 			style="aspect-ratio: 76 / 31; touch-action: none;"
 			role="button"
 			tabindex="0"
-			aria-label="Two three-dimensional patches of a loss surface side by side, turning slowly, each flat at a marked point in its centre. The left patch is a shallow round bowl: the ground rises away from the point in every direction, and the circle traced around the point sits level, entirely above it. The right patch is a saddle: the ground rises along one axis and falls along the perpendicular one, and the circle traced around the point rises on two opposite arcs, drawn in ultramarine, and falls on the two arcs between them, drawn in vermilion, crossing the height of the point four times. A dashed ring in each panel marks that height. Both patches turn on their own; drag or press the arrow keys to steer them."
+			aria-label="Two three-dimensional patches of a loss surface side by side, turning slowly, each flat inside a small ring painted at its centre. The left patch is a shallow round bowl: the ground rises away from the point in every direction, and the circle traced around the point sits level, entirely above it. The right patch is a saddle: the ground rises along one axis and falls along the perpendicular one, and the circle traced around the point rises on two opposite arcs, drawn in ultramarine, and falls on the two arcs between them, drawn in vermilion, crossing the height of the point four times. A dashed ring in each panel marks that height. Both patches turn on their own; drag or press the arrow keys to steer them."
 			onkeydown={onKeyDown}
 			onpointerdown={onPointerDown}
 			onpointermove={onPointerMove}
