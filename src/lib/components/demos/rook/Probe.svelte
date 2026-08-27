@@ -62,6 +62,26 @@
 	const TRUTH_X = 10;
 	const RUN_X = TRUTH_X + BOARD + 28;
 
+	/** The truth, then one board per block — each carrying its own count of
+	 *  misread squares. Six grids of specks differ by eleven dots between the
+	 *  first and the last, which is a real change and an unreadable one; the
+	 *  number under each board is what makes "more clearly with every block"
+	 *  something the reader checks rather than takes on faith. */
+	const boards = $derived(
+		example
+			? [
+					{ squares: example.trueOriented, x: TRUTH_X, truth: true, label: 'truth', wrong: 0 },
+					...example.predByLayer.map((sq, i) => ({
+						squares: sq,
+						x: RUN_X + i * (BOARD + GAP),
+						truth: false,
+						label: String(i + 1),
+						wrong: sq.reduce((n, v, k) => n + (v !== example.trueOriented[k] ? 1 : 0), 0)
+					}))
+				]
+			: []
+	);
+
 	/** Empty, the side to move's own men, and the opponent's. The two occupied
 	 *  classes take the book's two-class pair, as they do everywhere else. */
 	const FILL = ['var(--surface-2)', 'var(--accent)', 'var(--warm)'] as const;
@@ -91,7 +111,7 @@
 <Plate
 	id="probe"
 	title="Where the pieces are"
-	caption="A measurement rather than a training run, and made offline: the probe is fitted on a hundred thousand games against a Rook of the same design but eight times the size. Fit the simplest readout there is — one linear layer, no bend — to the numbers running through the model at each block, and ask it for the occupancy of all sixty-four squares. Above: one position, then the board that readout returns from each block in turn, with a dot on every square it gets wrong. Below, on the same left-to-right axis of depth: how often it is right, against the two numbers that decide whether that means anything. Always answering 'empty' scores the dashed line. The same probe, fitted the same way to the same architecture with its weights left random, scores the grey one — a network that has learned nothing still carries some trace of the moves it was fed, and an honest claim has to clear that rather than merely the dashed line. What training adds is the gap between the grey line and the ultramarine one, and it widens with depth."
+	caption="A measurement rather than a training run, and made offline: the probe is fitted on a hundred thousand games against a Rook of the same design but eight times the size. Fit the simplest readout there is — one linear layer, no bend — to the numbers running through the model at each block, and ask it for the occupancy of all sixty-four squares. Above: one position, then the board that readout returns from each block in turn, with a dot on every square it gets wrong and the count of them underneath — which is for this one position and will wobble from block to block, because one position is never evidence. Below, on the same left-to-right axis of depth: how often it is right, against the two numbers that decide whether that means anything. Always answering 'empty' scores the dashed line. The same probe, fitted the same way to the same architecture with its weights left random, scores the grey one — a network that has learned nothing still carries some trace of the moves it was fed, and an honest claim has to clear that rather than merely the dashed line. What training adds is the gap between the grey line and the ultramarine one, and it widens with depth."
 >
 	<div class="px-4">
 		{#if failed}
@@ -111,7 +131,7 @@
 				<text x={TRUTH_X} y="18" class="cap dim">the position</text>
 				<text x={RUN_X} y="18" class="cap dim">read out of block …</text>
 
-				{#each [{ squares: example.trueOriented, x: TRUTH_X, truth: true, label: 'truth' }, ...example.predByLayer.map( (sq, i) => ({ squares: sq, x: RUN_X + i * (BOARD + GAP), truth: false, label: String(i + 1) }) )] as board (board.x)}
+				{#each boards as board (board.x)}
 					{#each board.squares as cls, i (i)}
 						<rect
 							x={board.x + (i % 8) * CELL}
@@ -124,9 +144,9 @@
 							<circle
 								cx={board.x + (i % 8) * CELL + CELL / 2}
 								cy={BY + Math.floor(i / 8) * CELL + CELL / 2}
-								r="1.5"
+								r="1.8"
 								fill="var(--ink)"
-								opacity="0.62"
+								opacity="0.7"
 							/>
 						{/if}
 					{/each}
@@ -145,6 +165,11 @@
 						text-anchor="middle"
 						class="cap {board.truth ? '' : 'dim'}">{board.label}</text
 					>
+					{#if !board.truth}
+						<text x={board.x + BOARD / 2} y={BY + BOARD + 24} text-anchor="middle" class="cap dim"
+							>{board.wrong} wrong</text
+						>
+					{/if}
 				{/each}
 
 				<!-- ── the same journey, measured ── -->
