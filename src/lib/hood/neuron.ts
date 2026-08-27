@@ -17,7 +17,7 @@ export const neuron: HoodChapter = {
 		{
 			id: 'engine',
 			lesson: 'Lesson 1b — params as a tree, valueAndGrad, jit',
-			lede: `This plate is where jax-js starts doing the training for real. The curve workshop runs on the book's MLP engine — about four hundred lines in <code>src/lib/nn/</code> that also carry the next three chapters unchanged. Three ideas do all the work: parameters live in a plain object (a <em>pytree</em>), <code>valueAndGrad</code> differentiates the loss with respect to that whole object at once, and <code>jit</code> compiles the step so it stops being JavaScript.`,
+			lede: `This plate is where jax-js starts doing the training for real. The curve workshop runs on the book's MLP engine — a thousand lines in <code>src/lib/nn/</code> that also carry the next three chapters unchanged. Three ideas do all the work: parameters live in a plain object (a <em>pytree</em>), <code>valueAndGrad</code> differentiates the loss with respect to that whole object at once, and <code>jit</code> compiles the step so it stops being JavaScript.`,
 			ml: [
 				{
 					title: 'Parameters are just an object',

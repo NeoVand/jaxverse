@@ -53,14 +53,18 @@ export const language: HoodChapter = {
 			ml: [
 				{
 					title: 'The attention block, undissolved',
-					body: `Here is the equation the chapter's SVG dissected, as it actually executes. Queries, keys, and values are three matmuls; <code>nn.dotProductAttention</code> does the scaled dot-product, the softmax, and the causal mask in one fused call; a projection folds the heads back together, and the MLP does its two-matmul think. Residual adds thread the whole thing. Twelve lines is genuinely all of it.`,
+					body: `Here is the equation the chapter's SVG dissected, as it actually executes. Queries, keys, and values are three matmuls; <code>nn.dotProductAttention</code> does the scaled dot-product, the softmax, and the causal mask in one fused call; a projection folds the heads back together, and the MLP does its two-matmul think. Residual adds thread the whole thing, and each half opens with a norm — placed <em>before</em> the half rather than after it, which is the small rearrangement that let people start stacking these a hundred deep. Twelve lines for the block; the two after it turn the last vector into a belief.`,
 					code: {
 						file: 'src/lib/llm/model.ts',
 						code: `for (let li = 0; li < cfg.nLayer; li++) {
 	const layer = params.layers[li];
+	const xRes = x.ref;
+	x = rmsnorm(x);
 	// q, k, v: three matmuls, reshaped into heads
 	const attnOut = nn.dotProductAttention(qH, kH, vH, { isCausal: true });
 	x = np.dot(attnOut.reshape([-1, cfg.nEmbd]), layer.wo).add(xRes);
+	const mlpRes = x.ref;
+	x = rmsnorm(x);
 	x = nn.relu(np.dot(x, layer.mlpFc1));
 	x = np.dot(x, layer.mlpFc2).add(mlpRes);
 }
