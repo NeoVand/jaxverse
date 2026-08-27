@@ -19,9 +19,9 @@
 	<Prose>
 		<p>
 			The learners of <ChapterRef slug="reward" lower /> were paid by a number the world handed them:
-			a treasure worth ten, a pit worth minus eight, a pole still upright. Nobody had to be asked. The
-			reward was a fact about the situation, and the only interesting question was how to divide the credit
-			for it.
+			a harbour worth twelve, a shoal worth minus nine, a pole still upright. Nobody had to be asked.
+			The reward was a fact about the situation, and the only interesting question was how to divide the
+			credit for it.
 		</p>
 		<p>
 			Now try to write that number for the things people actually want from a machine. Score this
