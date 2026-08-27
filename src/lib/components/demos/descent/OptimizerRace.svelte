@@ -104,6 +104,41 @@
 		return (grids[id] ??= computeGrid(presetById(id)));
 	}
 
+	/** The fraction of cells the 3-D relief is allowed to bottom out.
+	 *
+	 *  The log-loss normalisation is shared with the 2-D heatmap and the
+	 *  contours, where a cell sitting far below everything else costs one dark
+	 *  pixel. In 3-D that same cell becomes geometry: on Two basins a thousandth
+	 *  of the grid falls from 0.11 to 0, which draws a needle two or three quads
+	 *  wide plunging out of an otherwise smooth surface — a rendering fault to
+	 *  look at, not a deep minimum.
+	 *
+	 *  A percentile rather than a constant, because the presets disagree about
+	 *  what their low ground is. At this quantile Two basins floors around 0.13
+	 *  and loses only its needle, while Saddle floors around 0.02 and keeps the
+	 *  broad descending ground that is the entire point of it. A fixed floor
+	 *  cannot do both. Height only: the 2-D views, the contours and every number
+	 *  reported are untouched. */
+	const RELIEF_Q = 0.003;
+	const reliefFloors: Partial<Record<PresetId, number>> = {};
+
+	function reliefFloor(id: PresetId): number {
+		let q = reliefFloors[id];
+		if (q === undefined) {
+			// straight off the grid the 2-D view already built — no extra sampling
+			const grid = gridFor(id);
+			const t = Float32Array.from(grid.values, (v) => normalizedLogLoss(grid, v)).sort();
+			q = t[Math.floor(RELIEF_Q * (t.length - 1))];
+			reliefFloors[id] = q;
+		}
+		return q;
+	}
+
+	function relief(id: PresetId, t: number): number {
+		const q = reliefFloor(id);
+		return (Math.max(t, q) - q) / (1 - q || 1);
+	}
+
 	function meshFor(id: PresetId): Float32Array {
 		let m = meshes[id];
 		if (!m) {
@@ -115,7 +150,7 @@
 				const y = p.yMin + (j / MESH) * (p.yMax - p.yMin);
 				for (let i = 0; i < n1; i++) {
 					const x = p.xMin + (i / MESH) * (p.xMax - p.xMin);
-					m[j * n1 + i] = normalizedLogLoss(grid, p.f(x, y));
+					m[j * n1 + i] = relief(id, normalizedLogLoss(grid, p.f(x, y)));
 				}
 			}
 			meshes[id] = m;
@@ -123,10 +158,22 @@
 		return m;
 	}
 
-	/** Per-quad LUT index into the paper→ink ramp: the exact log-loss shading
-	 *  the 2-D heatmap uses (basins collect ink), deepened by a Lambert term
-	 *  from the surface normal so the relief reads in both themes. Static per
-	 *  preset — terrain and light never move relative to each other. */
+	/** Per-quad index into the lit→shadowed ramp.
+	 *
+	 *  This used to be the 2-D heatmap's log-loss shading with a Lambert term
+	 *  added on top, and it did not work: colour was carrying the loss, which
+	 *  it has to in 2-D because a flat map has nowhere else to put it, but in
+	 *  3-D the HEIGHT already carries the loss. Spending the surface's
+	 *  brightness on it a second time left the relief almost unshaded, and in
+	 *  dark mode it inverted — high ground came out at the page's own colour
+	 *  and the patch lost its silhouette against it.
+	 *
+	 *  So here the height carries the loss and the colour carries the light.
+	 *  The one thing kept from the loss term is a mild extra darkening in the
+	 *  hollows, standing in for the light a valley does not receive, which a
+	 *  single directional lamp cannot express on its own.
+	 *
+	 *  Static per preset — terrain and light never move relative to each other. */
 	function shadeFor(id: PresetId): Uint8Array {
 		let s = shades[id];
 		if (!s) {
@@ -144,15 +191,14 @@
 					const h10 = mesh[k00 + 1];
 					const h01 = mesh[k00 + n1];
 					const h11 = mesh[k00 + n1 + 1];
-					// loss term: same direction as the heatmap, deeper for 3-D
 					const t = (h00 + h10 + h01 + h11) / 4;
-					const wLoss = 0.58 * Math.pow(1 - t, 1.25);
 					// Lambert term from the world-space normal of this quad
 					const dhdx = (((h10 + h11 - h00 - h01) / 2) * H_SCALE) / dX;
 					const dhdz = (((h01 + h11 - h00 - h10) / 2) * H_SCALE) / dZ;
 					const inv = 1 / Math.hypot(dhdx, 1, dhdz);
 					const lambert = Math.max(0, (-dhdx * LIGHT[0] + LIGHT[1] - dhdz * LIGHT[2]) * inv);
-					const w = Math.min(1, 0.05 + wLoss + 0.24 * (1 - lambert));
+					const lit = (0.16 + 0.84 * lambert) * (1 - 0.3 * Math.pow(1 - t, 1.25));
+					const w = 1 - Math.min(1, Math.max(0, lit)); // 0 lit, 1 shadowed
 					s[j * MESH + i] = Math.round(w * (SHADE_LEVELS - 1));
 				}
 			}
@@ -198,7 +244,7 @@
 			x: p.x,
 			y: p.y,
 			st: initOptState(),
-			trail: [{ x: p.x, y: p.y, h: normalizedLogLoss(gridFor(presetId), loss) }],
+			trail: [{ x: p.x, y: p.y, h: relief(presetId, normalizedLogLoss(gridFor(presetId), loss)) }],
 			loss,
 			diverged: false
 		};
@@ -238,7 +284,7 @@
 				r.x = next.x;
 				r.y = next.y;
 				r.loss = loss;
-				r.trail.push({ x: next.x, y: next.y, h: normalizedLogLoss(grid, loss) });
+				r.trail.push({ x: next.x, y: next.y, h: relief(presetId, normalizedLogLoss(grid, loss)) });
 				if (r.trail.length > TRAIL_MAX) r.trail.shift();
 			}
 		}
@@ -485,7 +531,15 @@
 			const sy = Math.sin(yaw);
 			const cp = Math.cos(pitch);
 			const sp = Math.sin(pitch);
-			const K = (H / 2.6) * zoom;
+			// Fit the patch to the frame instead of to a constant: the old
+			// K = H/2.6 left the object filling under half the canvas height on
+			// every preset. Both extents are taken at the worst yaw — the ground
+			// plane's half-diagonal — so the scale is steady as you turn it, and
+			// only a deliberate change of pitch or zoom moves it.
+			const R = Math.hypot(1, AZ);
+			const extX = 2 * R;
+			const extY = 2 * (R * Math.abs(sp) + (H_SCALE / 2) * Math.abs(cp));
+			const K = Math.min((W * 0.96) / extX, (H * 0.94) / extY) * zoom;
 
 			const toScreen = (x: number, y: number, h: number): [number, number, number] => {
 				const [vx, vy, vz] = project3(
@@ -500,18 +554,30 @@
 				return [W / 2 + vx * K, H * 0.52 - vy * K, vz];
 			};
 
-			// paper→ink fill ramp, rebuilt only on theme flips
+			// Lit→shadowed fill ramp, rebuilt only on theme flips. Both ends are
+			// mixed from the page's own two colours, but WHICH of those is the
+			// bright one flips with the theme, so the ramp is anchored on
+			// luminance rather than on the token names. Neither end is allowed
+			// to reach the page colour: a surface that meets the paper exactly
+			// has no silhouette, and this one is the whole figure.
 			const lk = `${tk.paper}|${tk.ink}`;
 			if (lk !== lutKey) {
 				lutKey = lk;
 				const paper = parseColor(tk.paper);
 				const ink = parseColor(tk.ink);
+				const lum = (c: [number, number, number]) => 0.21 * c[0] + 0.72 * c[1] + 0.07 * c[2];
+				const mix = (t: number): [number, number, number] => [
+					paper[0] + (ink[0] - paper[0]) * t,
+					paper[1] + (ink[1] - paper[1]) * t,
+					paper[2] + (ink[2] - paper[2]) * t
+				];
+				const night = lum(paper) < lum(ink);
+				const bright = night ? mix(0.62) : mix(0.05);
+				const shadow = night ? mix(0.11) : mix(0.78);
 				lut = Array.from({ length: SHADE_LEVELS }, (_, i) => {
 					const w = i / (SHADE_LEVELS - 1);
-					const r = Math.round(paper[0] + (ink[0] - paper[0]) * w);
-					const g = Math.round(paper[1] + (ink[1] - paper[1]) * w);
-					const b = Math.round(paper[2] + (ink[2] - paper[2]) * w);
-					return `rgb(${r},${g},${b})`;
+					const c = (k: number) => Math.round(bright[k] + (shadow[k] - bright[k]) * w);
+					return `rgb(${c(0)},${c(1)},${c(2)})`;
 				});
 			}
 
@@ -596,7 +662,7 @@
 			// …then the balls, painted far to near
 			const balls = RUNNERS.filter((s) => enabled[s.id]).map((s) => {
 				const r = racers[s.id];
-				const [X, Y, D] = toScreen(r.x, r.y, normalizedLogLoss(grid, r.loss));
+				const [X, Y, D] = toScreen(r.x, r.y, relief(presetId, normalizedLogLoss(grid, r.loss)));
 				return { X, Y, D, color: tk.colors[s.id], diverged: r.diverged };
 			});
 			balls.sort((a, b) => a.D - b.D);
