@@ -216,7 +216,7 @@
 	id="goodhart"
 	title="What the judge wants, and what you want"
 	live
-	caption="The optimizer is given your judge and no other instruction. It travels, and every ornament above is the same policy photographed further from where it started — the distance measured in nats of KL, the only honest ruler for “how hard did we optimize”. The blue curve is the judge's own opinion, which costs nothing to compute and never stops rising. The vermilion curve is yours, and each of its points costs you a click. Sides are shuffled every round so the plate is measuring your taste and not which way you look first."
+	caption="The optimizer is given your judge and no other instruction. It travels, and every ornament above is the same policy photographed further from where it started — the distance measured in nats of KL, the only honest ruler for “how hard did we optimize”. The ultramarine curve is the judge's own opinion, which costs nothing to compute and never stops rising. The vermilion curve is yours, and each of its points costs you a click. Sides are shuffled every round so the plate is measuring your taste and not which way you look first."
 >
 	{#snippet status()}
 		{#if started}

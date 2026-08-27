@@ -222,7 +222,7 @@
 	id="arena"
 	live
 	title="The arena — every stage, same position"
-	caption="Same board, three students. After each of your moves, every fielded Rook is asked for its next-move beliefs — the weights are swapped in place on the one engine, questioned, and restored — and each decision lands on the board as an arrow: blue pretrained, violet fine-tuned, green RLVR. The columns keep score honestly: legal mass climbs stage by stage, and the fine-tuned Rook starts hunting your pieces. The stage you pick under “plays Black” is the one that actually answers."
+	caption="Same board, three students. After each of your moves, every fielded Rook is asked for its next-move beliefs — the weights are swapped in place on the one engine, questioned, and restored — and each decision lands on the board as an arrow: ultramarine pretrained, violet fine-tuned, green RLVR. The columns keep score honestly: legal mass climbs stage by stage, and the fine-tuned Rook starts hunting your pieces. The stage you pick under “plays Black” is the one that actually answers."
 >
 	{#snippet status()}
 		{#if lab.phase === 'ready'}

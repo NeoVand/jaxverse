@@ -14,9 +14,9 @@
 		<p>
 			In the last chapter a network bent a line into any curve you asked for. That was
 			approximation. Classification sounds like a different job — here are two families of points,
-			blue and orange, tangled into each other; tell them apart — and the standard picture of it is
-			a network <em>drawing a boundary</em> between the classes, the way you might draw a fence between
-			two herds.
+			ultramarine and vermilion, tangled into each other; tell them apart — and the standard picture
+			of it is a network <em>drawing a boundary</em> between the classes, the way you might draw a fence
+			between two herds.
 		</p>
 		<p>
 			That picture is wrong in a quietly important way, and this chapter exists to replace it. A
@@ -81,11 +81,11 @@
 				tex={'\\htmlClass{eq-op}{\\tanh}'}
 			/> and an invertible <Math tex={'\\htmlClass{eq-model}{W}'} />, every layer is a
 			homeomorphism: the sheet stretches and bends as far as you like, but it is never cut and never
-			folded back onto itself, so what was inside stays inside. The orange ring encircles the blue
-			disk before the deformation and encircles it after, and no straight line can have a disk on
-			one side of it and a whole ring around that disk on the other. The network is not being slow.
-			It is attempting something that cannot be done, and the plateaued loss curve is the honest
-			report.
+			folded back onto itself, so what was inside stays inside. The vermilion ring encircles the
+			ultramarine disk before the deformation and encircles it after, and no straight line can have
+			a disk on one side of it and a whole ring around that disk on the other. The network is not
+			being slow. It is attempting something that cannot be done, and the plateaued loss curve is
+			the honest report.
 		</p>
 		<p>
 			The creasing bends slip out of that argument, and still do not help. relu <em>folds</em> the plane
