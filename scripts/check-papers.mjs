@@ -25,6 +25,8 @@ const UA =
 const TIMEOUT_MS = 30_000;
 /** Polite: these are other people's servers, and several are university boxes. */
 const CONCURRENCY = 4;
+/** Long enough that a host which just dropped us has moved on. */
+const RETRY_PAUSE_MS = 2_000;
 
 /** Pull the id/url pairs straight out of the registry's source text.
  *  Importing it would need a TypeScript loader for no benefit — the shape is
@@ -43,7 +45,10 @@ function readPapers() {
 	return out;
 }
 
-async function check({ id, url }) {
+/** One request. `answered` distinguishes "the server said something" from
+ *  "the connection went nowhere", which is the only distinction worth
+ *  retrying on. */
+async function ask(url) {
 	const ctl = new AbortController();
 	const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
 	try {
@@ -55,16 +60,34 @@ async function check({ id, url }) {
 			signal: ctl.signal
 		});
 		res.body?.cancel();
-		if (res.ok) return { id, url, state: 'ok', detail: String(res.status) };
+		if (res.ok) return { answered: true, state: 'ok', detail: String(res.status) };
 		if (res.status === 403 || res.status === 429 || res.status === 202)
-			return { id, url, state: 'unsure', detail: `${res.status} — bot check, verify by eye` };
-		return { id, url, state: 'failed', detail: String(res.status) };
+			return {
+				answered: true,
+				state: 'unsure',
+				detail: `${res.status} — bot check, verify by eye`
+			};
+		return { answered: true, state: 'failed', detail: String(res.status) };
 	} catch (err) {
 		const why = err.name === 'AbortError' ? `no answer in ${TIMEOUT_MS / 1000}s` : err.message;
-		return { id, url, state: 'failed', detail: why };
+		return { answered: false, state: 'failed', detail: why };
 	} finally {
 		clearTimeout(timer);
 	}
+}
+
+/** Archives and university boxes drop perfectly good connections under any
+ *  load at all — the Internet Archive does it to roughly two requests in five
+ *  here. A dropped connection is a fact about the minute, not about the link,
+ *  so it gets one more try; an HTTP status is an answer and never does. */
+async function check({ id, url }) {
+	let r = await ask(url);
+	if (!r.answered) {
+		await new Promise((done) => setTimeout(done, RETRY_PAUSE_MS));
+		r = await ask(url);
+		if (r.state === 'ok') r.detail += ' (second try)';
+	}
+	return { id, url, state: r.state, detail: r.detail };
 }
 
 const papers = readPapers();
