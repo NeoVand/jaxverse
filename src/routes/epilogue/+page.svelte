@@ -8,16 +8,17 @@
 	slug="epilogue"
 	front={{
 		numeral: '∞',
-		eyebrow: 'Epilogue · Sources · ≈3 min',
-		title: 'Sources & onward',
-		deck: 'Where the ideas in this book came from, and where to go when you have finished it.'
+		eyebrow: 'Epilogue · Credits · ≈3 min',
+		title: 'Credits & onward',
+		deck: 'What this book was built out of, and where to go when you have finished it.'
 	}}
 >
 	<Prose>
 		<h2 class="h2">The shoulders this stands on</h2>
 		<p>
-			This book stands on the shoulders of work it admires. If a chapter moved you, the original is
-			better:
+			Every chapter ends with the papers it stood on, each one linked to somewhere you can read it
+			without paying. This page is for the other kind of debt: the work that decided what this book
+			would be, and the code it runs on.
 		</p>
 		<ul class="list-disc space-y-2 pl-5">
 			<li>
@@ -49,9 +50,14 @@
 				book's board.
 			</li>
 			<li>
-				Kenneth Li et&nbsp;al., <em>Emergent World Representations</em> (Othello-GPT) and Adam Karvonen’s
-				chess-GPT work — the lineage Rook belongs to: small game-playing transformers that were never
-				shown a board and turn out to carry one anyway.
+				Kenneth Li et&nbsp;al.,
+				<a href="https://arxiv.org/abs/2210.13382" rel="external"
+					><em>Emergent World Representations</em></a
+				>
+				(Othello-GPT) and
+				<a href="https://arxiv.org/abs/2403.15498" rel="external">Adam Karvonen’s chess-GPT work</a>
+				— the lineage Rook belongs to: small game-playing transformers that were never shown a board and
+				turn out to carry one anyway.
 			</li>
 		</ul>
 
