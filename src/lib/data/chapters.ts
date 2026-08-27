@@ -53,7 +53,7 @@ export const chapters: Chapter[] = [
 		title: 'Telling Things Apart',
 		kicker: 'Supervised learning',
 		deck: 'Ten thousand handwritten digits, a stack of layers, and a rule for being less wrong. Train a classifier and then look inside it.',
-		minutes: 12,
+		minutes: 14,
 		live: true
 	},
 	{

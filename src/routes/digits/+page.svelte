@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ChapterRef from '$lib/components/ui/ChapterRef.svelte';
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
+	import Cite from '$lib/components/ui/Cite.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
@@ -38,9 +39,10 @@
 			in the recipe says x must stay small.
 		</p>
 		<p>
-			So make x an image. MNIST is the field's old warhorse: handwritten digits scanned off forms in
-			the 1990s, each one a 28 × 28 grid of gray. Read the grid row by row and the picture becomes a
-			list of 784 brightnesses — a single point in
+			So make x an image. MNIST is the field's old warhorse<Cite id="lecun-1998" />: handwriting
+			collected at the start of the 1990s from Census Bureau clerks and American high-school
+			students, every digit scanned and reduced to a 28 × 28 grid of gray. Read the grid row by row
+			and the picture becomes a list of 784 brightnesses — a single point in
 			<Math tex={'\\mathbb{R}^{784}'} />, exactly as a point on a plane was a list of two
 			coordinates. In that space, “every 7 anyone might write” is not an idea but a <em>place</em>:
 			a sprawling, tangled region, interleaved with the region of 1s and the region of 9s. The
@@ -135,6 +137,15 @@
 			has never seen, and the shortfall between them — the memorization it got away with. Only the
 			second number is a claim about handwriting.
 		</p>
+		<p>
+			Worth knowing that even this discipline leaks. A test set is only held out until people start
+			choosing what to keep by how it scores, and then, one published result at a time, the field
+			begins fitting to it too. When researchers built a fresh test set for a famous image benchmark
+			by repeating the original collection procedure as closely as they could, every model scored
+			worse on the new one — not catastrophically, but consistently, in the order of their original
+			ranks.<Cite id="recht-2019" /> Nothing here was cheated. The number was simply optimistic in a way
+			nobody could see from inside.
+		</p>
 	</Prose>
 
 	<Classifier
@@ -167,7 +178,10 @@
 			studied to examples it has not seen is called <em>generalization</em>, and the shortfall
 			between the two is the memorization it got away with. Here the gap stays small, and the reason
 			is unglamorous: eight thousand examples of a well-posed task. It is the field's bluntest law —
-			more data beats cleverness, almost every time it is allowed to compete.
+			more data beats cleverness, almost every time it is allowed to compete. And not vaguely:
+			across vision, speech and language, error falls as a power law in the number of training
+			examples, with enough regularity that you can forecast what another ten times the data will
+			buy before you go and collect it.<Cite id="hestness-2017" />
 		</p>
 		<p>
 			The 2,000 test digits are still other people's handwriting, scanned by the same machines in
@@ -175,6 +189,19 @@
 			courtesy is extended before each guess: MNIST digits are centered by their center of mass, so
 			the pad below re-centers your stroke the same way — the model has never seen a digit hiding in
 			a corner, and without that shift it would fail for reasons that have nothing to do with shape.
+		</p>
+		<p>
+			Beside the pad sits an <em>evidence square</em>, and it deserves a word of caution along with
+			its introduction. It is the gradient of the winning score with respect to each pixel: brighten
+			this pixel a little, and the score for the model's answer goes up by this much, or down. Laid
+			out as an image, that vector is a <em>saliency map</em>, and it does look like an explanation.<Cite
+				id="simonyan-2014"
+			/> Read it as one carefully. A gradient describes the model's behaviour in an infinitesimal neighbourhood
+			of exactly this input, which is not the same thing as the reason for the verdict — and some popular
+			relatives of this method have been caught producing the same handsome picture even after the network's
+			weights are replaced with random numbers.<Cite id="adebayo-2018" /> A picture that survives the
+			destruction of the model was never describing the model. The bare gradient shown here is the honest,
+			unretouched version: noisier than the pretty ones, and answering a question it can actually answer.
 		</p>
 	</Prose>
 
@@ -202,6 +229,20 @@
 			the winners. And its mistakes on the test set have structure. It does not confuse digits at random;
 			it confuses digits that share a skeleton, the same pairs you would confuse squinting at a bad fax.
 		</p>
+		<p>
+			It is also worth knowing how far the machine's idea of a 7 is from yours. Take an image it
+			reads correctly and confidently, compute which direction in pixel space would most reduce that
+			confidence, and step a little way along it — a change so small that the two pictures are
+			indistinguishable side by side. The verdict flips, often to a confident wrong answer. These
+			are <em>adversarial examples</em>, and they are not a bug in one model: they were found in
+			every network anyone tried, and the same doctored image usually fools models trained
+			separately on different data.<Cite id="szegedy-2014" /> The explanation is less exotic than the
+			effect. In a space of 784 dimensions, a nudge too small to see in any single pixel is a large step
+			overall if you take it in the one direction the model is most sensitive to — and a network built
+			out of nearly-linear pieces has such a direction everywhere.<Cite id="goodfellow-adv-2015" /> The
+			model has genuinely learned something about handwriting. It has not learned what you would call
+			seeing.
+		</p>
 	</Prose>
 
 	<Plate
@@ -219,9 +260,9 @@
 			What you just trained is not a toy version of the real thing; it is the real thing, small.
 			This exact recipe — pixels in, softmax out, cross-entropy pushed downhill — was reading the
 			amounts on a sizable share of American bank checks by the late 1990s, and sorting mail by ZIP
-			code before that. Scaled up, it reads street signs for cars and flags tumors on scans.
-			Whenever the world hands you questions paired with answers, supervised learning is the tool
-			you reach for first, and usually the tool that wins.
+			code a decade before that.<Cite id="lecun-1990" /> Scaled up, it reads street signs for cars and
+			flags tumors on scans. Whenever the world hands you questions paired with answers, supervised learning
+			is the tool you reach for first, and usually the tool that wins.
 		</p>
 		<p>
 			Its price is hiding in that phrase: <em>paired with answers</em>. Every label in this chapter

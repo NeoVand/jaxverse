@@ -273,6 +273,71 @@ export const papers = {
 		where: 'ICLR 2017 workshop',
 		url: 'https://arxiv.org/abs/1610.01644',
 		note: 'Hang a bare linear classifier off each hidden layer and see how well it does. Separability rises layer by layer, which is the untangling of this chapter measured in a number.'
+	},
+	'lecun-1998': {
+		authors: 'LeCun, Bottou, Bengio & Haffner',
+		year: 1998,
+		title: 'Gradient-Based Learning Applied to Document Recognition',
+		where: 'Proceedings of the IEEE 86(11)',
+		url: 'https://leon.bottou.org/publications/pdf/ieee-1998.pdf',
+		note: 'Where MNIST gets its name, and the account of the cheque-reading system this recipe was actually deployed as. Forty-six pages, and worth the afternoon.'
+	},
+	'recht-2019': {
+		authors: 'Recht et al.',
+		year: 2019,
+		title: 'Do ImageNet Classifiers Generalize to ImageNet?',
+		where: 'ICML 2019',
+		url: 'https://arxiv.org/abs/1902.10811',
+		note: 'Builds a fresh test set the same way the original was built, and finds every model does worse on it. A held-out set stops being held out once a field has spent a decade choosing what to publish against it.'
+	},
+	'hestness-2017': {
+		authors: 'Hestness et al.',
+		year: 2017,
+		title: 'Deep Learning Scaling is Predictable, Empirically',
+		where: 'arXiv preprint',
+		url: 'https://arxiv.org/abs/1712.00409',
+		note: 'Error falls as a power law in the amount of training data, with the same shape across vision, speech and language. Adding data is not just usually better; how much better is forecastable.'
+	},
+	'simonyan-2014': {
+		authors: 'Simonyan, Vedaldi & Zisserman',
+		year: 2014,
+		title:
+			'Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps',
+		where: 'ICLR 2014 workshop',
+		url: 'https://arxiv.org/abs/1312.6034',
+		note: 'The gradient of a class score with respect to the pixels, read as a picture — the evidence square in this chapter, in its original form.'
+	},
+	'adebayo-2018': {
+		authors: 'Adebayo et al.',
+		year: 2018,
+		title: 'Sanity Checks for Saliency Maps',
+		where: 'NeurIPS 2018',
+		url: 'https://arxiv.org/abs/1810.03292',
+		note: "Randomise a trained network's weights and several popular saliency methods keep producing the same convincing picture. A map that survives the destruction of the model was never explaining the model."
+	},
+	'szegedy-2014': {
+		authors: 'Szegedy et al.',
+		year: 2014,
+		title: 'Intriguing properties of neural networks',
+		where: 'ICLR 2014',
+		url: 'https://arxiv.org/abs/1312.6199',
+		note: 'The discovery of adversarial examples: a change too small for a person to see, chosen deliberately, flips the verdict with confidence.'
+	},
+	'goodfellow-adv-2015': {
+		authors: 'Goodfellow, Shlens & Szegedy',
+		year: 2015,
+		title: 'Explaining and Harnessing Adversarial Examples',
+		where: 'ICLR 2015',
+		url: 'https://arxiv.org/abs/1412.6572',
+		note: 'Argues the cause is not exotic: in high dimensions a great many tiny nudges, each harmless, add up along the direction the model is most sensitive to.'
+	},
+	'lecun-1990': {
+		authors: 'LeCun et al.',
+		year: 1990,
+		title: 'Handwritten Digit Recognition with a Back-Propagation Network',
+		where: 'NeurIPS 1989',
+		url: 'https://proceedings.neurips.cc/paper_files/paper/1989/hash/53c3bce66e43be4f209556518c2fcb54-Abstract.html',
+		note: 'The postal-code reader, trained by backpropagation on zip codes off real US mail — the first convincing demonstration that this recipe works on pixels.'
 	}
 } as const satisfies Record<string, Paper>;
 
@@ -301,6 +366,16 @@ export const citationOrder: Partial<Record<string, readonly PaperId[]>> = {
 		'nakkiran-2019'
 	],
 	space: ['olah-2014', 'fefferman-2016', 'bengio-2013', 'alain-bengio-2016', 'naitzat-2020'],
+	digits: [
+		'lecun-1998',
+		'recht-2019',
+		'hestness-2017',
+		'simonyan-2014',
+		'adebayo-2018',
+		'szegedy-2014',
+		'goodfellow-adv-2015',
+		'lecun-1990'
+	],
 	descent: [
 		'polyak-1964',
 		'kingma-ba-2015',
