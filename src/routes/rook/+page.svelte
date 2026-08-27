@@ -348,11 +348,11 @@
 		</p>
 		<p>
 			And that is the book. A loss surface and a step downhill; a neuron, a bump of influence; space
-			bent until classes come apart; a map that draws itself; a game of guess-the-next-word; a
-			policy beating to windward with nothing to go on but a clock; a judge fitted to your own eye
-			and then broken by an optimizer — and here, all of it at once, teaching a pocket of numbers to
-			play chess it was never taught. None of it stayed mysterious once you could watch the
-			gradients move. That was the point.
+			bent until classes come apart; handwriting read out of 784 numbers and no picture; a map that
+			draws itself; a game of guess-the-next-word; a policy beating to windward with nothing to go
+			on but a clock; a judge fitted to your own eye and then broken by an optimizer — and here, all
+			of it at once, teaching a pocket of numbers to play a game whose rules nobody told it. None of
+			it stayed mysterious once you could watch the gradients move. That was the point.
 		</p>
 	</Prose>
 </ChapterShell>
