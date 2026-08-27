@@ -10,6 +10,7 @@
 	import Vocabulary from '$lib/components/demos/rook/Vocabulary.svelte';
 	import LegalOrNot from '$lib/components/demos/rook/LegalOrNot.svelte';
 	import Pretrain from '$lib/components/demos/rook/Pretrain.svelte';
+	import Probe from '$lib/components/demos/rook/Probe.svelte';
 	import PlayRook from '$lib/components/demos/rook/PlayRook.svelte';
 	import Sft from '$lib/components/demos/rook/Sft.svelte';
 	import Rlvr from '$lib/components/demos/rook/Rlvr.svelte';
@@ -73,21 +74,6 @@
 			this page are for you; the model gets the sentence.
 		</p>
 		<p>
-			Which raises a question you can actually answer, and people have.<Cite id="toshniwal-2022" />
-			Train a transformer on nothing but move lists, then go looking inside its activations for the board
-			— not by asking it, but by fitting a simple linear readout to the numbers running through it. The
-			board is there. In the cleaner case of Othello it is there sharply enough to
-			<em>edit</em>: change the internal board to say a square is occupied, let the model continue,
-			and its moves change to suit the board you gave it rather than the one the moves implied.<Cite
-				id="li-2023"
-			/> The same probe works on chess models trained the way Rook is, and it recovers more than the position
-			— it recovers an estimate of how strong the player being imitated was.<Cite
-				id="karvonen-2024"
-			/> A sequence model that has only ever seen sentences can end up holding a model of the thing the
-			sentences are about. That is not proof of understanding, and it is a great deal more than memorised
-			n-grams.
-		</p>
-		<p>
 			Meet the student, then: four transformer blocks, 128 numbers wide, four attention heads — 1.3
 			million parameters. The same weights thread through this entire chapter; what pretraining
 			builds is exactly what fine-tuning bends and reinforcement sharpens. The plates need WebGPU (a
@@ -108,6 +94,30 @@
 			pressure ever applied was next-token prediction over some six thousand games. Legality
 			condensed out of statistics, the way grammar condenses out of text: not because the loss asked
 			for it, but because predicting the corpus well is impossible without it.
+		</p>
+		<p>
+			Legality was not the only thing that condensed, and the rest can be checked rather than argued
+			about.<Cite id="toshniwal-2022" /> Fit the simplest readout you can build — one linear layer, no
+			bend — to the numbers running through a trained model, and ask it where the pieces are. They are
+			in there, more clearly with every block. In the cleaner case of Othello the same probe finds the
+			board sharply enough to
+			<em>edit</em>: change the board inside the activations, let the model carry on, and its moves
+			follow the board you planted rather than the one its own moves implied.<Cite id="li-2023" /> On
+			chess models trained the way Rook is, the readout recovers more than the position — it recovers
+			an estimate of how strong the player being imitated was.<Cite id="karvonen-2024" />
+		</p>
+	</Prose>
+
+	<Probe />
+
+	<Prose>
+		<p>
+			None of which is proof of understanding, and the plate above is careful about the difference.
+			A probe that scores well might be reading the model, or it might be reading the moves that
+			were fed into it — which is what the control line measures, and why it sits above the dashed
+			one rather than on it. The claim the experiment actually supports is narrower and still
+			remarkable: a machine that has only ever seen sentences ends up carrying something shaped like
+			the thing the sentences are about.
 		</p>
 		<p>
 			Now look at what pretraining did <em>not</em> buy. Read the sampled games: pieces drift,
