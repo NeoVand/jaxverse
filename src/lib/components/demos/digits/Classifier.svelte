@@ -47,28 +47,6 @@
 	let lossHist = $state<number[]>([]);
 	let accHist = $state<number[]>([]);
 	let gen = 0; // boot generation — cancels stale loops
-	/** Identifies the current run, so a pause-then-play mid-run cannot leave
-	 * two loops driving one worker. */
-	let runToken = 0;
-	/** Steps per worker run; it yields between sync points, so `stop` still
-	 * lands promptly and measurement RPCs interleave. */
-	const RUN_STEPS = 2000;
-	/** Steps between sync points — each costs a stall to read the loss back
-	 * and buys one sample of the curve. */
-	const SYNC_EVERY = 10;
-	/** How often the readings are taken. Accuracy is a percentage; five times
-	 * a second is already more than a reader can follow. */
-	const REFRESH_MS = 200;
-	/** …and how often the expensive one is. */
-	const PROBE_MS = 1500;
-	/** Metrics land here first — see onMetrics. */
-	let lossRing: number[] = [];
-	let accRing: number[] = [];
-	let liveStep = 0;
-	let liveLoss = NaN;
-	let liveMs = 0;
-	let lossSum = 0;
-	let lossCount = 0;
 
 	watchTheme();
 
@@ -122,32 +100,18 @@
 	/** A fixed slice of the training rows, so the train/test gap is comparable
 	 * from step to step and across architectures. */
 	let probe: { x: Float32Array; y: Int32Array; n: number } | null = null;
-	let testProbe: { x: Float32Array; y: Int32Array; n: number } | null = null;
-	/** An evenly-strided sample of `xs`, so the reading covers the whole set
-	 * rather than whichever rows happen to sit at the front of it. */
-	function buildProbe(xs: Float32Array, ys: Int32Array, want: number) {
-		const total = ys.length;
-		const k = Math.min(want, total);
+	function buildProbe(m: MnistData) {
+		const total = m.trainY.length;
+		const k = Math.min(PROBE, total);
 		const stride = Math.max(1, Math.floor(total / k));
 		const x = new Float32Array(k * DIM);
 		const y = new Int32Array(k);
 		for (let i = 0; i < k; i++) {
 			const t = i * stride;
-			x.set(xs.subarray(t * DIM, (t + 1) * DIM), i * DIM);
-			y[i] = ys[t];
+			x.set(m.trainX.subarray(t * DIM, (t + 1) * DIM), i * DIM);
+			y[i] = m.trainY[t];
 		}
 		return { x, y, n: k };
-	}
-
-	/** Accuracy of the current weights on a fixed set of rows. */
-	async function accuracyOn(p: { x: Float32Array; y: Int32Array; n: number }): Promise<number> {
-		const engine = lab.engine;
-		if (!engine) return NaN;
-		const logits = await engine.predict(p.x, p.n, 1024);
-		if (lab.engine !== engine) return NaN;
-		let hit = 0;
-		for (let i = 0; i < p.n; i++) if (argmax(logits, i * 10, 10) === p.y[i]) hit += 1;
-		return hit / p.n;
 	}
 
 	/** Train rows first, test rows as the held-out tail — built once per dataset. */
@@ -175,8 +139,7 @@
 			const m = await loadMnist();
 			if (myGen !== gen) return;
 			rows = buildRows(m);
-			probe = buildProbe(m.trainX, m.trainY, PROBE);
-			testProbe = buildProbe(m.testX, m.testY, PROBE);
+			probe = buildProbe(m);
 			engine = new MlpEngine();
 			await engine.init(
 				{
@@ -249,13 +212,6 @@
 			lab.msPerStep = 0;
 			lossHist = [];
 			accHist = [];
-			lossRing = [];
-			accRing = [];
-			liveStep = 0;
-			liveLoss = NaN;
-			liveMs = 0;
-			lossSum = 0;
-			lossCount = 0;
 			await refreshGuesses();
 			lab.version += 1;
 			if (wasTraining) setTraining(true);
@@ -286,101 +242,38 @@
 	function setTraining(on: boolean) {
 		if (on && !training && lab.phase === 'ready') {
 			training = true;
-			const token = ++runToken;
-			void trainLoop(token);
-			void measureLoop(token);
+			void trainLoop();
 		} else if (!on && training) {
 			training = false;
-			runToken++;
-			void lab.engine?.stop(); // ends the in-flight run early
-			publish(); // whatever the last steps measured, shown rather than dropped
+			void lab.engine?.stop(); // ends the in-flight chunk early
 		}
 	}
 
-	/**
-	 * Train, and measure on a different clock.
-	 *
-	 * This was a ping-pong — twenty-five steps, then a test-set eval, then a
-	 * 1,500-row probe of the training set, then the sixteen shown digits, then
-	 * repeat — and every one of those was awaited in turn, so the worker
-	 * stalled four times per chunk and the whole cycle ran as fast as training
-	 * allowed. On this network that is a couple of thousand extra forward
-	 * passes for every three thousand rows actually trained on, spent to
-	 * refresh percentages that move too slowly for anyone to read at that
-	 * rate, and it made the entire page feel heavy while the plate ran.
-	 *
-	 * The worker now gets a long run and is left alone; it yields between sync
-	 * points, so the measurement RPCs interleave with training instead of
-	 * taking turns with it. `measureLoop` reads on its own clock, and the most
-	 * expensive reading — the training-set probe, which exists to show a
-	 * generalization gap that moves over minutes — gets a much slower one.
-	 */
-	async function trainLoop(token: number) {
+	async function trainLoop() {
 		const myGen = gen;
 		const engine = lab.engine;
-		while (training && engine && myGen === gen && token === runToken) {
+		while (training && engine && myGen === gen) {
+			const chunk = 25;
+			const syncEvery = 4;
 			try {
-				await engine.train(RUN_STEPS, onMetrics, SYNC_EVERY);
-			} catch {
-				return; // engine disposed mid-flight
-			}
-			if (myGen !== gen) return;
-		}
-	}
-
-	/** Cheap by design: this fires many times a second and must not touch
-	 * anything that re-renders. `publish` moves it into $state on the slower
-	 * clock. */
-	function onMetrics(m: { step: number; loss: number; stepMs: number }) {
-		liveStep = m.step;
-		liveLoss = m.loss;
-		liveMs = liveMs ? liveMs * 0.7 + m.stepMs * 0.3 : m.stepMs;
-		lossSum += m.loss;
-		lossCount += 1;
-	}
-
-	function publish() {
-		lab.step = liveStep;
-		lab.loss = liveLoss;
-		lab.msPerStep = liveMs;
-		// One point per reading, and it is the MEAN of the steps since the last
-		// one rather than whichever single step happened to be synced. Pushing
-		// raw sync losses filled the 240-point window in seven seconds with a
-		// band of minibatch noise; a 200 ms average holds forty-odd seconds of
-		// run and has a shape.
-		if (lossCount) {
-			lossRing.push(lossSum / lossCount);
-			lossSum = 0;
-			lossCount = 0;
-			if (lossRing.length > 240) lossRing.splice(0, lossRing.length - 240);
-		}
-		lossHist = lossRing.slice();
-		accHist = accRing.slice();
-	}
-
-	const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-	async function measureLoop(token: number) {
-		const myGen = gen;
-		let probeAt = 0;
-		while (training && myGen === gen && token === runToken) {
-			await pause(REFRESH_MS);
-			const engine = lab.engine;
-			if (!training || myGen !== gen || token !== runToken || !engine) return;
-			try {
-				// cheap, and the only thing the eye actually tracks: the loss
-				// curve and the sixteen digits on show
+				await engine.train(
+					chunk,
+					(m) => {
+						lab.step = m.step;
+						lab.loss = m.loss;
+						lab.msPerStep = lab.msPerStep ? lab.msPerStep * 0.7 + m.stepMs * 0.3 : m.stepMs;
+						lossHist = [...lossHist.slice(-239), m.loss];
+					},
+					syncEvery
+				);
+				if (myGen !== gen || !lab.engine) return;
+				const ev = await engine.eval();
+				if (myGen !== gen) return;
+				lab.testAcc = ev.accuracy ?? NaN;
+				accHist = [...accHist.slice(-239), lab.testAcc];
+				if (lab.testAcc >= 0.9) progress.reach('digits:trained');
+				await refreshTrainAcc();
 				await refreshGuesses();
-				// The two accuracy readings are three thousand forward passes
-				// between them and show numbers that move over minutes. They do
-				// not belong on the same clock as everything else.
-				const now = performance.now();
-				if (now - probeAt >= PROBE_MS) {
-					probeAt = now;
-					await refreshAccuracies();
-				}
-				if (myGen !== gen || token !== runToken) return;
-				publish();
 				lab.version += 1;
 			} catch {
 				return; // engine disposed mid-flight
@@ -405,29 +298,15 @@
 		}
 	}
 
-	/**
-	 * Both accuracies, on the same number of rows, in one pass.
-	 *
-	 * The headline of this plate is the GAP between them, and the gap used to
-	 * compare 1,500 sampled training rows against the worker's eval — which
-	 * caps itself at 512, and always the first 512 of the test tail. On a
-	 * 512-row sample an accuracy near 95% carries about a point of sampling
-	 * noise, so the difference of the two readings jittered by about as much
-	 * as the effect it was there to show, and it was shown to a tenth of a
-	 * point. Matched sample sizes make the two sides comparable and the gap
-	 * worth reading.
-	 */
-	async function refreshAccuracies() {
-		if (!probe || !testProbe) return;
+	async function refreshTrainAcc() {
+		const engine = lab.engine;
+		if (!engine || !probe) return;
 		try {
-			const [tr, te] = await Promise.all([accuracyOn(probe), accuracyOn(testProbe)]);
-			if (!Number.isNaN(tr)) lab.trainAcc = tr;
-			if (!Number.isNaN(te)) {
-				lab.testAcc = te;
-				accRing.push(te);
-				if (accRing.length > 240) accRing.splice(0, accRing.length - 240);
-				if (te >= 0.9) progress.reach('digits:trained');
-			}
+			const logits = await engine.predict(probe.x, probe.n, 1024);
+			if (lab.engine !== engine) return;
+			let hit = 0;
+			for (let i = 0; i < probe.n; i++) if (argmax(logits, i * 10, 10) === probe.y[i]) hit += 1;
+			lab.trainAcc = hit / probe.n;
 		} catch {
 			/* engine disposed mid-flight */
 		}
@@ -459,13 +338,6 @@
 		lab.msPerStep = 0;
 		lossHist = [];
 		accHist = [];
-		lossRing = [];
-		accRing = [];
-		liveStep = 0;
-		liveLoss = NaN;
-		liveMs = 0;
-		lossSum = 0;
-		lossCount = 0;
 		await refreshGuesses(); // never throws — it guards internally
 		lab.version += 1;
 		if (wasTraining) setTraining(true);
@@ -688,9 +560,7 @@
 						<div>
 							<div class="flex items-baseline justify-between gap-2">
 								<span class="eyebrow">accuracy · test</span>
-								<span class="text-[10.5px] text-ink-3"
-									>{PROBE.toLocaleString('en-US')} rows · held out</span
-								>
+								<span class="text-[10.5px] text-ink-3">held out</span>
 							</div>
 							<div
 								class="num text-[2.6rem] leading-[1.1]"

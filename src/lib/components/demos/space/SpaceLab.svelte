@@ -158,8 +158,6 @@
 	let liveStep = 0;
 	let liveLoss = NaN;
 	let liveMs = 0;
-	let lossSum = 0;
-	let lossCount = 0;
 	/** The shadow's basis, carried between refreshes so it cannot flip. */
 	let pca: Pca | null = null;
 
@@ -201,8 +199,6 @@
 			liveStep = 0;
 			liveLoss = NaN;
 			liveMs = 0;
-			lossSum = 0;
-			lossCount = 0;
 			pca = null;
 			refreshing = false;
 			snapA = snapB = null;
@@ -286,8 +282,8 @@
 		liveStep = m.step;
 		liveLoss = m.loss;
 		liveMs = liveMs ? liveMs * 0.7 + m.stepMs * 0.3 : m.stepMs;
-		lossSum += m.loss;
-		lossCount += 1;
+		lossRing.push(m.loss);
+		if (lossRing.length > 240) lossRing.splice(0, lossRing.length - 240);
 	}
 
 	/** Copy the run's numbers into the page. */
@@ -295,15 +291,6 @@
 		step = liveStep;
 		lossNow = liveLoss;
 		msPerStep = liveMs;
-		// One point per reading, and it is the MEAN of the steps since the last
-		// one rather than whichever single step happened to be synced: the
-		// window then holds a run rather than a few seconds of minibatch noise.
-		if (lossCount) {
-			lossRing.push(lossSum / lossCount);
-			lossSum = 0;
-			lossCount = 0;
-			if (lossRing.length > 240) lossRing.splice(0, lossRing.length - 240);
-		}
 		lossHist = lossRing.slice();
 		accHist = accRing.slice();
 	}

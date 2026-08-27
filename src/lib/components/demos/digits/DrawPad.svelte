@@ -184,32 +184,12 @@
 		}
 	}
 
-	/** Whether the pad is anywhere near the viewport — see the effect below. */
-	let visible = $state(false);
-	function observeVisible(el: HTMLElement) {
-		if (typeof IntersectionObserver === 'undefined') {
-			visible = true;
-			return;
-		}
-		const io = new IntersectionObserver((es) => (visible = es[0]?.isIntersecting ?? false), {
-			rootMargin: '250px'
-		});
-		io.observe(el);
-		return () => io.disconnect();
-	}
-
-	// Keep the verdict honest while the classifier plate trains on, and read
-	// the seeded digit as soon as there is an engine to read it with — but only
-	// while the pad is on screen. Each re-read is a forward pass AND an
-	// input-gradient backward pass through the whole network, on the same
-	// worker the classifier is training in, and it used to run on every weight
-	// bump whether or not this plate was anywhere the reader could see. The
-	// explorer plate below has always guarded itself this way; the pad never
-	// did.
+	// keep the verdict honest while the classifier plate trains on, and read the seeded
+	// digit as soon as there is an engine to read it with
 	$effect(() => {
 		void lab.version;
 		void lab.phase;
-		if (hasInk && visible) schedulePredict();
+		if (hasInk) schedulePredict();
 	});
 
 	// ── the two images ────────────────────────────────────────────────────────
@@ -413,7 +393,7 @@
 		</p>
 	</div>
 {:else}
-	<div class="flex flex-wrap items-start gap-x-7 gap-y-6 p-4 sm:p-5" {@attach observeVisible}>
+	<div class="flex flex-wrap items-start gap-x-7 gap-y-6 p-4 sm:p-5">
 		<!-- the pad, its brush, and the same square of evidence beside it -->
 		<div class="flex items-start gap-3">
 			<!-- brush size: a dot the size of the nib, on a track as tall as the pad -->
