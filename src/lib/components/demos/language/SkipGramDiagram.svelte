@@ -58,7 +58,7 @@
 		viewBox="0 -8 660 240"
 		class="mx-auto block w-full max-w-[950px]"
 		role="img"
-		aria-label="Skip-gram in one picture. Left: in the sentence 'the little dog wagged his tail', a window around the centre word 'dog' marks its neighbors; every centre–neighbor pair is one lesson. Below, the word 'dog' begins as a one-hot column — six hundred slots, a single 1, which says nothing about meaning — and trades it for row 41 of a 600-by-16 embedding table: sixteen learned numbers, the dense vector the plate scatters. Right: the training rule. The dot product of dog's vector with a real neighbor like 'wagged' is pushed through a sigmoid toward 1, pulling the two vectors together; the dot product with a randomly drawn word like 'spoon' is pushed toward 0, pushing those vectors apart. The loss is the surprise at the real neighbor plus the surprise whenever a random word scores."
+		aria-label="Skip-gram in one picture. Left: in the sentence 'the little dog wagged his tail', a window around the centre word 'dog' marks its neighbors; every centre–neighbor pair is one lesson. Below, the word 'dog' begins as a one-hot column — six hundred slots, a single 1, which says nothing about meaning — and trades it for its own row of a 600-by-16 embedding table: sixteen learned numbers, the dense vector the plate scatters. Right: the training rule. The dot product of dog's vector with a real neighbor like 'wagged' is pushed through a sigmoid toward 1, pulling the two vectors together; the dot product with a randomly drawn word like 'spoon' is pushed toward 0, pushing those vectors apart. The loss is the surprise at the real neighbor plus the surprise whenever a random word scores."
 	>
 		<defs>
 			<marker
