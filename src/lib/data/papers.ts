@@ -64,6 +64,14 @@ export const papers = {
 		url: 'https://arxiv.org/abs/1412.6980',
 		note: 'Momentum and RMSProp in one update, with a bias correction for the first few steps.'
 	},
+	'loshchilov-hutter-2017': {
+		authors: 'Loshchilov & Hutter',
+		year: 2017,
+		title: 'SGDR: Stochastic Gradient Descent with Warm Restarts',
+		where: 'ICLR 2017',
+		url: 'https://arxiv.org/abs/1608.03983',
+		note: "Where the shape of almost every modern schedule comes from: walk the stride down a cosine from its starting value toward nothing, then — the paper's actual proposal — jump it back up and do it again. The cosine was adopted everywhere. The restarts, mostly not."
+	},
 	'loshchilov-hutter-2019': {
 		authors: 'Loshchilov & Hutter',
 		year: 2019,
@@ -848,6 +856,7 @@ export const citationOrder: Partial<Record<string, readonly PaperId[]>> = {
 		'tieleman-hinton-2012',
 		'cohen-2021',
 		'robbins-monro-1951',
+		'loshchilov-hutter-2017',
 		'dauphin-2014',
 		'goodfellow-2015',
 		'li-2018'

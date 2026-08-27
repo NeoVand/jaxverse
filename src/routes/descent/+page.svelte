@@ -189,7 +189,12 @@
 			stepping on noisy estimates still converges, provided its steps shrink neither too fast nor too
 			slowly. The noise is not a cost to be tolerated. A rough gradient is a cheap gradient — a few dozen
 			examples rather than a few million — so the same compute buys thousands of steps for the price of
-			one, and the jitter shakes the walker off the first flat place it stumbles into.
+			one, and the jitter shakes the walker off the first flat place it stumbles into. And that condition
+			on shrinking steps is honoured to this day: a real run decays
+			<Math tex={'\\htmlClass{eq-knob}{\\eta}'} /> on a schedule fixed before training starts — long strides
+			early, when almost any direction is an improvement, short ones late, when the walker is placing
+			its feet.<Cite id="loshchilov-hutter-2017" /> Every plate in this book holds
+			<Math tex={'\\htmlClass{eq-knob}{\\eta}'} /> still instead, so you can feel one number at a time.
 		</p>
 		<p>
 			The second is the shape of the ground. The picture of a walker stranded in a shallow valley,
