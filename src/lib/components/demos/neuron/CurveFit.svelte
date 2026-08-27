@@ -506,7 +506,7 @@
 	id="workshop"
 	live
 	title="The curve workshop"
-	caption="Left: the network itself, live — every edge is one weight, read by the legend beneath it. Right: the dashed target and the network's fit. Below, the palette — the curves the deeper layers output, ending in the last hidden layer's contributions: colored by the sign of each output weight, thicker as it grows, and summing exactly to the fit. Hover any node or tile; the highlight runs both ways."
+	caption="The network itself, live — every edge is one weight, read by the legend beneath it. The plot: the dashed target, and the fit the network currently draws against it. Underneath, the palette — the curves the deeper layers output, ending in the last hidden layer's contributions: colored by the sign of each output weight, thicker as it grows, and summing exactly to the fit. Hover any node or tile; the highlight runs both ways."
 >
 	{#snippet status()}
 		{#if phase === 'idle'}

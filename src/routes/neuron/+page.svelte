@@ -117,7 +117,7 @@
 			— the network computes on a changing, sparse subset of itself.<Cite id="glorot-2011" />
 		</p>
 		<p>
-			The bottom row — gelu<Cite id="hendrycks-gimpel-2016" />, silu<Cite id="elfwing-2017" />, mish<Cite
+			The last three — gelu<Cite id="hendrycks-gimpel-2016" />, silu<Cite id="elfwing-2017" />, mish<Cite
 				id="misra-2019"
 			/> — sands the corner off and keeps a little slope slightly below zero, which is one reason the
 			transformer era settled on them. Silu arrived twice: once from researchers building reinforcement
