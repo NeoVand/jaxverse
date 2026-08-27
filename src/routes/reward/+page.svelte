@@ -175,11 +175,11 @@
 		<p>
 			But a wind does something to exploration that a maze cannot, and this world had to be built
 			twice before it worked. A policy that picks headings uniformly <em>drifts downwind</em>. So a
-			harbour set to windward is not merely far, it is somewhere a random walk essentially never
-			reaches — and on some wind directions the learner never found it at all. What it found instead
-			was that sailing straight onto a shoal ended the passage for nine points, while wandering
-			until the clock ran out cost far more. So it did that. Deliberately, reliably, and with a
-			reward curve that simply flattened out and told you nothing.
+			harbour set to windward is worse than far. A random walk essentially never reaches it, and on
+			some wind directions the learner never found it at all. What it found instead was that sailing
+			straight onto a shoal ended the passage for nine points, while wandering until the clock ran
+			out cost far more. So it did that. Deliberately, reliably, and with a reward curve that simply
+			flattened out and told you nothing.
 		</p>
 		<p>
 			The fix is the one <PlateRef id="pendulum" lower /> uses on a much harder problem: one passage in

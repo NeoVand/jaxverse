@@ -187,9 +187,9 @@
 			the ground is slightly wrong. That is the <em>S</em> in SGD, and the licence for it is older
 			than neural networks: Robbins and Monro showed in 1951<Cite id="robbins-monro-1951" /> that a walker
 			stepping on noisy estimates still converges, provided its steps shrink neither too fast nor too
-			slowly. The noise is not merely survivable. A rough gradient is a cheap gradient — a few dozen examples
-			rather than a few million — so the same compute buys thousands of steps for the price of one, and
-			the jitter shakes the walker off the first flat place it stumbles into.
+			slowly. The noise is not a cost to be tolerated. A rough gradient is a cheap gradient — a few dozen
+			examples rather than a few million — so the same compute buys thousands of steps for the price of
+			one, and the jitter shakes the walker off the first flat place it stumbles into.
 		</p>
 		<p>
 			The second is the shape of the ground. The picture of a walker stranded in a shallow valley,

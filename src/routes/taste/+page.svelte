@@ -202,8 +202,8 @@
 			you get the previous plate. Everything worth having is in between.
 		</p>
 		<p>
-			And this objective is not merely optimizable. It has an exact answer, which you can write down
-			in one line and which is the same shape you will meet every time a paper says <em>soft</em>,
+			And this objective does not need a search. It has an exact answer, which you can write down in
+			one line and which is the same shape you will meet every time a paper says <em>soft</em>,
 			<em>temperature</em>, or <em>log-sum-exp</em>:
 		</p>
 		<Math
