@@ -373,6 +373,17 @@
 			head <em>writes</em> to the stream, as though the model were a workshop of specialists sharing one
 			notebook. Which, read this way, it is.
 		</p>
+		<p>
+			One thing rides along with that picture. Because every block adds, the stream grows: by the
+			last block a token's vector is the sum of everything written into it, at whatever size that
+			came to. So a block does not read the stream raw — it reads a rescaled copy, normalized to a
+			predictable size, while the stream itself passes through untouched. Two lines of arithmetic,
+			and where they sit is not a detail: put the rescaling <em>between</em> the blocks instead of
+			inside them and the gradients near the output blow up at the start of training, which is why
+			the early transformers needed a careful warm-up to survive their own first steps.<Cite
+				id="xiong-2020"
+			/> Moving it inside is most of what made stacking a hundred blocks routine.
+		</p>
 	</Prose>
 
 	<Walkthrough />

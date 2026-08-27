@@ -515,6 +515,14 @@ export const papers = {
 		url: 'https://arxiv.org/abs/2104.09864',
 		note: 'How position is actually supplied in current models: rotate each query and key by an angle proportional to its position, so what attention sees is the distance between two tokens rather than their absolute slots.'
 	},
+	'xiong-2020': {
+		authors: 'Xiong et al.',
+		year: 2020,
+		title: 'On Layer Normalization in the Transformer Architecture',
+		where: 'ICML 2020',
+		url: 'https://arxiv.org/abs/2002.04745',
+		note: 'Where the norm goes turns out to matter more than what it is. Put it between the blocks and the gradients near the output blow up at initialization, so the run needs a warm-up to survive its own first steps; put it inside, before each read, and they are well behaved from the start. The scribe uses the second arrangement, with RMSNorm in place of the original.'
+	},
 	'kaplan-2020': {
 		authors: 'Kaplan et al.',
 		year: 2020,
@@ -795,6 +803,7 @@ export const citationOrder: Partial<Record<string, readonly PaperId[]>> = {
 		'su-2021',
 		'vaswani-2017',
 		'elhage-2021',
+		'xiong-2020',
 		'kaplan-2020',
 		'hoffmann-2022'
 	],
