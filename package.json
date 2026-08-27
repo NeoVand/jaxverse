@@ -17,7 +17,8 @@
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run && npm run test:e2e",
 		"test:e2e": "playwright install && playwright test",
-		"check:papers": "node scripts/check-papers.mjs"
+		"check:papers": "node scripts/check-papers.mjs",
+		"check:labels": "node scripts/check-labels.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
