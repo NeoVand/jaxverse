@@ -234,10 +234,10 @@
 		</div>
 
 		<p class="note font-serif">
-			Read the ordering once, because it is the whole safety property. The penalty is KL(π ‖ π_ref)
-			— averaged under <em>your own</em> policy, so it only ever notices places you actually go, and bites
-			hardest exactly where you put mass the reference never would. Write it the other way round and it
-			would patrol territory you never visit and shrug at the blot.
+			Read the two numbers under each card rather than the ornaments themselves. Left to right the
+			reward climbs, and so does the distance travelled to reach it; β decides how much of the
+			second you are willing to spend on the first. Slide it and the middle card walks between its
+			neighbours. There is no setting where the reward arrives free.
 		</p>
 	</div>
 </Plate>
