@@ -72,7 +72,7 @@ const hAll = acts.layers[acts.layers.length - 2]; // the last hidden layer`
 			],
 			lab: {
 				file: 'space.zip',
-				note: 'A two-moons classifier that prints its own hidden space as ASCII art while it trains — devices, xent loss, activations'
+				note: 'A two-moons classifier that asks the network for a verdict over a whole lattice every few hundred steps and prints the decision boundary as ASCII — watch the crease form'
 			}
 		}
 	]

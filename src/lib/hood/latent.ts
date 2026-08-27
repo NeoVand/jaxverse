@@ -85,7 +85,7 @@ async decode(z: Float32Array, n: number, chunk = 16): Promise<Float32Array> {
 			],
 			lab: {
 				file: 'latent.zip',
-				note: 'A VAE on MNIST with the reparameterized waist, printing reconstructions and a 2-D latent scatter as it trains'
+				note: 'A VAE on MNIST with the reparameterized waist, printing its latent map as ASCII every few hundred steps — 300 test digits, each character a real digit at its own address'
 			}
 		}
 	]
