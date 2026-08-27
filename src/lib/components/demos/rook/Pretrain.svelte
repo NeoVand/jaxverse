@@ -161,7 +161,7 @@
 					<Shuffle size={12} aria-hidden="true" /> Sample
 				</Btn>
 			{/if}
-			<Btn onclick={() => void toggleTrain()}>
+			<Btn kind={running ? 'ghost' : 'primary'} onclick={() => void toggleTrain()}>
 				{#if running}
 					<Pause size={12} aria-hidden="true" /> Pause
 				{:else}

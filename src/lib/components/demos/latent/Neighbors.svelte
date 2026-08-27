@@ -492,6 +492,7 @@
 			<Shuffle size={12} aria-hidden="true" /> Borrow one
 		</Btn>
 		<Btn
+			kind={lab.training ? 'ghost' : 'primary'}
 			disabled={lab.phase !== 'ready' || lab.rebuilding}
 			onclick={() => lab.setTraining(!lab.training)}
 		>

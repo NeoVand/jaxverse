@@ -689,7 +689,7 @@
 	{/snippet}
 
 	{#snippet actions()}
-		<Btn kind="primary" onclick={togglePlay}>
+		<Btn kind={running ? 'ghost' : 'primary'} onclick={togglePlay}>
 			{#if running}
 				<Pause size={13} aria-hidden="true" /> Pause
 			{:else}

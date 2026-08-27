@@ -176,7 +176,7 @@
 	{/snippet}
 
 	{#snippet actions()}
-		<Btn kind={auto ? 'primary' : 'ghost'} onclick={() => (auto = !auto)} disabled={diverged}>
+		<Btn kind={auto ? 'ghost' : 'primary'} onclick={() => (auto = !auto)} disabled={diverged}>
 			{#if auto}
 				<Pause size={13} aria-hidden="true" /> Auto
 			{:else}

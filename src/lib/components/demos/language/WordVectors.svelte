@@ -525,7 +525,7 @@
 				<Pause size={12} aria-hidden="true" /> Pause
 			</Btn>
 		{:else if phase === 'paused'}
-			<Btn onclick={resumeTraining}>
+			<Btn kind="primary" onclick={resumeTraining}>
 				<Play size={12} aria-hidden="true" /> Resume
 			</Btn>
 		{/if}

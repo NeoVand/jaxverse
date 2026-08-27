@@ -155,6 +155,7 @@
 
 	{#snippet actions()}
 		<Btn
+			kind={lab.training ? 'ghost' : 'primary'}
 			disabled={lab.phase !== 'ready' || lab.rebuilding}
 			onclick={() => lab.setTraining(!lab.training)}
 		>

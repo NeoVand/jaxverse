@@ -527,7 +527,11 @@
 	{/snippet}
 
 	{#snippet actions()}
-		<Btn kind="primary" onclick={toggleTrain} disabled={controlsLocked}>
+		<Btn
+			kind={phase === 'training' ? 'ghost' : 'primary'}
+			onclick={toggleTrain}
+			disabled={controlsLocked}
+		>
 			{#if phase === 'training'}
 				<Pause size={13} aria-hidden="true" /> Pause
 			{:else}

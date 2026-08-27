@@ -247,7 +247,7 @@
 	{/snippet}
 	{#snippet actions()}
 		{#if lab.phase === 'ready'}
-			<Btn kind="primary" onclick={() => void toggleRun()}>
+			<Btn kind={running ? 'ghost' : 'primary'} onclick={() => void toggleRun()}>
 				{#if running}
 					<Pause size={12} aria-hidden="true" /> Pause
 				{:else}

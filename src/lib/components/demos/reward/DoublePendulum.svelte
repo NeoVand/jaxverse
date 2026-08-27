@@ -1499,11 +1499,11 @@
 	{#snippet actions()}
 		{#if ready}
 			{#if reduced}
-				<Btn onclick={trainBurst}>
+				<Btn kind="primary" onclick={trainBurst}>
 					<StepForward size={13} aria-hidden="true" /> Train ×400
 				</Btn>
 			{:else}
-				<Btn onclick={toggleTraining}>
+				<Btn kind={training ? 'ghost' : 'primary'} onclick={toggleTraining}>
 					{#if training}
 						<Pause size={13} aria-hidden="true" /> Training
 					{:else}

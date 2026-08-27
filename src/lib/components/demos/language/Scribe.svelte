@@ -108,7 +108,7 @@
 
 	{#snippet actions()}
 		{#if usable}
-			<Btn onclick={() => scribe.toggle()}>
+			<Btn kind={scribe.phase === 'training' ? 'ghost' : 'primary'} onclick={() => scribe.toggle()}>
 				{#if scribe.phase === 'training'}
 					<Pause size={12} aria-hidden="true" /> Pause
 				{:else}

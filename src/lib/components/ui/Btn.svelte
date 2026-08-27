@@ -3,8 +3,18 @@
 
 	// The house button: quiet by default, accent-tinted when primary.
 	// Uppercase Inter, hairline border — chrome that defers to the work.
+	//
+	// `primary` means THE NEXT THING TO DO, and nothing else. A plate's
+	// transport is therefore primary while it sits idle and ghost while it
+	// runs: Train is what you came to press, Pause is only the way out of it.
+	// Written down because it had drifted four ways across twenty buttons —
+	// some permanently accented, some accented only while running, most never
+	// accented at all — and the accent stops meaning anything the moment two
+	// plates disagree about it.
 	interface Props {
 		onclick?: () => void;
+		/** `primary` for the next thing to do. See the note above before
+		 *  reaching for it: a running demo's Pause is not that. */
 		kind?: 'primary' | 'ghost';
 		/** One of a set of choices, currently the active one — a quiet pressed
 		 * state rather than the ink fill of `primary`, since nothing about it is
