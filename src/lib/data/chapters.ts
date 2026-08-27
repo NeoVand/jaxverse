@@ -35,7 +35,7 @@ export const chapters: Chapter[] = [
 		title: 'The Approximator',
 		kicker: 'Neural networks',
 		deck: 'A neuron is a bump of influence; a layer is a sum of bumps. Watch a tiny network sculpt itself into any curve you draw.',
-		minutes: 10,
+		minutes: 12,
 		live: true
 	},
 	{

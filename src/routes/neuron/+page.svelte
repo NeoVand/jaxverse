@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
+	import Cite from '$lib/components/ui/Cite.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
@@ -46,10 +47,20 @@
 			Subtract one step from a slightly shifted copy and you get a bump. Sums of steps are therefore
 			sums of bumps: little hills of influence you can place, widen, and flip. The
 			<em>universal approximation theorem</em> makes this precise — with enough hidden neurons, f
-			can match any continuous curve on an interval as closely as you like. Read it honestly,
-			though. The theorem says the right weights <em>exist</em>; it says nothing about how to find
-			them, and “enough” can be an absurd number. What turns possible into practical is the previous
-			chapter: write the error down as a loss, and send gradient descent looking.
+			can match any continuous curve on an interval as closely as you like.<Cite
+				id="cybenko-1989"
+			/>
+			It holds from the other direction too: keep the layer narrow, barely wider than the input, and stack
+			it deep enough, and you get the same guarantee.<Cite id="lu-2017" />
+		</p>
+		<p>
+			Read either of them honestly, though. They say the right weights <em>exist</em>; they say
+			nothing about how to find them, and “enough” can be an absurd number. And a theorem about what
+			a machine <em>could</em> represent is a weaker thing than it sounds — a large enough lookup table
+			is a universal approximator too, and no use to anyone. The question that decides whether a network
+			is worth building is not which curves it could draw in principle. It is which ones it finds easily,
+			from a random start, by walking downhill. That is the previous chapter's business: write the error
+			down as a loss, and send gradient descent looking.
 		</p>
 
 		<h2 class="h2">One neuron, three knobs</h2>
@@ -58,7 +69,9 @@
 			on the left as a circuit — the ultramarine edge carries <Math
 				tex={'\\htmlClass{eq-model}{w}'}
 			/>, the violet edge carries <Math tex={'\\htmlClass{eq-model-2}{b}'} />, and the blue-cyan
-			path is the signal itself — and on the right as
+			edge on the way out carries the amplitude <Math tex={'\\htmlClass{eq-model-3}{v}'} />, and the
+			teal disk between them plots whichever <Math tex={'\\htmlClass{eq-op}{\\sigma}'} /> is selected
+			— and on the right as
 			<Math
 				tex={'\\htmlClass{eq-model-3}{v}\\,\\htmlClass{eq-op}{\\sigma}(\\htmlClass{eq-model}{w}x + \\htmlClass{eq-model-2}{b})'}
 			/>, the one shape it can draw. The third knob, <Math tex={'\\htmlClass{eq-model-3}{v}'} />, is
@@ -92,11 +105,25 @@
 			/> at each layer it crosses on the way back. The field guide below therefore draws every activation
 			twice — the function solid, its derivative dashed. Wherever the dashed curve hugs zero, learning
 			goes quiet. The two classics saturate at both ends, which is how deep sigmoid networks starved for
-			decades — the
-			<em>vanishing gradient</em>. relu is silent across its entire left half, and a unit trapped
-			there is called <em>dead</em>; its leaky cousin keeps a trickle flowing on purpose. The bottom
-			row — gelu, silu, mish — bends smoothly and holds a little slope even slightly below zero, one
-			reason the transformer era settled on them.
+			decades — the <em>vanishing gradient</em>, and a large part of why the field spent those
+			decades shallow.<Cite id="glorot-bengio-2010" /> relu<Cite id="nair-hinton-2010" /> is silent across
+			its entire left half instead, which sounds worse and is not: on the right it never saturates at
+			all, so a gradient can cross ten layers without being multiplied down to nothing. The cost is that
+			a unit driven far enough left stops receiving gradient and is called
+			<em>dead</em>; its leaky cousin<Cite id="maas-2013" /> keeps a trickle flowing on purpose. That
+			half of relu's units are silent at any moment turns out to be part of the appeal rather than a defect
+			— the network computes on a changing, sparse subset of itself.<Cite id="glorot-2011" />
+		</p>
+		<p>
+			The bottom row — gelu<Cite id="hendrycks-gimpel-2016" />, silu<Cite id="elfwing-2017" />, mish<Cite
+				id="misra-2019"
+			/> — sands the corner off and keeps a little slope slightly below zero, which is one reason the
+			transformer era settled on them. Silu is worth a footnote of its own: it was found twice, first
+			by researchers building reinforcement learners, then again by an automated search over candidate
+			formulas that reported it as a discovery under a different name.<Cite
+				id="ramachandran-2017"
+			/> That is roughly the state of the art here. Nobody derives an activation from first principles;
+			they are found, measured, and kept if they win.
 		</p>
 		<p>
 			None of this changes what networks <em>can</em> express — the universal approximation theorem is
@@ -152,8 +179,16 @@
 			Add a second layer and the new neurons stop reading x directly: they read the first layer’s
 			steps, and can bend an already-bent thing — bumps of bumps. A third layer bends the bumps of
 			bumps again. The same budget of parameters goes further because pieces are reused instead of
-			re-made. In one dimension the difference is subtle; in the chapters ahead, where inputs are
-			images, it is most of the story.
+			re-made.
+		</p>
+		<p>
+			That is not just a nicer story; it is a measurable gap. Count the straight pieces a relu
+			network's fit is made of and the count grows roughly in proportion to width, but
+			<em>multiplies</em> with each layer of depth — every layer folds the folds beneath it.<Cite
+				id="montufar-2014"
+			/> And there are functions a deep network draws with a handful of units that no shallow network
+			can match without an exponential number of them.<Cite id="telgarsky-2016" /> In one dimension the
+			difference is subtle; in the chapters ahead, where inputs are images, it is most of the story.
 		</p>
 		<p>
 			The activation sets the network’s handwriting. tanh is a soft wave, so its sums are smooth and
@@ -169,9 +204,29 @@
 			points packed densely along the interval, so fitting the data and fitting the curve are nearly
 			the same task. They usually aren’t. With few points and many neurons, a network can pass
 			through every training point exactly and still be wrong everywhere between them — wiggling
-			where it should glide. That failure is called <em>overfitting</em>, and it is the tax on
-			flexibility. This book meets it properly once real data arrives; for now, notice that nothing
-			in the loss ever asked the network to behave between the points.
+			where it should glide. That failure is called <em>overfitting</em>, and nothing in the loss
+			ever asked the network to behave between the points. This book meets it properly once real
+			data arrives.
+		</p>
+		<p>
+			The old lesson drawn from that is: capacity is dangerous, so keep the model small. The last
+			decade made a mess of the lesson. Take a network that reads photographs well, shuffle the
+			labels so every answer is now noise, and train it again — it fits all of them, perfectly,
+			memorising the lot.<Cite id="zhang-2017" /> Its capacity to overfit is total. Hand back the real
+			labels and the very same network generalizes. Whatever holds it honest, it is not a shortage of
+			room.
+		</p>
+		<p>
+			Stranger still is what happens if you keep growing it. Test error rises as the textbook
+			promises, peaks right at the size where the model can just barely fit its training set exactly
+			— and then, as the model gets bigger still, comes down again, often below anything the small
+			models managed.<Cite id="belkin-2019" /> The curve has two descents, and the classical one is only
+			the first. The models in the news live far out on the second, in the region the textbook picture
+			calls hopeless, and the same double dip appears in how long you train, not only in how big you build.<Cite
+				id="nakkiran-2019"
+			/> None of this repeals overfitting. It moves the explanation somewhere more interesting: what keeps
+			an over-parameterised network honest is not how few parameters it has, but which of the enormous
+			number of perfect fits gradient descent happens to walk to.
 		</p>
 		<p>
 			This chapter happened in one dimension on purpose: you could see every neuron, every bump, and

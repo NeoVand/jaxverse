@@ -112,6 +112,127 @@ export const papers = {
 		where: 'ICLR 2021',
 		url: 'https://arxiv.org/abs/2103.00065',
 		note: 'Full-batch gradient descent does not settle into a curvature it can handle. It climbs until the curvature is exactly as sharp as its step size can survive, and then stays there, half-unstable, for the rest of training.'
+	},
+	'cybenko-1989': {
+		authors: 'Cybenko',
+		year: 1989,
+		title: 'Approximation by superpositions of a sigmoidal function',
+		where: 'Mathematics of Control, Signals and Systems 2',
+		url: 'https://web.njit.edu/~usman/courses/cs675_fall18/10.1.1.441.7873.pdf',
+		note: 'The universal approximation theorem, for one hidden layer of sigmoids. Read the proof and notice what it never mentions: how many neurons, or how to find their weights.'
+	},
+	'lu-2017': {
+		authors: 'Lu et al.',
+		year: 2017,
+		title: 'The Expressive Power of Neural Networks: A View from the Width',
+		where: 'NeurIPS 2017',
+		url: 'https://arxiv.org/abs/1709.02540',
+		note: 'The mirror image of Cybenko: hold the width just above the input dimension and stack deep, and you are universal again. Width and depth are two ways to buy the same guarantee.'
+	},
+	'glorot-bengio-2010': {
+		authors: 'Glorot & Bengio',
+		year: 2010,
+		title: 'Understanding the difficulty of training deep feedforward neural networks',
+		where: 'AISTATS 2010',
+		url: 'https://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf',
+		note: 'Measures the saturation directly, layer by layer, and shows how a badly scaled start drives sigmoid units flat and holds them there.'
+	},
+	'nair-hinton-2010': {
+		authors: 'Nair & Hinton',
+		year: 2010,
+		title: 'Rectified Linear Units Improve Restricted Boltzmann Machines',
+		where: 'ICML 2010',
+		url: 'https://www.cs.toronto.edu/~fritz/absps/reluICML.pdf',
+		note: 'Where the crease enters modern practice.'
+	},
+	'glorot-2011': {
+		authors: 'Glorot, Bordes & Bengio',
+		year: 2011,
+		title: 'Deep Sparse Rectifier Neural Networks',
+		where: 'AISTATS 2011',
+		url: 'https://proceedings.mlr.press/v15/glorot11a/glorot11a.pdf',
+		note: 'The case that relu wins not despite its dead half but partly because of it: at any moment most units are silent, and the network computes on a sparse subset of itself.'
+	},
+	'maas-2013': {
+		authors: 'Maas, Hannun & Ng',
+		year: 2013,
+		title: 'Rectifier Nonlinearities Improve Neural Network Acoustic Models',
+		where: 'ICML 2013 WDLASL',
+		url: 'https://ai.stanford.edu/~amaas/papers/relu_hybrid_icml2013_final.pdf',
+		note: 'Leaky relu — a trickle of slope below zero, so a unit that falls silent can still be argued back.'
+	},
+	'hendrycks-gimpel-2016': {
+		authors: 'Hendrycks & Gimpel',
+		year: 2016,
+		title: 'Gaussian Error Linear Units (GELUs)',
+		where: 'arXiv preprint',
+		url: 'https://arxiv.org/abs/1606.08415',
+		note: 'The bend the GPT and BERT lines are built on: weight the input by the chance a standard normal falls below it.'
+	},
+	'elfwing-2017': {
+		authors: 'Elfwing, Uchibe & Doya',
+		year: 2017,
+		title:
+			'Sigmoid-Weighted Linear Units for Neural Network Function Approximation in Reinforcement Learning',
+		where: 'Neural Networks 107',
+		url: 'https://arxiv.org/abs/1702.03118',
+		note: 'SiLU, found while building reinforcement learners.'
+	},
+	'ramachandran-2017': {
+		authors: 'Ramachandran, Zoph & Le',
+		year: 2017,
+		title: 'Searching for Activation Functions',
+		where: 'arXiv preprint',
+		url: 'https://arxiv.org/abs/1710.05941',
+		note: 'The same function found again from the other end — by automated search over candidate formulas, which reported it as Swish before noticing it already had a name.'
+	},
+	'misra-2019': {
+		authors: 'Misra',
+		year: 2019,
+		title: 'Mish: A Self Regularized Non-Monotonic Activation Function',
+		where: 'BMVC 2020',
+		url: 'https://arxiv.org/abs/1908.08681',
+		note: 'Self-gated like silu, a shade softer, and the one computer vision kept.'
+	},
+	'telgarsky-2016': {
+		authors: 'Telgarsky',
+		year: 2016,
+		title: 'Benefits of depth in neural networks',
+		where: 'COLT 2016',
+		url: 'https://arxiv.org/abs/1602.04485',
+		note: 'A function a deep network draws with a handful of units that any shallow network would need an exponential number to match. Depth is not a convenience.'
+	},
+	'montufar-2014': {
+		authors: 'Montúfar et al.',
+		year: 2014,
+		title: 'On the Number of Linear Regions of Deep Neural Networks',
+		where: 'NeurIPS 2014',
+		url: 'https://arxiv.org/abs/1402.1869',
+		note: 'Counts the creases. A relu network folds its input space, and each new layer folds the folds — so the pieces multiply with depth and only add with width.'
+	},
+	'zhang-2017': {
+		authors: 'Zhang et al.',
+		year: 2017,
+		title: 'Understanding deep learning requires rethinking generalization',
+		where: 'ICLR 2017',
+		url: 'https://arxiv.org/abs/1611.03530',
+		note: 'Replace every label in a photograph dataset with a random one. The same networks fit all of it, perfectly. Whatever stops them from memorising real data, it is not a shortage of capacity.'
+	},
+	'belkin-2019': {
+		authors: 'Belkin et al.',
+		year: 2019,
+		title: 'Reconciling modern machine learning practice and the bias-variance trade-off',
+		where: 'PNAS 116(32)',
+		url: 'https://arxiv.org/abs/1812.11118',
+		note: 'The double-descent curve. Test error peaks exactly where a model can just barely fit its training set, and then falls again as the model keeps growing.'
+	},
+	'nakkiran-2019': {
+		authors: 'Nakkiran et al.',
+		year: 2019,
+		title: 'Deep Double Descent: Where Bigger Models and More Data Hurt',
+		where: 'ICLR 2020',
+		url: 'https://arxiv.org/abs/1912.02292',
+		note: 'The same second descent in real deep networks — in model size, in training time, and, uncomfortably, in dataset size.'
 	}
 } as const satisfies Record<string, Paper>;
 
@@ -122,6 +243,23 @@ export type PaperId = keyof typeof papers;
  * them. Position here is the numeral the reader sees.
  */
 export const citationOrder: Partial<Record<string, readonly PaperId[]>> = {
+	neuron: [
+		'cybenko-1989',
+		'lu-2017',
+		'glorot-bengio-2010',
+		'nair-hinton-2010',
+		'maas-2013',
+		'glorot-2011',
+		'hendrycks-gimpel-2016',
+		'elfwing-2017',
+		'misra-2019',
+		'ramachandran-2017',
+		'montufar-2014',
+		'telgarsky-2016',
+		'zhang-2017',
+		'belkin-2019',
+		'nakkiran-2019'
+	],
 	descent: [
 		'polyak-1964',
 		'kingma-ba-2015',

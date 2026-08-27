@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { citationNumber, citationOrder, papers, sourceLabel, type PaperId } from './papers';
 import { chapters } from './chapters';
@@ -35,6 +36,20 @@ describe('the bibliography', () => {
 		for (const [id, paper] of Object.entries(papers)) {
 			expect(paper.url, id).toMatch(/^https:\/\//);
 			expect(() => new URL(paper.url), id).not.toThrow();
+		}
+	});
+
+	// The registry decides the numerals, so if it drifts out of the order the
+	// prose actually reaches for its sources, a chapter counts 1, 2, 4, 3 down
+	// the page. Read the marks straight out of the chapter files and compare.
+	it('numbers each chapter in the order its prose cites', () => {
+		for (const [chapter, list] of Object.entries(citationOrder)) {
+			const page = readFileSync(`src/routes/${chapter}/+page.svelte`, 'utf8');
+			const cited = [...page.matchAll(/<Cite\s+id="([^"]+)"/g)].map((m) => m[1]);
+			const firstUse = [...new Set(cited)];
+			expect(firstUse, `${chapter} cites in a different order than it lists`).toEqual([
+				...(list ?? [])
+			]);
 		}
 	});
 
