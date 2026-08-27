@@ -395,6 +395,14 @@ export const papers = {
 		url: 'https://arxiv.org/abs/2006.11239',
 		note: 'The answer that won. Learn to remove a little noise at a time and the model never has to average over everything an address could mean — it commits, gradually.'
 	},
+	'rombach-2022': {
+		authors: 'Rombach, Blattmann, Lorenz, Esser & Ommer',
+		year: 2022,
+		title: 'High-Resolution Image Synthesis with Latent Diffusion Models',
+		where: 'CVPR 2022',
+		url: 'https://arxiv.org/abs/2112.10752',
+		note: "Where this chapter's hourglass ended up. Diffusion in pixels is ruinously expensive, so run it inside the latent space of an autoencoder instead — which is what the image generators most people have used are doing underneath."
+	},
 	'oord-2018': {
 		authors: 'van den Oord, Li & Vinyals',
 		year: 2018,
@@ -753,6 +761,7 @@ export const citationOrder: Partial<Record<string, readonly PaperId[]>> = {
 		'higgins-2017',
 		'goodfellow-gan-2014',
 		'ho-2020',
+		'rombach-2022',
 		'oord-2018',
 		'chen-simclr-2020',
 		'radford-2021'

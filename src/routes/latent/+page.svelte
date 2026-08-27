@@ -152,8 +152,11 @@
 				id="goodfellow-gan-2014"
 			/>; diffusion models, which is what the image generators you have used are, sidestep the
 			averaging by learning to remove a little noise at a time, so the model commits gradually
-			instead of hedging in one shot.<Cite id="ho-2020" /> The hourglass survives inside both. Only the
-			question changed.
+			instead of hedging in one shot.<Cite id="ho-2020" /> Neither threw the hourglass away. A generative
+			adversarial network is its second half working alone, and the image generators most people have
+			used run their diffusion not in pixels at all but inside the latent space of an autoencoder trained
+			exactly like this one — the waist did not go anywhere, it just stopped being the part that gets
+			scored.<Cite id="rombach-2022" />
 		</p>
 		<p>
 			The plate below puts the whole map on one page, with one twist held in reserve. In ink you see
