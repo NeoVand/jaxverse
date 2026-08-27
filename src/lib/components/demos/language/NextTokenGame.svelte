@@ -87,7 +87,7 @@
 		<!-- the fold between the two prompts -->
 		<line x1="310" y1="8" x2="310" y2="150" stroke="var(--line-soft)" stroke-width="1" />
 
-		<!-- ── right: a coin toss over the dictionary ── -->
+		<!-- ── right: no favourite anywhere in the dictionary ── -->
 		<text x="452" y="22" text-anchor="middle" class="sentence"> my favorite word is </text>
 		<rect
 			x="524"
@@ -128,7 +128,7 @@
 		{/each}
 		<text x="566" y={BASE + 1} class="cap dim">…</text>
 		<line x1="344" y1={BASE} x2="576" y2={BASE} stroke="var(--line)" stroke-width="1" />
-		<text x="452" y="145" text-anchor="middle" class="cap">a coin toss</text>
+		<text x="452" y="145" text-anchor="middle" class="cap">genuinely hard</text>
 		<text x="452" y="156" text-anchor="middle" class="cap dim">the belief spread thin</text>
 
 		<defs>
