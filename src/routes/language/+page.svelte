@@ -123,9 +123,9 @@
 			from the company its word keeps — a word barely mentioned barely exists.
 		</p>
 		<p>
-			While we are here: that famous example has always been sold harder than it deserves. The usual
-			way of scoring it forbids the answer from being any of the three words you put in, which
-			quietly removes the most likely wrong answers before the arithmetic is judged — and
+			That famous example has always been sold harder than it deserves. The usual way of scoring it
+			forbids the answer from being any of the three words you put in, which quietly removes the
+			most likely wrong answers before the arithmetic is judged — and
 			<em>king</em> is a very likely wrong answer to <em>king − man + woman</em>. Take the rule away
 			and a good deal of the accuracy goes with it.<Cite id="linzen-2016" /> The vectors do carry direction
 			and relation. They carry rather less of it than the party trick implies.
@@ -251,11 +251,10 @@
 			None of which is new. Shannon measured English this way in 1951 by sitting people down with
 			covered text and asking them to guess the next letter, then turning their guesses into a
 			number — somewhere between 0.6 and 1.3 bits per character, which is roughly where a good model
-			sits today.<Cite id="shannon-1951" /> The identity runs the other way too, and recently someone
-			checked: hand a large language model to a compression routine and it beats the specialist formats
-			outright, on text and — stranger — on images and audio it was never trained on.<Cite
-				id="deletang-2023"
-			/> Something that predicts well enough is a compressor, whatever it was built to be.
+			sits today.<Cite id="shannon-1951" /> The identity runs the other way too: hand a large language
+			model to a compression routine and it beats the specialist formats outright, on text and — stranger
+			— on images and audio it was never trained on.<Cite id="deletang-2023" /> Something that predicts
+			well enough is a compressor, whatever it was built to be.
 		</p>
 		<p>
 			You may also have noticed the scribe's register — sunny, simple, faintly like a bedtime story,
@@ -295,11 +294,10 @@
 		<p>
 			<strong>One:</strong> every token becomes a vector, exactly as words did in the first plate,
 			plus a second vector encoding <em>where</em> it sits — attention sees a bag of tokens and has
-			no inherent sense of order, so position has to be supplied. This model does it the plain way,
-			with a learned vector per slot. Current models mostly rotate each query and key by an angle
-			proportional to its position instead, so what attention ends up seeing is how far apart two
-			tokens are rather than which absolute slots they occupy — which is much of why a model can be
-			stretched past the context length it was trained on at all.<Cite id="su-2021" />
+			no inherent sense of order, so position must be supplied. This model supplies it the plain
+			way, one learned vector per slot; current models mostly rotate each query and key by an angle
+			set by its position instead, which lets attention see how far apart two tokens are rather than
+			which slots they sit in.<Cite id="su-2021" />
 			<strong>Two:</strong>
 			each vector is projected three ways, into a <em>query</em> (what am I looking for?), a
 			<em>key</em>
@@ -363,8 +361,8 @@
 			meant.
 		</p>
 		<p>
-			One structural detail is easy to miss in that list, and it changes how the whole thing reads.
-			A block does not hand its output to the next block. It <em>adds</em> to what it was given:
+			That list of five leaves out what happens between the blocks, and it is the whole shape of the
+			thing. A block does not hand its output onward. It <em>adds</em> to what it was given:
 			attention computes something and adds it in, the little network computes something and adds it
 			in, and the vector for each token runs the entire length of the model, picking up
 			contributions along the way. What travels through a transformer is not a signal being
