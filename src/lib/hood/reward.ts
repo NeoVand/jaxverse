@@ -76,14 +76,20 @@ reinforceUpdate(sea, theta, baseline, p, lr, opts.entropy);`
 					body: `The double pendulum's policy is a softmax over 33 hand-crafted features — and every hard-won lesson lives in the <em>reward and curriculum</em>, not the optimizer: whitened advantages so one lucky episode cannot yank the weights, an entropy bonus so the policy keeps exploring, a spin tax so it cannot cheat by becoming a propeller, and a replay buffer of its own successful deliveries so the catch gets practised from states it can actually reach. RL's dirty secret, on display: the update rule is the easy part.`,
 					code: {
 						file: 'src/lib/optim-rl/dpole.ts',
-						code: `// whiten advantages across the batch: mean 0, unit spread, clamped
-const advs = eps.flatMap((e) => e.advs);
-const sd = Math.sqrt(advs.reduce((a, v) => a + v * v, 0) / advs.length) || 1;
-for (const e of eps)
-	for (let t = 0; t < e.advs.length; t++) {
-		const a = Math.max(-3, Math.min(3, e.advs[t] / sd));
-		// θ[f, k] += lr · a · (1[k=aₜ] − πₖ) · featₜ[f]   (+ entropy, − decay)
-	}`
+						code: `for (let t = 0; t < T; t++) {
+	adv[t] = g[t] - baseline[off + t];                 // better or worse than usual, here
+	baseline[off + t] += DPOLE_BASELINE_LR * adv[t];   // and "usual" moves toward what happened
+}
+
+// The normalizer is a running RMS across episodes, not this batch's own: a
+// quiet episode's advantages are genuinely small, and dividing them by their
+// own spread would shout them back up.
+const rms = prev === 0 ? epRms : prev * 0.99 + epRms * 0.01;
+
+// Clamped, because a curriculum shift lands the first episodes under the new
+// regime many RMS out, and one unclamped update saturates the softmax for good.
+const w = Math.max(-3, Math.min(3, adv[t] / Math.max(rms, 1e-3))) / eps.length;
+gz[b] = w * ((b === a ? 1 : 0) - probs[b]) + (beta / eps.length) * dH;`
 					}
 				},
 				{
