@@ -317,8 +317,8 @@
 			box, and no peak to fall off.
 		</p>
 		<p>
-			That judge exists, for some questions and not others, and the difference between those two
-			sets is most of what governs where machines are getting rapidly better and where they are not.
+			That judge exists for some questions and not others, and which side a question falls on does
+			more than anything else to decide whether machines are getting rapidly better at it.
 			<a href={resolve('/rook')}>Meet Rook</a> — and watch <PlateRef id="fence" lower /> turn out to be
 			machinery it barely needs.
 		</p>

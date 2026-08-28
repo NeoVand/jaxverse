@@ -382,7 +382,7 @@
 			inside them and the gradients near the output blow up at the start of training, which is why
 			the early transformers needed a careful warm-up to survive their own first steps.<Cite
 				id="xiong-2020"
-			/> Moving it inside is most of what made stacking a hundred blocks routine.
+			/> Moving it inside is why a hundred blocks stack without one.
 		</p>
 	</Prose>
 

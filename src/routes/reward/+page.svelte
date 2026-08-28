@@ -154,8 +154,8 @@
 			underneath a learner that never stopped running: the old route stops paying, every cell's rose
 			turns, and a different zigzag grows in. Turn the wind behind the boat and the zigzag vanishes
 			altogether, because now it can simply go: the policy did not become smarter, the problem
-			became easier, and telling those two apart by looking at a reward curve is most of what
-			applied reinforcement learning actually is.
+			became easier, and a reward curve on its own cannot tell you which. Most of applied
+			reinforcement learning is the work of finding out.
 		</p>
 
 		<h2 class="h2">Exploring, and failing to</h2>

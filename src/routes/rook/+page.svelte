@@ -142,7 +142,7 @@
 			To see why the second act exists, look at what the first one actually produces. A pretrained
 			model is a <em>completion machine</em>: ask a raw base model a question and it may answer — or
 			continue with three more questions, or a survey form, because that is what question-shaped
-			text does in its corpus. The assistant you have talked to was made from such a base model by
+			text does in its corpus. The assistant on the other end of a chat window is made from one by
 			<em>supervised fine-tuning</em><Cite id="ouyang-2022" />: continued training on a curated set
 			of (instruction → good response) pairs, written and vetted by people. It adds little
 			knowledge. What it teaches is the <em>format</em> of being helpful — that in this house, a question

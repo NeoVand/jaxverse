@@ -177,9 +177,9 @@
 			push. The
 			<span style="color: var(--warm);">test accuracy</span> is the earned number: performance on
 			questions the gradients never touched. How well a model carries over from the examples it
-			studied to examples it has not seen is called <em>generalization</em>, and the shortfall
-			between the two is the memorization it got away with. Here the gap stays small, and the reason
-			is unglamorous: eight thousand examples of a well-posed task. It is the field's bluntest law —
+			studied to examples it has not seen is called <em>generalization</em>, and the gap between
+			those two curves is exactly where it fails. Here that gap stays small, and the reason is
+			unglamorous: eight thousand examples of a well-posed task. It is the field's bluntest law —
 			more data beats cleverness, almost every time it is allowed to compete. And not vaguely:
 			across vision, speech and language, error falls as a power law in the number of training
 			examples, with enough regularity that you can forecast what another ten times the data will
