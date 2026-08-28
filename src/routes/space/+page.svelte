@@ -147,7 +147,8 @@
 			like two interlocked surfaces, push it through a trained network, and measure the topology of what
 			comes out at every layer — the holes close one after another, until by the last hidden layer the
 			two classes are two plain blobs. Networks with a folding bend get there in fewer layers than smooth
-			ones, for the reason the creases gave two sections ago.<Cite id="naitzat-2020" />
+			ones, and the reason is the one the creases already gave: a fold is not reversible, and closing
+			a hole is not something a reversible map can do.<Cite id="naitzat-2020" />
 		</p>
 		<p>
 			Every chapter from here is this chapter wearing different clothes. Handwritten digits live in
