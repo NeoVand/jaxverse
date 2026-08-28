@@ -30,7 +30,8 @@
 //                                     gradient of the episode that found it
 //   { type: 'live', episode }         a segment played out on the stage
 // and (hall → main), after every round:
-//   { type: 'report', theta, score, deliverEMA, drillEMA, episodes, drills,
+//   { type: 'report', theta, score, deliverEMA, drillEMA, showDeliver,
+//     showDrill, episodes, drills,
 //     alpha, finds }
 import {
 	createDpoleBaseline,
@@ -129,6 +130,26 @@ let lr = 0.15;
 let running = false;
 let deliverEMA = 0; // recent fraction of swing drills that delivered
 let drillEMA = 0; // recent caught-ticks per brink drill, as a fraction
+/** The same two skills, averaged over a much longer window, for DRAWING only.
+ *
+ * The fast pair above is a control signal — it sets `score`, which sets the
+ * ranking, which is the social learner's whole reward — so it has to answer
+ * within the couple of seconds a social decision is graded over. At that speed
+ * it carries real sampling noise, around 0.04 on a rate of 0.9, and the field
+ * draws each hall AT its two skills, so that noise is the pool visibly
+ * shaking.
+ *
+ * Slowing the fast pair fixes the picture and breaks the learning; damping it
+ * in the follower that draws does not work either, because that follower
+ * adapts its rate to the distance still to cover and at this noise level the
+ * NOISE is the distance — it reads a tremble as a hall that has moved and
+ * hurries to keep up. Two averages of the same two numbers is the way out: the
+ * slow pair is a true reading of an earlier moment rather than a point
+ * invented between two readings, so the rungs still measure exactly what they
+ * appear to measure. It lags by about a second. */
+let showDeliver = 0;
+let showDrill = 0;
+const SHOW_EMA = 0.003;
 let bestFind = 0; // the finest delivery this hall has ever announced
 
 function round() {
@@ -142,9 +163,13 @@ function round() {
 		dpoleReinforceUpdate(theta, baseline, batch, lr);
 		episodes += batch.length;
 		for (const ep of batch) {
-			if (ep.kind === 0) deliverEMA += EMA * ((ep.delivered ? 1 : 0) - deliverEMA);
+			if (ep.kind === 0) {
+				deliverEMA += EMA * ((ep.delivered ? 1 : 0) - deliverEMA);
+				showDeliver += SHOW_EMA * ((ep.delivered ? 1 : 0) - showDeliver);
+			}
 			if (ep.kind === 2) {
 				drillEMA += EMA * (ep.caught / 400 - drillEMA);
+				showDrill += SHOW_EMA * (ep.caught / 400 - showDrill);
 				drills.push(ep.caught);
 			}
 			// a personal best worth telling the others about. Prime only: the
@@ -178,6 +203,8 @@ function round() {
 		score: deliverEMA + 0.5 * drillEMA,
 		deliverEMA,
 		drillEMA,
+		showDeliver,
+		showDrill,
 		episodes,
 		drills,
 		alpha: curriculum.alpha,
@@ -295,6 +322,10 @@ function social(m: {
 	for (let i = 0; i < P; i++) theta[i] += k * (m.thetas[off + i] - theta[i]);
 	deliverEMA += k * (m.deliverEMAs[slot] - deliverEMA);
 	drillEMA += k * (m.drillEMAs[slot] - drillEMA);
+	// the drawn pair moves with them, or the mark on the field would go on
+	// describing a policy this hall has partly stepped away from
+	showDeliver += k * (m.deliverEMAs[slot] - showDeliver);
+	showDrill += k * (m.drillEMAs[slot] - showDrill);
 }
 
 type HallMessage =

@@ -63,6 +63,7 @@
 	import {
 		camera,
 		fieldBox,
+		RIG_REACH,
 		fitness,
 		isoLine,
 		niceStep,
@@ -163,7 +164,12 @@
 	const PULSE_MS = 1300; // how long a shared discovery takes to fly
 	let hallSlow: number[] = []; // each hall's own slow fitness average…
 	let hallRise: number[] = []; // …and how far it has just pulled above it
-	let hallEMAs: { deliverEMA: number; drillEMA: number }[] = [];
+	let hallEMAs: {
+		deliverEMA: number;
+		drillEMA: number;
+		showDeliver: number;
+		showDrill: number;
+	}[] = [];
 	let hallFindAt: number[] = []; // last announcement, for the cooldown
 	// row w = hall w's LEARNED social weights over the pool (last entry: the
 	// probability it refuses everyone), as reported back by the hall itself
@@ -182,7 +188,7 @@
 		hallScore.push(0);
 		hallSlow.push(0);
 		hallRise.push(0);
-		hallEMAs.push({ deliverEMA: 0, drillEMA: 0 });
+		hallEMAs.push({ deliverEMA: 0, drillEMA: 0, showDeliver: 0, showDrill: 0 });
 		hallFindAt.push(0);
 		pullK.push(0);
 		hallTheta.push(createDpoleTheta());
@@ -246,6 +252,8 @@
 			score: number;
 			deliverEMA: number;
 			drillEMA: number;
+			showDeliver: number;
+			showDrill: number;
 			episodes: number;
 			drills: number[];
 			alpha: number;
@@ -256,7 +264,14 @@
 		if (m.type !== 'report') return;
 		hallScore[w] = m.score;
 		hallAlpha[w] = m.alpha;
-		hallEMAs[w] = { deliverEMA: m.deliverEMA, drillEMA: m.drillEMA };
+		// the fast pair for the social message, the slow pair for the field —
+		// see the note beside SHOW_EMA in the worker
+		hallEMAs[w] = {
+			deliverEMA: m.deliverEMA,
+			drillEMA: m.drillEMA,
+			showDeliver: m.showDeliver,
+			showDrill: m.showDrill
+		};
 		hallTheta[w].set(m.theta);
 		// fitness against the hall's own slow average: `rise` is the spike a
 		// hall shows in the seconds after it finds something, and it is what
@@ -714,14 +729,26 @@
 			ctx.globalAlpha = 1;
 		}
 
-		// the two walls — a frame, not a scale: the numbers on the rungs are
-		// the reading, and these only say which way is better
+		// The two walls — a frame, not a scale: the numbers on the rungs are the
+		// reading, and these only say which way is better.
+		//
+		// Drawn outside the rig reach, which is the whole trick. `box` is the
+		// rectangle the hall POSITIONS live in, and fieldBox already inset it by
+		// a rig's reach so the drawing fits the canvas. Putting the walls at
+		// box ± 10 therefore drew the frame INSIDE that inset, and a hall at
+		// either end of the delivery axis then hung across its own frame every
+		// time — by 6 px with the pool at its smallest and 62 px at its largest,
+		// which is a whole pendulum outside the picture. The frame belongs
+		// around the rigs, not around their centres.
+		// `slack` too: the fan is allowed to borrow that much rung beyond the
+		// box, so it is part of how far out a rig can legitimately stand.
+		const out = slot * RIG_REACH + box.slack + 2;
 		ctx.strokeStyle = tk.lineSoft;
 		ctx.lineWidth = 1;
 		ctx.beginPath();
-		ctx.moveTo(box.left - 10, box.top - 10);
-		ctx.lineTo(box.left - 10, box.bottom + 10);
-		ctx.lineTo(box.right + 8, box.bottom + 10);
+		ctx.moveTo(box.left - out, box.top - out);
+		ctx.lineTo(box.left - out, box.bottom + out);
+		ctx.lineTo(box.right + out, box.bottom + out);
 		ctx.stroke();
 
 		// ── where each hall stands ──
@@ -745,21 +772,25 @@
 		// hundredth of tremble is damped hard, because that is the only part
 		// worth damping.
 		for (let w = 0; w < n; w++) {
-			const e = hallEMAs[w] ?? { deliverEMA: 0, drillEMA: 0 };
+			const e = hallEMAs[w];
+			const ed = e ? e.showDeliver : 0;
+			const ec = e ? e.showDrill : 0;
 			if (showD[w] === undefined) {
-				showD[w] = e.deliverEMA;
-				showC[w] = e.drillEMA;
+				showD[w] = ed;
+				showC[w] = ec;
 				continue;
 			}
-			const gd = e.deliverEMA - showD[w];
-			const gc = e.drillEMA - showC[w];
-			// The floor is what damps the tremble, and it is the ONLY thing that
-			// should: the worker's fitness average was slowed for this once, and
-			// it is a control signal — see the note beside EMA in the worker. At
-			// 0.06 a hundredth of noise is damped about fourfold over a quarter
-			// second, while a genuine move of a tenth still lands in two frames
-			// on the distance term, which is the whole point of having one.
-			const rate = Math.min(1, 0.06 + 6 * Math.hypot(gd, gc));
+			const gd = ed - showD[w];
+			const gc = ec - showC[w];
+			// Back to a plain responsive follower. Lowering this floor was an
+			// attempt to damp the tremble here instead, and it cannot work: the
+			// rate rises with the distance still to cover, and when the input
+			// carries noise of 0.04 per axis the NOISE is a distance of 0.057,
+			// which lifts the rate to 0.4 on its own. A follower that adapts to
+			// distance cannot tell a tremble from a hall that has moved. The
+			// smoothing belongs upstream, on a second average of the same two
+			// numbers, and now lives there.
+			const rate = Math.min(1, 0.25 + 6 * Math.hypot(gd, gc));
 			showD[w] += rate * gd;
 			showC[w] += rate * gc;
 		}
@@ -807,10 +838,8 @@
 				// somewhere inside. Seven seconds of smoothing leaves the arc:
 				// right first, then up, and the long slide back when a hall
 				// loses the catch.
-				trailD[w] =
-					trailD[w] === undefined ? e.deliverEMA : trailD[w] + 0.06 * (e.deliverEMA - trailD[w]);
-				trailC[w] =
-					trailC[w] === undefined ? e.drillEMA : trailC[w] + 0.06 * (e.drillEMA - trailC[w]);
+				trailD[w] = trailD[w] === undefined ? showD[w] : trailD[w] + 0.06 * (showD[w] - trailD[w]);
+				trailC[w] = trailC[w] === undefined ? showC[w] : trailC[w] + 0.06 * (showC[w] - trailC[w]);
 				const p = hallPath[w] ?? (hallPath[w] = []);
 				const k = p.length;
 				if (k && Math.hypot(trailD[w] - p[k - 2], trailC[w] - p[k - 1]) < 0.003) continue;

@@ -204,7 +204,13 @@ export function fieldBox(w: number, h: number, slot: number) {
 		right: w - pad.right - reach,
 		top: pad.top + reach,
 		bottom: h - pad.bottom - reach,
-		slack: Math.min(pad.left, pad.right, pad.top, pad.bottom)
+		// Deliberately small. The fan borrows this to open a degenerate rung —
+		// six untrained halls all at (0, 0) sit in a CORNER, where the line of
+		// equal fitness through them has no length inside the box at all. But
+		// every pixel borrowed is a pixel a rig is drawn outside the frame, so
+		// this buys just enough to separate a stack and no more; the frame is
+		// drawn wide enough to contain even a fully borrowed fan.
+		slack: Math.min(10, pad.left, pad.right, pad.top, pad.bottom)
 	};
 }
 
