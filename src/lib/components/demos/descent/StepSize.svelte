@@ -2,19 +2,40 @@
 	import { Pause, Play, RotateCcw, StepForward } from 'lucide-svelte';
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Plate from '$lib/components/ui/Plate.svelte';
-	import Slider from '$lib/components/ui/Slider.svelte';
 
-	// Three 1-D landscapes. On θ² one update is θ ← (1 − 2η)θ, so |1 − 2η|
-	// decides the fate; the double well adds a second minimum to hop into;
-	// |θ| has a kink, so the (sub)gradient step never shrinks near the bottom.
+	// Four step sizes down the same landscape at once, because the thing worth
+	// seeing is the DIFFERENCE and a dial can only ever show one at a time.
+	// The plate used to be one ball and a slider, which asked the reader to
+	// hold the last setting in their head and compare it with this one.
+	//
+	// On θ² one update is θ ← (1 − 2η)θ, so a single number decides everything:
+	//
+	//   η = 0.15 → ×0.70   same side, closing slowly
+	//   η = 0.45 → ×0.10   same side, almost there in one
+	//   η = 0.80 → ×−0.60  crosses the bottom each step, still closing
+	//   η = 1.05 → ×−1.10  crosses it and lands further out than it started
+	//
+	// 0.80 and not 0.85, which was the first choice and wrong: |1 − 2η| is 0.70
+	// for both 0.15 and 0.85, so the two ran at exactly the same rate and their
+	// two lines on the log chart lay on top of each other. True, and a fine
+	// remark, but a chart drawing three lines where the legend promises four
+	// reads as a fault before it reads as a coincidence.
+	//
+	// which is the whole taxonomy: sign says whether it overshoots, magnitude
+	// says whether it survives. The four are chosen to sit one in each cell of
+	// that table, and the loss chart underneath is where it becomes obvious —
+	// on a log axis a constant contraction is a straight line, so each η is a
+	// slope, and the diverging one is the slope that points up.
 	interface Curve {
 		id: 'quad' | 'well' | 'abs';
 		label: string;
 		f(th: number): number;
 		df(th: number): number;
+		/** The floor, so the chart can plot height ABOVE the minimum and take
+		 *  a logarithm of it. The double well's floor is not zero. */
+		fmin: number;
 		xMax: number;
 		yMax: number;
-		/** θ₀ — mid-slope, with frame headroom for diverging bounces. */
 		theta0: number;
 	}
 
@@ -24,6 +45,7 @@
 			label: 'θ²',
 			f: (th) => th * th,
 			df: (th) => 2 * th,
+			fmin: 0,
 			xMax: 1.6,
 			yMax: 2.56,
 			theta0: -0.9
@@ -33,41 +55,71 @@
 			label: '0.3θ⁴ − θ² + 1',
 			f: (th) => 0.3 * th ** 4 - th * th + 1,
 			df: (th) => 1.2 * th ** 3 - 2 * th,
+			// 1.2θ³ = 2θ puts the two minima at θ² = 5/3, and the floor there is
+			// 1/6 — not zero, which is why the chart plots height ABOVE it
+			fmin: 0.3 * (5 / 3) ** 2 - 5 / 3 + 1,
 			xMax: 2.2,
 			yMax: 3.2,
-			theta0: -2.05
+			// −1.70 and not −2.05. From −2.05 the slope is steep enough that both
+			// bold steps are thrown clean out of the frame on their second move,
+			// so the plate's whole point on this landscape — that a big step can
+			// cross into the OTHER valley — never happened. From here it does:
+			// the two small steps settle in the valley they started in, 0.80
+			// crosses to the far one, and only 1.05 leaves.
+			theta0: -1.7
 		},
 		{
 			id: 'abs',
 			label: '|θ|',
 			f: (th) => Math.abs(th),
 			df: (th) => Math.sign(th),
+			fmin: 0,
 			xMax: 1.6,
 			yMax: 1.6,
-			theta0: -1.35
+			// −1.31 and not −1.35, which divided exactly by both 0.15 and 0.45 —
+			// so those two runners landed precisely on the kink, where the
+			// subgradient is zero and they stopped dead. Two of the four then
+			// reached a floor the caption said none of them could reach, on the
+			// one landscape whose entire lesson is that none of them can.
+			theta0: -1.31
 		}
 	];
 
-	const KEEP = 12; // cobweb depth kept visible
+	/** One runner per regime, cool to warm as the step grows — the ordering is
+	 *  the reading, so the legend needs no explaining. */
+	const RUNNERS = [
+		{ eta: 0.15, tone: 'var(--cat-6)' },
+		{ eta: 0.45, tone: 'var(--accent)' },
+		{ eta: 0.8, tone: 'var(--cat-1)' },
+		{ eta: 1.05, tone: 'var(--warm)' }
+	] as const;
+
+	const MAX_STEPS = 30;
+	const TRAIL = 2; // hops kept behind each ball — motion, not a cobweb
 
 	// plot geometry, viewBox units
 	const VW = 640;
-	const VH = 260;
+	const VH = 240;
 	const PAD_L = 30;
 	const PAD_R = 14;
 	const PAD_T = 14;
 	const PAD_B = 24;
 
+	// the loss chart below it
+	const LH = 132;
+	const LPAD_T = 12;
+	const LPAD_B = 22;
+	const FLOOR = 1e-6; // the bottom of the log axis, and the clamp for zero
+
 	let curveId = $state<Curve['id']>('quad');
-	let eta = $state(0.3);
 	let auto = $state(false);
 	let k = $state(0);
-	let thetas = $state<number[]>([CURVES[0].theta0]);
+	let paths = $state<number[][]>(RUNNERS.map(() => [CURVES[0].theta0]));
 
 	const curve = $derived(CURVES.find((c) => c.id === curveId) ?? CURVES[0]);
 	const limit = $derived(curve.xMax - 0.05); // |θ| past the frame = diverged
-	const theta = $derived(thetas[thetas.length - 1]);
-	const diverged = $derived(Math.abs(theta) > limit);
+	const gone = $derived(paths.map((p) => Math.abs(p[p.length - 1]) > limit));
+	const done = $derived(k >= MAX_STEPS || gone.every(Boolean));
 
 	const px = $derived(
 		(th: number) => PAD_L + ((th + curve.xMax) / (2 * curve.xMax)) * (VW - PAD_L - PAD_R)
@@ -89,61 +141,65 @@
 		return out;
 	});
 
-	const yTicks = $derived.by(() => {
+	// ── the loss chart: height above the floor, on a log axis ──
+	const hi = $derived(Math.max(curve.f(curve.theta0) - curve.fmin, 1e-3));
+	const lx = $derived((step: number) => PAD_L + (step / MAX_STEPS) * (VW - PAD_L - PAD_R));
+	const ly = $derived((v: number) => {
+		const t =
+			(Math.log10(Math.max(v, FLOOR)) - Math.log10(FLOOR)) / (Math.log10(hi) - Math.log10(FLOOR));
+		// clamped at the FLOOR and not at the ceiling, on purpose. A run that is
+		// climbing has to be seen to leave: pinning it to the top edge draws a
+		// diverging run as a flat line, which is the shape of a run that has
+		// settled — the exact opposite reading. The svg clips it instead, so it
+		// goes up and off, which is what it is doing.
+		return LH - LPAD_B - Math.max(0, t) * (LH - LPAD_T - LPAD_B);
+	});
+	const decades = $derived.by(() => {
 		const out: number[] = [];
-		for (let v = 1; v < curve.yMax; v++) out.push(v);
+		for (let e = Math.ceil(Math.log10(FLOOR)); e <= Math.floor(Math.log10(hi)); e += 2)
+			out.push(Math.pow(10, e));
 		return out;
 	});
 
-	interface Hop {
-		x1: number;
-		y1: number;
-		x2: number;
-		y2: number;
-		/** 0 = the newest hop; opacity fades as age grows. */
-		age: number;
-	}
-
-	const hops = $derived.by(() => {
-		const out: Hop[] = [];
-		for (let i = 1; i < thetas.length; i++) {
-			out.push({
-				x1: px(thetas[i - 1]),
-				y1: py(curve.f(thetas[i - 1])),
-				x2: px(thetas[i]),
-				y2: py(curve.f(thetas[i])),
-				age: thetas.length - 1 - i
-			});
-		}
-		return out;
-	});
-
-	const fade = (age: number) => Math.max(0.14, 0.9 * Math.pow(0.8, age));
-
-	/** Arrowhead triangle at the end of a hop, aligned with its direction. */
-	function arrowPoints(h: Hop): string {
-		const dx = h.x2 - h.x1;
-		const dy = h.y2 - h.y1;
+	/** Arrowhead at the far end of a hop, so a chord across the bowl reads as a
+	 *  step that was taken and not as a line that wandered in. */
+	function arrow(x1: number, y1: number, x2: number, y2: number): string {
+		const dx = x2 - x1;
+		const dy = y2 - y1;
 		const len = Math.hypot(dx, dy) || 1;
 		const ux = dx / len;
 		const uy = dy / len;
-		const s = 5;
-		const bx = h.x2 - ux * s;
-		const by = h.y2 - uy * s;
-		return `${h.x2},${h.y2} ${bx - uy * s * 0.55},${by + ux * s * 0.55} ${bx + uy * s * 0.55},${by - ux * s * 0.55}`;
+		const s = 4.5;
+		const bx = x2 - ux * s;
+		const by = y2 - uy * s;
+		return `${x2},${y2} ${bx - uy * s * 0.55},${by + ux * s * 0.55} ${bx + uy * s * 0.55},${by - ux * s * 0.55}`;
 	}
 
+	/** Each runner's loss trace, clipped where it left the frame. */
+	const traces = $derived(
+		paths.map((p) => {
+			let d = '';
+			for (let i = 0; i < p.length; i++) {
+				if (Math.abs(p[i]) > limit) break;
+				d += `${i === 0 ? 'M' : 'L'}${lx(i).toFixed(1)} ${ly(curve.f(p[i]) - curve.fmin).toFixed(1)}`;
+			}
+			return d;
+		})
+	);
+
 	function stepOnce() {
-		const cur = thetas[thetas.length - 1];
-		if (Math.abs(cur) > limit) return;
-		const next = cur - eta * curve.df(cur);
-		thetas = [...thetas, next].slice(-(KEEP + 1));
+		if (k >= MAX_STEPS) return;
+		paths = paths.map((p, i) => {
+			const cur = p[p.length - 1];
+			if (Math.abs(cur) > limit) return p;
+			return [...p, cur - RUNNERS[i].eta * curve.df(cur)];
+		});
 		k += 1;
-		if (Math.abs(next) > limit) auto = false;
 	}
 
 	function reset() {
-		thetas = [curve.theta0];
+		const c = CURVES.find((x) => x.id === curveId) ?? CURVES[0];
+		paths = RUNNERS.map(() => [c.theta0]);
 		k = 0;
 	}
 
@@ -151,13 +207,14 @@
 		if (id === curveId) return;
 		curveId = id;
 		auto = false;
-		thetas = [(CURVES.find((c) => c.id === id) ?? CURVES[0]).theta0];
+		const c = CURVES.find((x) => x.id === id) ?? CURVES[0];
+		paths = RUNNERS.map(() => [c.theta0]);
 		k = 0;
 	}
 
 	$effect(() => {
-		if (!auto) return;
-		const id = setInterval(stepOnce, 400);
+		if (!auto || done) return;
+		const id = setInterval(stepOnce, 380);
 		return () => clearInterval(id);
 	});
 </script>
@@ -166,24 +223,21 @@
 	id="stepsize"
 	live
 	title="Too big, too small"
-	caption="Three regimes of one dial on θ²: below η = 0.5 the ball eases in, near 0.5 it drops almost in one step, past 1.0 every hop bounces it out of the bowl. On the double well a bold η hops between valleys; on |θ| the slope never softens, so the ball strides across the kink forever."
+	caption="Four step sizes let down the same slope together, from the same start, so the difference is the picture rather than something to remember between two settings of a dial. On θ² a step is θ ← (1 − 2η)θ, and that one number decides everything: at η = 0.15 it multiplies θ by 0.70 each time and the ball closes in from one side; at 0.45, by 0.10, and it is essentially there in one move; at 0.80, by −0.60, so it crosses the bottom every step and still closes; at 1.05, by −1.10, and each crossing lands further out than the last. The chart underneath is the same four runs as height above the floor of the valley, on a log axis, where a constant multiplier is a straight line — so each step size is a slope, and the one that diverges is the slope pointing the wrong way. Switch landscapes and the same four steps sort themselves differently. On the double well the two small steps settle into whichever valley they were dropped beside, 0.80 is bold enough to cross into the other one, and only 1.05 leaves the frame — a bigger step is not simply worse, it is a different search. On |θ| the slope never softens as you approach the bottom, so the step never shrinks either: all four stride back and forth across the kink forever, and not one of the four lines ever reaches the floor."
 >
 	{#snippet status()}
-		<span>
-			k = {k} · η = {eta.toFixed(2)} · θ = {theta.toFixed(2)}
-			{#if diverged}<span style="color: var(--bad);">· diverged</span>{/if}
-		</span>
+		<span>step {k} of {MAX_STEPS}</span>
 	{/snippet}
 
 	{#snippet actions()}
-		<Btn kind={auto ? 'ghost' : 'primary'} onclick={() => (auto = !auto)} disabled={diverged}>
+		<Btn kind={auto ? 'ghost' : 'primary'} onclick={() => (auto = !auto)} disabled={done}>
 			{#if auto}
 				<Pause size={13} aria-hidden="true" /> Auto
 			{:else}
 				<Play size={13} aria-hidden="true" /> Auto
 			{/if}
 		</Btn>
-		<Btn onclick={stepOnce} disabled={diverged}>
+		<Btn onclick={stepOnce} disabled={done}>
 			<StepForward size={13} aria-hidden="true" /> Step
 		</Btn>
 		<Btn onclick={reset}><RotateCcw size={13} aria-hidden="true" /> Reset</Btn>
@@ -208,9 +262,8 @@
 				viewBox="0 0 {VW} {VH}"
 				class="block h-auto w-full"
 				role="img"
-				aria-label="A 1-D loss curve with gradient-descent steps hopping along it"
+				aria-label="A one-dimensional loss curve with four balls on it, one per step size, all released from the same point. The small steps close in from one side; the largest crosses the bottom each step and climbs away from it."
 			>
-				<!-- hairline scaffolding -->
 				<line
 					x1={PAD_L}
 					y1={py(0)}
@@ -219,23 +272,6 @@
 					stroke="var(--line)"
 					stroke-width="1"
 				/>
-				{#each yTicks as l (l)}
-					<line
-						x1={PAD_L}
-						y1={py(l)}
-						x2={VW - PAD_R}
-						y2={py(l)}
-						stroke="var(--line-soft)"
-						stroke-width="1"
-					/>
-					<text
-						x={PAD_L - 6}
-						y={py(l) + 3}
-						text-anchor="end"
-						class="num"
-						style="fill: var(--ink-3); font-size: 10px;">{l}</text
-					>
-				{/each}
 				<line
 					x1={px(0)}
 					y1={PAD_T}
@@ -246,76 +282,122 @@
 					stroke-dasharray="2 4"
 				/>
 				{#each xTicks as th (th)}
-					<text
-						x={px(th)}
-						y={VH - PAD_B + 14}
-						text-anchor="middle"
-						class="num"
-						style="fill: var(--ink-3); font-size: 10px;">{th}</text
-					>
+					<text x={px(th)} y={VH - PAD_B + 14} text-anchor="middle" class="tick">{th}</text>
 				{/each}
-				<text
-					x={VW - PAD_R}
-					y={VH - PAD_B + 14}
-					text-anchor="end"
-					class="num"
-					style="fill: var(--ink-3); font-size: 10px;">θ</text
-				>
+				<text x={VW - PAD_R} y={VH - PAD_B + 14} text-anchor="end" class="tick">θ</text>
 
-				<!-- the landscape -->
 				<path d={curvePath} fill="none" stroke="var(--ink)" stroke-width="1.5" />
 
-				<!-- the cobweb: hops fade with age, arrowheads show direction -->
-				{#each hops as h, i (i)}
-					<g opacity={fade(h.age)}>
-						<line
-							x1={h.x1}
-							y1={h.y1}
-							x2={h.x2}
-							y2={h.y2}
-							stroke="var(--accent)"
-							stroke-width="1.4"
+				<!-- each runner: a short trail for motion, then the ball. Not a
+				     cobweb — four cobwebs on one landscape is a thicket, and the
+				     rates belong in the chart below where they can be read. -->
+				{#each RUNNERS as r, i (r.eta)}
+					{@const p = paths[i]}
+					{@const inside = p.filter((th) => Math.abs(th) <= limit)}
+					{@const tail = inside.slice(-(TRAIL + 1))}
+					{#if !gone[i]}
+						{#each tail.slice(0, -1) as th, j (j)}
+							<g opacity={0.3 + 0.3 * j}>
+								<line
+									x1={px(th)}
+									y1={py(curve.f(th))}
+									x2={px(tail[j + 1])}
+									y2={py(curve.f(tail[j + 1]))}
+									stroke={r.tone}
+									stroke-width="1.3"
+								/>
+								<polygon
+									points={arrow(px(th), py(curve.f(th)), px(tail[j + 1]), py(curve.f(tail[j + 1])))}
+									fill={r.tone}
+								/>
+							</g>
+						{/each}
+						<circle
+							cx={px(p[p.length - 1])}
+							cy={py(curve.f(p[p.length - 1]))}
+							r="5"
+							fill={r.tone}
+							stroke="var(--surface)"
+							stroke-width="1.5"
 						/>
-						<polygon points={arrowPoints(h)} fill="var(--accent)" />
-						<circle cx={h.x1} cy={h.y1} r="2.6" fill="var(--accent)" />
-					</g>
+					{:else}
+						<!-- gone off the frame: its last step is left as one arrow at the
+						     edge, and nothing else, so no chord hangs in the air with no
+						     ball on the end of it -->
+						{#if inside.length}
+							<circle
+								cx={px(inside[inside.length - 1])}
+								cy={py(curve.f(inside[inside.length - 1]))}
+								r="3"
+								fill="none"
+								stroke={r.tone}
+								stroke-width="1.4"
+								opacity="0.55"
+							/>
+						{/if}
+					{/if}
 				{/each}
-
-				<!-- the ball -->
-				{#if !diverged}
-					<circle
-						cx={px(theta)}
-						cy={py(curve.f(theta))}
-						r="5.5"
-						fill="var(--warm)"
-						stroke="var(--paper)"
-						stroke-width="1.5"
-					/>
-				{:else}
-					<text
-						x={VW - PAD_R}
-						y={PAD_T + 6}
-						text-anchor="end"
-						class="num"
-						style="fill: var(--bad); font-size: 10.5px;">diverged — the step outran the bowl</text
-					>
-				{/if}
 			</svg>
-		</div>
 
-		<div class="mx-auto mt-3 max-w-[640px]">
-			<Slider
-				label="step size η"
-				bind:value={eta}
-				min={0.05}
-				max={1.15}
-				step={0.01}
-				format={(v) => v.toFixed(2)}
-				tone="knob"
-			/>
+			<svg
+				viewBox="0 0 {VW} {LH}"
+				class="mt-1 block h-auto w-full"
+				role="img"
+				aria-label="Height above the bottom of the valley against step number, on a logarithmic axis, one line per step size. A constant contraction draws a straight line, so a smaller step size is a shallower slope down, and the largest step size draws a line that rises instead."
+			>
+				{#each decades as d (d)}
+					<line
+						x1={PAD_L}
+						y1={ly(d)}
+						x2={VW - PAD_R}
+						y2={ly(d)}
+						stroke="var(--line-soft)"
+						stroke-width="1"
+					/>
+					<text x={PAD_L - 6} y={ly(d) + 3} text-anchor="end" class="tick"
+						>{d >= 1 ? d : `1e${Math.round(Math.log10(d))}`}</text
+					>
+				{/each}
+				<line
+					x1={PAD_L}
+					y1={ly(FLOOR)}
+					x2={VW - PAD_R}
+					y2={ly(FLOOR)}
+					stroke="var(--line)"
+					stroke-width="1"
+				/>
+				<text x={PAD_L} y={LH - 6} class="tick">step</text>
+				<text x={VW - PAD_R} y={LH - 6} text-anchor="end" class="tick">{MAX_STEPS}</text>
+
+				{#each RUNNERS as r, i (r.eta)}
+					<path d={traces[i]} fill="none" stroke={r.tone} stroke-width="1.7" opacity="0.95" />
+				{/each}
+			</svg>
+
+			<div class="mt-2.5 flex flex-wrap justify-center gap-x-5 gap-y-1.5">
+				{#each RUNNERS as r, i (r.eta)}
+					<span class="num inline-flex items-baseline gap-1.5 text-[11px] text-ink-3">
+						<span class="dot" style="background: {r.tone};"></span>
+						η = {r.eta.toFixed(2)}
+						{#if gone[i]}<span style="color: var(--bad);">diverged</span>{/if}
+					</span>
+				{/each}
+			</div>
 		</div>
 	</div>
 </Plate>
 
 <style>
+	.tick {
+		font-family: var(--font-mono);
+		font-size: 10px;
+		fill: var(--ink-3);
+	}
+	.dot {
+		display: inline-block;
+		width: 7px;
+		height: 7px;
+		border-radius: 999px;
+		align-self: center;
+	}
 </style>

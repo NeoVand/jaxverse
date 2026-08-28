@@ -141,6 +141,98 @@ describe('the discount plate and the sentence describing it', () => {
 	}
 });
 
+describe('the step-size plate and the sentence describing it', () => {
+	// Four runners, and a caption that names each one's step size and the
+	// factor it multiplies θ by. Both numbers are hand-typed in the prose and
+	// computed nowhere, so changing a runner silently falsifies the sentence —
+	// which is exactly what happened when 0.85 became 0.80 and the caption went
+	// on saying 0.85 for a further ten minutes.
+	const plate = readFileSync('src/lib/components/demos/descent/StepSize.svelte', 'utf8');
+	const etas = [...plate.matchAll(/\{ eta: ([\d.]+), tone:/g)].map((m) => Number(m[1]));
+
+	it('has the four runners the caption walks through', () => {
+		expect(etas).toEqual([0.15, 0.45, 0.8, 1.05]);
+	});
+
+	it('every |1 − 2η| is distinct, or two runs draw one line', () => {
+		const mags = etas.map((e) => Math.abs(1 - 2 * e).toFixed(2));
+		expect(new Set(mags).size).toBe(etas.length);
+	});
+
+	// The caption promises a different sorting on each landscape. Both starting
+	// points had to be moved to make those promises true — from −2.05, where
+	// both bold steps were thrown out of the frame before either could reach
+	// the far valley, and from −1.35, which divided exactly by two of the four
+	// step sizes so those runners landed on the kink and stopped. Neither was
+	// visible without running it, so it is run here.
+	const outcome = (
+		f: (t: number) => number,
+		df: (t: number) => number,
+		t0: number,
+		xMax: number,
+		eta: number
+	) => {
+		let t = t0;
+		let crossed = false;
+		const lim = xMax - 0.05;
+		let least = Infinity;
+		for (let k = 0; k < 30; k++) {
+			if (Math.abs(t) > lim) return { end: 'diverged', least };
+			const n = t - eta * df(t);
+			if (t < 0 !== n < 0) crossed = true;
+			t = n;
+			least = Math.min(least, f(t));
+		}
+		return { end: crossed ? 'crossed' : 'stayed', least };
+	};
+	const QUAD = (e: number) =>
+		outcome(
+			(t) => t * t,
+			(t) => 2 * t,
+			-0.9,
+			1.6,
+			e
+		);
+	const WELL = (e: number) =>
+		outcome(
+			(t) => 0.3 * t ** 4 - t * t + 1 - (0.3 * (5 / 3) ** 2 - 5 / 3 + 1),
+			(t) => 1.2 * t ** 3 - 2 * t,
+			-1.7,
+			2.2,
+			e
+		);
+	const ABS = (e: number) => outcome(Math.abs, Math.sign, -1.31, 1.6, e);
+
+	it('θ²: the two small steps close from one side, 0.80 overshoots, 1.05 leaves', () => {
+		expect([0.15, 0.45].map((e) => QUAD(e).end)).toEqual(['stayed', 'stayed']);
+		expect(QUAD(0.8).end).toBe('crossed');
+		expect(QUAD(1.05).end).toBe('diverged');
+	});
+
+	it('the double well: 0.80 reaches the other valley and only 1.05 is lost', () => {
+		expect([0.15, 0.45].map((e) => WELL(e).end)).toEqual(['stayed', 'stayed']);
+		expect(WELL(0.8).end).toBe('crossed');
+		expect(WELL(1.05).end).toBe('diverged');
+	});
+
+	it('|θ|: all four stride across the kink and none of them lands on it', () => {
+		for (const e of [0.15, 0.45, 0.8, 1.05]) {
+			expect(ABS(e).end).toBe('crossed');
+			// a runner that hits the kink exactly stops dead, subgradient zero
+			expect(ABS(e).least).toBeGreaterThan(1e-3);
+		}
+	});
+
+	for (const e of [0.15, 0.45, 0.8, 1.05]) {
+		it(`the caption's factor for η = ${e} is the one θ² actually applies`, () => {
+			const f = 1 - 2 * e;
+			// the prose writes a minus sign as U+2212, not a hyphen
+			const said = `${f < 0 ? '\u2212' : ''}${Math.abs(f).toFixed(2)}`;
+			expect(plate).toContain(said);
+		});
+	}
+});
+
 describe('rounded claims stay in the range that makes them fair', () => {
 	it('“three hundred thousand words” is the corpus, to the nearest hundred thousand', () => {
 		const n = corpusWords().length;
