@@ -9,6 +9,7 @@
 	import UnderTheHood from '$lib/components/ui/UnderTheHood.svelte';
 	import DoublePendulum from '$lib/components/demos/reward/DoublePendulum.svelte';
 	import RlLoopDiagram from '$lib/components/demos/reward/RlLoopDiagram.svelte';
+	import Discount from '$lib/components/demos/reward/Discount.svelte';
 	import SeaChart from '$lib/components/demos/reward/SeaChart.svelte';
 </script>
 
@@ -95,7 +96,11 @@
 			<Math tex={'\\htmlClass{eq-knob}{\\eta}'} />. Two knobs, two letters, and from here on they
 			sit side by side in the same equations.<Cite id="sutton-barto-2018" />
 		</p>
+	</Prose>
 
+	<Discount />
+
+	<Prose>
 		<h2 class="h2">A harbour you cannot sail to</h2>
 		<p>
 			Now the world. It is a sea chart: fourteen cells by ten, a start, a harbour, an islet, two

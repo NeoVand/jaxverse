@@ -27,7 +27,7 @@ export const plateOrder: Record<string, readonly string[]> = {
 		'attention',
 		'walkthrough'
 	],
-	reward: ['loop', 'chart', 'pendulum'],
+	reward: ['loop', 'discount', 'chart', 'pendulum'],
 	taste: ['balance', 'pairs', 'judge', 'goodhart', 'leash', 'fence'],
 	rook: ['vocab', 'pretrain', 'probe', 'play', 'sft', 'rlvr', 'arena']
 };

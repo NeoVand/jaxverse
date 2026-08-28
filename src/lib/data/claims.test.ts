@@ -112,6 +112,35 @@ describe('numbers the prose states out loud', () => {
 	}
 });
 
+describe('the discount plate and the sentence describing it', () => {
+	// The figure computes its own labels; the aria-label and the caption spell
+	// them out for anyone who cannot see it. Those two got out of step the hour
+	// the plate was written — the drawn label rounded to 30 and the sentence
+	// said 31 — which is the whole reason this file exists.
+	const plate = readFileSync('src/lib/components/demos/reward/Discount.svelte', 'utf8');
+	const N = 40;
+	const first = (g: number) => Math.pow(g, N - 1);
+
+	it('the sailing chart still runs at the γ the plate calls its own', () => {
+		expect(plate).toContain('0.97');
+		const chart = readFileSync('src/lib/optim-rl/chart.ts', 'utf8');
+		expect(Number(/gamma:\s*([\d.]+)/.exec(chart)?.[1])).toBe(0.97);
+	});
+
+	for (const [g, said] of [
+		[0.9, '1.6 per cent'],
+		[0.97, '30 per cent'],
+		[0.99, '68 per cent']
+	] as const) {
+		it(`γ = ${g} gives the first of forty decisions ${said}`, () => {
+			const v = first(g) * 100;
+			const drawn = v < 10 ? v.toFixed(1) : String(Math.round(v));
+			expect(said.startsWith(drawn)).toBe(true);
+			expect(plate).toContain(said);
+		});
+	}
+});
+
 describe('rounded claims stay in the range that makes them fair', () => {
 	it('“three hundred thousand words” is the corpus, to the nearest hundred thousand', () => {
 		const n = corpusWords().length;
