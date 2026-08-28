@@ -114,6 +114,17 @@ const theta = createDpoleTheta();
 const baseline = createDpoleBaseline();
 const curriculum = new DpoleCurriculum();
 let rand: Rand = mulberry32(1);
+/** The social learner draws here and NOT from `rand`.
+ *
+ * `rand` is the training stream: the curriculum pulls from it to choose every
+ * start state. Sampling a social decision out of it too means the episodes a
+ * hall practises depend on how many peer messages have arrived, and peer
+ * messages arrive on wall-clock timing — so the run stops being reproducible
+ * from its seed, which is the only reason the seed exists. (This drew from
+ * `Math.random()` once, which was not reproducible either; moving it onto the
+ * training stream fixed the wrong half of that.) Same seed, separate stream:
+ * the decisions replay, and the training they interleave with does not move. */
+let socRand: Rand = mulberry32(2);
 let lr = 0.15;
 let running = false;
 let deliverEMA = 0; // recent fraction of swing drills that delivered
@@ -252,8 +263,8 @@ function social(m: {
 		sum += probs[c];
 	}
 	for (let c = 0; c <= K; c++) probs[c] /= sum;
-	// the hall's own seeded stream, like everything else it draws
-	let u = rand();
+	// the hall's own seeded stream — its social one, see above
+	let u = socRand();
 	let slot = K;
 	for (let c = 0; c <= K; c++) {
 		u -= probs[c];
@@ -310,6 +321,9 @@ self.onmessage = (e: MessageEvent<HallMessage>) => {
 	const m = e.data;
 	if (m.type === 'boot') {
 		rand = mulberry32(m.seed);
+		// a different stream from the same seed, not a different seed: two halls
+		// booted alike still differ, and one hall replays exactly
+		socRand = mulberry32((m.seed ^ 0x9e3779b9) >>> 0);
 		lr = m.lr;
 	} else if (m.type === 'run') {
 		if (!running) {
