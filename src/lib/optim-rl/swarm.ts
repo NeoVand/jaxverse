@@ -160,6 +160,8 @@ export function blendInto(
  * has a rise of ~0; a hall that just found something has a spike.
  *
  * It has to be a good deal slower than the fitness it is subtracting, or the
- * two averages track each other and every rise is zero. Fitness now settles
- * over about a second; this settles over several. */
-export const RISE_EMA = 0.004;
+ * two averages track each other and every rise is zero — and no slower than
+ * that, since a spike nobody notices until after the discovery is over is a
+ * spike nobody can act on. Paired with the worker's own EMA; the two moved
+ * together once and must move together again. */
+export const RISE_EMA = 0.01;

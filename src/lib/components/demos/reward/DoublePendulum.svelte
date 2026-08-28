@@ -753,7 +753,13 @@
 			}
 			const gd = e.deliverEMA - showD[w];
 			const gc = e.drillEMA - showC[w];
-			const rate = Math.min(1, 0.25 + 6 * Math.hypot(gd, gc));
+			// The floor is what damps the tremble, and it is the ONLY thing that
+			// should: the worker's fitness average was slowed for this once, and
+			// it is a control signal — see the note beside EMA in the worker. At
+			// 0.06 a hundredth of noise is damped about fourfold over a quarter
+			// second, while a genuine move of a tenth still lands in two frames
+			// on the distance term, which is the whole point of having one.
+			const rate = Math.min(1, 0.06 + 6 * Math.hypot(gd, gc));
 			showD[w] += rate * gd;
 			showC[w] += rate * gc;
 		}

@@ -46,16 +46,26 @@ import {
 import { mulberry32, type Rand } from './rng';
 
 const BATCHES_PER_ROUND = 6; // 48 episodes ≈ 25 ms per report
-// Fitness horizon. This was 0.02, and the comment next to it claimed "the
-// last few hundred episodes" — it was not. Only half of a round's episodes
-// are swing attempts, so at 0.02 the delivery rate averaged its last fifty of
-// those: about two rounds, about fifty milliseconds. The number was therefore
-// mostly sampling noise, with a standard deviation near 0.04 on a rate of
-// 0.9, and since the plate draws each hall AT its fitness, that noise was
-// visible as the whole pool twitching. A horizon of a few hundred episodes —
-// which is what was wanted all along — costs about a second of response and
-// takes the twitch out.
-const EMA = 0.003;
+// Fitness horizon — and this is a CONTROL signal, not a display value.
+//
+// It was briefly 0.003, on the reasoning that at 0.02 the delivery rate
+// averages only its last fifty swing attempts and the residual sampling
+// noise (σ ≈ 0.04 on a rate of 0.9) was visible as the pool twitching on the
+// field. Both halves of that were true and the conclusion was still wrong,
+// because `score` is not only drawn. It is what the halls are RANKED by, and
+// rank is the entire reward of the social learner below: a decision is graded
+// on whether it climbed the ranking over the next SOC_HORIZON. Slowing this
+// average flattens the ranking exactly during the first seconds, when every
+// hall is still near zero and the differences that ought to separate them are
+// smaller than the lag — so the social learner spends the discovery window
+// being taught by noise, and then acts on what it learned with a step of
+// SOC_KAPPA.
+//
+// Measured, six halls, matched wall-clock and matched episode counts: at 0.02
+// the performing rig first holds the stack at 30 s and has 3,690 held ticks by
+// 90 s. At 0.003 it first holds at 80 s and has 764. The twitch belongs to the
+// follower that draws the field, which is where it is now damped.
+const EMA = 0.02;
 const FINDS_PER_ROUND = 2; // announcements are rare by construction; cap anyway
 // A find must beat the hall's own best by this much to be worth everyone's
 // attention — and that bar sags very slowly, so a hall whose policy has
