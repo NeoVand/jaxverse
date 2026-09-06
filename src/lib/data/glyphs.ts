@@ -11,7 +11,9 @@ import {
 	PenLine,
 	Scale,
 	Spline,
-	Type
+	Sparkles,
+	Type,
+	Waves
 } from 'lucide-svelte';
 import type { ChapterSlug } from './chapters';
 
@@ -26,7 +28,9 @@ export const chapterGlyphs: Record<ChapterSlug, Glyph> = {
 	language: Type,
 	reward: Gamepad2,
 	taste: Scale,
-	rook: Castle
+	rook: Castle,
+	noise: Sparkles,
+	flow: Waves
 };
 
 /** The epilogue closes the book, so it gets the book. */

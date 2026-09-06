@@ -28,3 +28,7 @@ test-results
 labs/*/public
 labs/*/node_modules
 /static/labs
+.cache/
+
+# generated: benchmark and trainer scratch pages
+tools/*/node_modules/

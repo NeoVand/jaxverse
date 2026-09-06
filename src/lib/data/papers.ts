@@ -764,6 +764,160 @@ export const papers = {
 		where: 'arXiv preprint',
 		url: 'https://arxiv.org/abs/2503.14476',
 		note: 'The industrial answer to the dead group this chapter runs into: keep sampling until a prompt produces both successes and failures, and throw away the prompts that cannot.'
+	},
+
+	// diffusion, flow matching, and the arithmetic of steering them
+	'sohl-dickstein-2015': {
+		authors: 'Sohl-Dickstein et al.',
+		year: 2015,
+		title: 'Deep Unsupervised Learning using Nonequilibrium Thermodynamics',
+		where: 'ICML 2015',
+		url: 'https://arxiv.org/abs/1503.03585',
+		note: 'The whole shape of the idea, five years early: destroy the data with a slow diffusion whose every step is a small Gaussian, then train a model to run the same chain backwards. What it lacked was the parameterization, the architecture and the compute.'
+	},
+	'hyvarinen-2005': {
+		authors: 'Hyvärinen',
+		year: 2005,
+		title: 'Estimation of Non-Normalized Statistical Models by Score Matching',
+		where: 'JMLR 6',
+		url: 'https://jmlr.org/papers/v6/hyvarinen05a.html',
+		note: 'How to fit a distribution you can only evaluate up to a constant: match the gradient of its log density instead, and the constant differentiates away.'
+	},
+	'vincent-2011': {
+		authors: 'Vincent',
+		year: 2011,
+		title: 'A Connection Between Score Matching and Denoising Autoencoders',
+		where: 'Neural Computation 23(7)',
+		url: 'https://www.iro.umontreal.ca/~vincentp/Publications/smdae_techreport.pdf',
+		note: 'The identity this whole chapter stands on: a network trained to remove Gaussian noise is, at the optimum, reporting the gradient of the log density of the noisy data — negated, and scaled by the noise level. Nobody has to know what that density is.'
+	},
+	'song-ermon-2019': {
+		authors: 'Y. Song & Ermon',
+		year: 2019,
+		title: 'Generative Modeling by Estimating Gradients of the Data Distribution',
+		where: 'NeurIPS 2019',
+		url: 'https://arxiv.org/abs/1907.05600',
+		note: 'Diffusion arrived at a second time from the other direction — learn the score at many noise levels, then follow it downhill — and the two turned out to be the same algorithm.'
+	},
+	'nichol-dhariwal-2021': {
+		authors: 'Nichol & Dhariwal',
+		year: 2021,
+		title: 'Improved Denoising Diffusion Probabilistic Models',
+		where: 'ICML 2021',
+		url: 'https://arxiv.org/abs/2102.09672',
+		note: 'Where the cosine schedule comes from, and the measurement that motivated it: the linear one destroys the picture so early that most of its steps are spent on noise.'
+	},
+	'song-2021-ddim': {
+		authors: 'J. Song et al.',
+		year: 2021,
+		title: 'Denoising Diffusion Implicit Models',
+		where: 'ICLR 2021',
+		url: 'https://arxiv.org/abs/2010.02502',
+		note: 'The same trained weights, sampled along a deterministic path that can skip: fifty steps instead of a thousand, and a seed that now names a picture.'
+	},
+	'song-2021-sde': {
+		authors: 'Y. Song et al.',
+		year: 2021,
+		title: 'Score-Based Generative Modeling through Stochastic Differential Equations',
+		where: 'ICLR 2021',
+		url: 'https://arxiv.org/abs/2011.13456',
+		note: 'The view from above: every discrete schedule is a stochastic differential equation, and each one has a deterministic twin that carries the same distribution.'
+	},
+	'dhariwal-nichol-2021': {
+		authors: 'Dhariwal & Nichol',
+		year: 2021,
+		title: 'Diffusion Models Beat GANs on Image Synthesis',
+		where: 'NeurIPS 2021',
+		url: 'https://arxiv.org/abs/2105.05233',
+		note: 'The paper that ended the argument, and the first version of guidance: push the sample with the gradient of a separately trained classifier.'
+	},
+	'karras-2022': {
+		authors: 'Karras et al.',
+		year: 2022,
+		title: 'Elucidating the Design Space of Diffusion-Based Generative Models',
+		where: 'NeurIPS 2022',
+		url: 'https://arxiv.org/abs/2206.00364',
+		note: 'Pulls the schedule, the scaling and the sampler apart from the network so each can be chosen on its own. The best reference for why any of these constants are what they are.'
+	},
+	'peebles-xie-2023': {
+		authors: 'Peebles & Xie',
+		year: 2023,
+		title: 'Scalable Diffusion Models with Transformers',
+		where: 'ICCV 2023',
+		url: 'https://arxiv.org/abs/2212.09748',
+		note: 'Replaces the U-Net with a transformer over image patches and finds it scales better. The denoiser these two chapters train is this, small.'
+	},
+	'liu-2023-rectflow': {
+		authors: 'X. Liu et al.',
+		year: 2023,
+		title: 'Flow Straight and Fast: Learning to Generate and Transfer Data with Rectified Flow',
+		where: 'ICLR 2023',
+		url: 'https://arxiv.org/abs/2209.03003',
+		note: 'Train on the straight line between noise and picture and the learned path comes out nearly straight, which is what makes four sampling steps enough.'
+	},
+	'lipman-2023': {
+		authors: 'Lipman et al.',
+		year: 2023,
+		title: 'Flow Matching for Generative Modeling',
+		where: 'ICLR 2023',
+		url: 'https://arxiv.org/abs/2210.02747',
+		note: 'The general statement: pick any path from noise to data, regress on its velocity, and you have trained a continuous normalizing flow without ever solving one.'
+	},
+	'albergo-2023': {
+		authors: 'Albergo & Vanden-Eijnden',
+		year: 2023,
+		title: 'Building Normalizing Flows with Stochastic Interpolants',
+		where: 'ICLR 2023',
+		url: 'https://arxiv.org/abs/2209.15571',
+		note: 'The third simultaneous arrival at the same idea, framed as interpolating between two densities. Three groups, one autumn.'
+	},
+	'chen-node-2018': {
+		authors: 'Chen et al.',
+		year: 2018,
+		title: 'Neural Ordinary Differential Equations',
+		where: 'NeurIPS 2018',
+		url: 'https://arxiv.org/abs/1806.07366',
+		note: 'The ancestor of the straight path: treat a network as the derivative of a trajectory and let a solver do the layers.'
+	},
+	'ho-salimans-2022': {
+		authors: 'Ho & Salimans',
+		year: 2022,
+		title: 'Classifier-Free Diffusion Guidance',
+		where: 'NeurIPS 2021 Workshop on Deep Generative Models',
+		url: 'https://arxiv.org/abs/2207.12598',
+		note: 'Drop the separate classifier: train one network with the prompt sometimes missing, and the difference between its two answers is the push. The dial every Stable Diffusion interface calls guidance scale is this one.'
+	},
+	'liu-2022-composable': {
+		authors: 'N. Liu et al.',
+		year: 2022,
+		title: 'Compositional Visual Generation with Composable Diffusion Models',
+		where: 'ECCV 2022',
+		url: 'https://arxiv.org/abs/2206.01714',
+		note: 'If a prompt contributes a vector field, two prompts contribute two, and fields add. The combination plate in this chapter is one line of this paper.'
+	},
+	'esser-2024': {
+		authors: 'Esser et al.',
+		year: 2024,
+		title: 'Scaling Rectified Flow Transformers for High-Resolution Image Synthesis',
+		where: 'ICML 2024',
+		url: 'https://arxiv.org/abs/2403.03206',
+		note: 'Rectified flow and a patch transformer at production scale — the same two choices these chapters make, plus a better way of choosing which noise levels to train on and separate weights for the text and image streams.'
+	},
+	'salimans-ho-2022': {
+		authors: 'Salimans & Ho',
+		year: 2022,
+		title: 'Progressive Distillation for Fast Sampling of Diffusion Models',
+		where: 'ICLR 2022',
+		url: 'https://arxiv.org/abs/2202.00512',
+		note: 'Teach a student to take in one step what the teacher takes in two, then do it again. Halving all the way down is how a sampler gets to single digits.'
+	},
+	'song-2023-consistency': {
+		authors: 'Y. Song et al.',
+		year: 2023,
+		title: 'Consistency Models',
+		where: 'ICML 2023',
+		url: 'https://arxiv.org/abs/2303.01469',
+		note: 'Train the map from any point on the path straight to its endpoint, and the walk collapses into a single evaluation.'
 	}
 } as const satisfies Record<string, Paper>;
 
@@ -774,6 +928,34 @@ export type PaperId = keyof typeof papers;
  * them. Position here is the numeral the reader sees.
  */
 export const citationOrder: Partial<Record<string, readonly PaperId[]>> = {
+	noise: [
+		'sohl-dickstein-2015',
+		'nichol-dhariwal-2021',
+		'karras-2022',
+		'vincent-2011',
+		'hyvarinen-2005',
+		'song-ermon-2019',
+		'peebles-xie-2023',
+		'ho-2020',
+		'song-2021-ddim',
+		'song-2021-sde',
+		'dhariwal-nichol-2021',
+		'rombach-2022'
+	],
+	flow: [
+		'liu-2023-rectflow',
+		'lipman-2023',
+		'albergo-2023',
+		'chen-node-2018',
+		'esser-2024',
+		'salimans-ho-2022',
+		'song-2023-consistency',
+		'radford-2021',
+		'dhariwal-nichol-2021',
+		'ho-salimans-2022',
+		'liu-2022-composable',
+		'rombach-2022'
+	],
 	neuron: [
 		'cybenko-1989',
 		'lu-2017',

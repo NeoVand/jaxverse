@@ -1,0 +1,382 @@
+// The training step and the samplers: everything that turns the network in
+// model.ts into a thing that learns and a thing that draws.
+//
+// Both chapters and the offline trainer import this file, so a checkpoint
+// trained overnight and a checkpoint trained in the reader's own tab came out
+// of exactly the same arithmetic.
+
+import { numpy as np, jit, valueAndGrad, tree } from '@jax-js/jax';
+import {
+	type DiffusionConfig,
+	alphaBar,
+	condWidth,
+	forward,
+	lossFn,
+	TIME_FEATURES,
+	writeTimeFeatures
+} from './model';
+
+// jax-js arrays are consumed on use and typed loosely at this seam.
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type Arr = any;
+
+/** Deterministic, seedable, and identical in the worker and the trainer. */
+export function mulberry32(seed: number): () => number {
+	let a = seed >>> 0;
+	return () => {
+		a = (a + 0x6d2b79f5) >>> 0;
+		let t = Math.imul(a ^ (a >>> 15), 1 | a);
+		t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+		return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+	};
+}
+
+/** Box–Muller. The noise this whole subject is about has to be Gaussian. */
+export function gaussianFill(buf: Float32Array, rand: () => number): void {
+	for (let i = 0; i < buf.length; i += 2) {
+		const u = Math.max(rand(), 1e-7);
+		const r = Math.sqrt(-2 * Math.log(u));
+		const th = 2 * Math.PI * rand();
+		buf[i] = r * Math.cos(th);
+		if (i + 1 < buf.length) buf[i + 1] = r * Math.sin(th);
+	}
+}
+
+// ------------------------------------------------------------ conditions ---
+
+export interface Condition {
+	/** Indices into the tag vocabulary. Empty means "no prompt". */
+	tags: number[];
+	/** Index into the style list, or null for "any style". */
+	style: number | null;
+}
+
+export const NOTHING: Condition = { tags: [], style: null };
+
+/**
+ * Write one row of the conditioning vector.
+ *
+ * Tags are scaled by 1/sqrt(n) rather than summed, so a six-word prompt
+ * arrives no louder than a two-word one. The two trailing flags say whether
+ * the tag block and the style block mean anything, which is what lets
+ * guidance drop either of them on its own.
+ */
+export function writeCondition(
+	dst: Float32Array,
+	row: number,
+	c: DiffusionConfig,
+	tau: number,
+	cond: Condition
+): void {
+	const w = condWidth(c);
+	const off = row * w;
+	dst.fill(0, off, off + w);
+	writeTimeFeatures(dst, off, tau);
+	const tagBase = off + TIME_FEATURES;
+	const flagBase = tagBase + c.tags + c.styles;
+	if (cond.tags.length > 0) {
+		const v = 1 / Math.sqrt(cond.tags.length);
+		for (const t of cond.tags) if (t >= 0 && t < c.tags) dst[tagBase + t] = v;
+		dst[flagBase] = 1;
+	}
+	if (cond.style !== null && cond.style >= 0 && cond.style < c.styles) {
+		dst[tagBase + c.tags + cond.style] = 1;
+		dst[flagBase + 1] = 1;
+	}
+}
+
+// -------------------------------------------------------------- training ---
+
+/** Explicitly backed by ArrayBuffer, not ArrayBufferLike: jax-js will not
+ *  accept a view that might sit on a SharedArrayBuffer. */
+export interface TrainBatch {
+	x: Float32Array<ArrayBuffer>;
+	cond: Float32Array<ArrayBuffer>;
+	target: Float32Array<ArrayBuffer>;
+}
+
+export interface Corpus {
+	/**
+	 * Premultiplied RGBA bytes, style-major: style s, emoji i, channel c and
+	 * pixel p live at ((s · count + i) · channels + c) · res² + p. Kept as
+	 * bytes because that is the precision the artwork arrived in, and because
+	 * the float version of the same thing is 142 MB.
+	 */
+	images: Uint8Array;
+	/** Tag index lists, one per emoji. */
+	tags: number[][];
+	count: number;
+	styles: number;
+}
+
+/** Bytes to the [-1, 1] the network trains on. */
+export const toUnit = (b: number) => b / 127.5 - 1;
+
+export function allocBatch(c: DiffusionConfig, batch: number): TrainBatch {
+	const dim = c.channels * c.res * c.res;
+	return {
+		x: new Float32Array(batch * dim),
+		cond: new Float32Array(batch * condWidth(c)),
+		target: new Float32Array(batch * dim)
+	};
+}
+
+/**
+ * One training example is: take a picture, choose how far to destroy it,
+ * destroy it that far, and write down what would undo the damage. The only
+ * thing the two chapters disagree about is that last clause.
+ *
+ * A tenth of the rows drop the prompt and a tenth drop the style, drawn
+ * independently, so one set of weights learns the conditional field and the
+ * unconditional one that guidance later subtracts from it.
+ */
+export function makeBatch(
+	corpus: Corpus,
+	c: DiffusionConfig,
+	batch: number,
+	rand: () => number,
+	out: TrainBatch
+): void {
+	const dim = c.channels * c.res * c.res;
+	const noise = new Float32Array(dim);
+	for (let b = 0; b < batch; b++) {
+		const idx = Math.floor(rand() * corpus.count);
+		const style = Math.floor(rand() * corpus.styles);
+		const src = (style * corpus.count + idx) * dim;
+		gaussianFill(noise, rand);
+
+		// Noise levels are drawn uniformly: every level has to be learned, and
+		// the schedule decides what each one means, not how often it is seen.
+		const tau = rand();
+		const o = b * dim;
+		if (c.objective === 'flow') {
+			for (let i = 0; i < dim; i++) {
+				const x0 = toUnit(corpus.images[src + i]);
+				out.x[o + i] = (1 - tau) * x0 + tau * noise[i];
+				out.target[o + i] = noise[i] - x0;
+			}
+		} else {
+			const ab = alphaBar(tau);
+			const sa = Math.sqrt(ab);
+			const sn = Math.sqrt(1 - ab);
+			for (let i = 0; i < dim; i++) {
+				out.x[o + i] = sa * toUnit(corpus.images[src + i]) + sn * noise[i];
+				out.target[o + i] = noise[i];
+			}
+		}
+
+		writeCondition(out.cond, b, c, tau, {
+			tags: rand() < 0.1 ? [] : corpus.tags[idx],
+			style: rand() < 0.1 ? null : style
+		});
+	}
+}
+
+export interface Optimizer {
+	/** Consumes `params`, returns the loss and the updated parameters. */
+	step(params: Arr, b: TrainBatch, lr: number): [Arr, Arr];
+	dispose(): void;
+}
+
+/**
+ * Adam, hand-rolled so the update fits inside the jit boundary.
+ *
+ * optax's version reads its own step counter with .item(), which a tracer
+ * cannot answer, so its update has to run outside jit — and outside jit it
+ * dispatches several tiny kernels per parameter. With forty-odd parameters
+ * that launch traffic, not the matmuls, is most of the step: 151 ms measured
+ * split against 88 ms fused. The bias corrections and the learning rate come
+ * in as one traced triple instead, so the shape signature never changes and
+ * the kernel compiles once.
+ */
+export function makeOptimizer(c: DiffusionConfig, batch: number, params: Arr): Optimizer {
+	let m: Arr = tree.map((l: Arr) => np.zerosLike(l), tree.ref(params));
+	let v: Arr = tree.map((l: Arr) => np.zerosLike(l), tree.ref(params));
+	let t = 0;
+
+	const fused = jit((p: Arr, mm: Arr, vv: Arr, k: Arr, x: Arr, cond: Arr, target: Arr) => {
+		const [loss, grads] = valueAndGrad((pp: Arr) => lossFn(pp, c, batch, x, cond, target))(
+			tree.ref(p)
+		);
+		const [leaves, def] = tree.flatten(p) as [Arr[], Arr];
+		const gl = tree.leaves(grads) as Arr[];
+		const ml = tree.leaves(mm) as Arr[];
+		const vl = tree.leaves(vv) as Arr[];
+		const c1 = k.ref.slice([0, 1]);
+		const c2 = k.ref.slice([1, 2]);
+		const lr = k.slice([2, 3]);
+		const nextP: Arr[] = [];
+		const nextM: Arr[] = [];
+		const nextV: Arr[] = [];
+		for (let i = 0; i < gl.length; i++) {
+			const mi = ml[i].mul(0.9).add(gl[i].ref.mul(0.1));
+			const vi = vl[i].mul(0.99).add(np.square(gl[i]).mul(0.01));
+			const mhat = mi.ref.mul(c1.ref);
+			const vhat = vi.ref.mul(c2.ref);
+			nextP.push(leaves[i].sub(mhat.mul(lr.ref).div(np.sqrt(vhat).add(1e-8))));
+			nextM.push(mi);
+			nextV.push(vi);
+		}
+		c1.dispose();
+		c2.dispose();
+		lr.dispose();
+		return [
+			loss,
+			tree.unflatten(def, nextP),
+			tree.unflatten(def, nextM),
+			tree.unflatten(def, nextV)
+		];
+	});
+
+	return {
+		step(p: Arr, b: TrainBatch, lr: number) {
+			t++;
+			const k = np.array(
+				new Float32Array([1 / (1 - Math.pow(0.9, t)), 1 / (1 - Math.pow(0.99, t)), lr])
+			);
+			const x = np.array(b.x).reshape([batch, c.channels, c.res, c.res]);
+			const cond = np.array(b.cond).reshape([batch, condWidth(c)]);
+			const target = np.array(b.target).reshape([batch, c.channels, c.res, c.res]);
+			const [loss, p2, m2, v2] = fused(p, m, v, k, x, cond, target);
+			m = m2;
+			v = v2;
+			return [loss, p2];
+		},
+		dispose() {
+			tree.dispose(m);
+			tree.dispose(v);
+		}
+	};
+}
+
+// -------------------------------------------------------------- sampling ---
+
+/**
+ * Guidance always runs three branches — unconditional, prompt A, prompt B —
+ * so the compiled shape never changes. A single-prompt request pays for one
+ * branch it does not need, which is cheaper than a recompile.
+ */
+export const BRANCHES = 3;
+
+export interface SampleRequest {
+	/** Consumed: pass `tree.ref(weights)` if you still need them afterwards. */
+	params: Arr;
+	/** Denoising steps. Fewer is faster, and for `eps` also worse. */
+	steps: number;
+	a: Condition;
+	b?: Condition;
+	/** Guidance strengths. 1 is the raw conditional field; 0 is unconditional. */
+	guidanceA: number;
+	guidanceB?: number;
+	/** Fixed noise, so the same seed keeps returning the same picture. */
+	seed: number;
+	/** 0 is deterministic (DDIM); 1 is ancestral DDPM. Ignored for `flow`. */
+	eta?: number;
+	/**
+	 * Receives a frame after every step, for the trajectory plates.
+	 * `state` is the picture as it actually is at that rung; `endpoint` is the
+	 * finished picture the model's answer implies from there, which is the
+	 * thing that reveals how curved the path is.
+	 */
+	trace?: 'state' | 'endpoint';
+	onStep?: (frame: Float32Array, done: number, steps: number) => void;
+}
+
+export interface Sampler {
+	/** Resolves to [count · channels · res · res] in roughly [-1, 1]. */
+	run(req: SampleRequest): Promise<Float32Array>;
+}
+
+/**
+ * Composable guidance, which is one line of arithmetic and the reason two
+ * prompts can be answered with one picture.
+ *
+ * Each branch predicts a field over the same image. The unconditional branch
+ * says what any picture would do from here; a conditional branch says what a
+ * picture matching that prompt would do. The difference between them is what
+ * the prompt is asking for — and differences are vectors, so they add.
+ */
+export function makeSampler(c: DiffusionConfig, count: number): Sampler {
+	const dim = c.channels * c.res * c.res;
+	const B = BRANCHES * count;
+	const net = jit((p: Arr, x: Arr, cond: Arr) => forward(p, c, B, x, cond));
+
+	const xBuf = new Float32Array(B * dim);
+	const condBuf = new Float32Array(B * condWidth(c));
+	const state = new Float32Array(count * dim);
+	const field = new Float32Array(count * dim);
+	const noise = new Float32Array(count * dim);
+	const endpoint = new Float32Array(count * dim);
+
+	return {
+		async run(req: SampleRequest): Promise<Float32Array> {
+			const rand = mulberry32(req.seed);
+			gaussianFill(state, rand);
+			const steps = Math.max(1, req.steps);
+			const condB = req.b ?? NOTHING;
+			const wB = req.b ? (req.guidanceB ?? 0) : 0;
+
+			for (let s = 0; s < steps; s++) {
+				const tau = 1 - s / steps; // 1 is pure noise, 0 is a finished picture
+				const tauNext = 1 - (s + 1) / steps;
+
+				for (let br = 0; br < BRANCHES; br++) {
+					xBuf.set(state, br * count * dim);
+				}
+				for (let n = 0; n < count; n++) {
+					writeCondition(condBuf, n, c, tau, NOTHING);
+					writeCondition(condBuf, count + n, c, tau, req.a);
+					writeCondition(condBuf, 2 * count + n, c, tau, condB);
+				}
+
+				const out = await net(
+					tree.ref(req.params),
+					np.array(xBuf).reshape([B, c.channels, c.res, c.res]),
+					np.array(condBuf).reshape([B, condWidth(c)])
+				).data();
+
+				const aOff = count * dim;
+				const bOff = 2 * count * dim;
+				for (let i = 0; i < field.length; i++) {
+					const u = out[i];
+					field[i] = u + req.guidanceA * (out[aOff + i] - u) + wB * (out[bOff + i] - u);
+				}
+
+				if (c.objective === 'flow') {
+					// Euler, along a path training made as straight as it could
+					const dt = tau - tauNext;
+					if (req.trace === 'endpoint') {
+						// x_τ = (1−τ)x₀ + τε and v = ε − x₀, so x₀ = x_τ − τv.
+						// Clamped exactly like the eps branch below: the trace is a
+						// comparison between the two, and clamping one and not the
+						// other would decide it before the models did.
+						for (let i = 0; i < state.length; i++) {
+							endpoint[i] = Math.min(Math.max(state[i] - tau * field[i], -1), 1);
+						}
+					}
+					for (let i = 0; i < state.length; i++) state[i] -= dt * field[i];
+				} else {
+					const ab = alphaBar(tau);
+					const abNext = tauNext <= 0 ? 1 : alphaBar(tauNext);
+					const sa = Math.sqrt(ab);
+					const sn = Math.sqrt(1 - ab);
+					const eta = tauNext <= 0 ? 0 : (req.eta ?? 0);
+					const sigma = eta * Math.sqrt(((1 - abNext) / (1 - ab)) * Math.max(1 - ab / abNext, 0));
+					const keep = Math.sqrt(Math.max(1 - abNext - sigma * sigma, 0));
+					if (sigma > 0) gaussianFill(noise, rand);
+					for (let i = 0; i < state.length; i++) {
+						// clamping the implied clean image is what stops a short
+						// schedule from walking off into saturated garbage
+						const x0 = Math.min(Math.max((state[i] - sn * field[i]) / sa, -1), 1);
+						if (req.trace === 'endpoint') endpoint[i] = x0;
+						state[i] = Math.sqrt(abNext) * x0 + keep * field[i];
+						if (sigma > 0) state[i] += sigma * noise[i];
+					}
+				}
+				req.onStep?.(req.trace === 'endpoint' ? endpoint : state, s + 1, steps);
+			}
+			tree.dispose(req.params);
+			return state;
+		}
+	};
+}

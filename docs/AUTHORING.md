@@ -5,7 +5,7 @@ writing any chapter code. Deviating from it produces visual noise; don't.
 
 ## What this site is
 
-An interactive book: eight chapters that teach deep learning by training real
+An interactive book: eleven chapters that teach deep learning by training real
 models in the browser (jax-js on WebGPU, in Web Workers). Editorial, minimal,
 warm. Think "physics textbook designed by a gallery": prose in a serif reading
 column, demos as numbered _plates_ (figures), math interleaved and beautiful.
@@ -58,8 +58,12 @@ column, demos as numbered _plates_ (figures), math interleaved and beautiful.
 ## Components (already built — use, don't reinvent)
 
 - `Math` — `<Math tex={'…'} />` inline, `<Math display tex={'…'} />` block.
-  KaTeX. Color terms with `\htmlClass{eq-a}{\gamma}` → accent; `eq-w` warm,
-  `eq-b` teal (bias terms), `eq-g` good, `eq-m` muted. Color only terms the
+  KaTeX. Color terms with `\htmlClass{eq-model}{\theta}`. The constitution:
+  `eq-model`/`eq-model-2`/`eq-model-3` for learned parameters, `eq-world` for
+  data and labels, `eq-op` for fixed operations, `eq-knob` for
+  hyperparameters, `eq-out` for what the model answers, `eq-mute` for what is
+  ignored (and, in the diffusion chapters, for noise). Cool hues live inside
+  the machine; warm hues come from outside it. Color only terms the
   surrounding prose or a demo refers to by that color.
 - `Plate` — every demo's frame. `<Plate n={1} title="The landscape" caption="…">
 {#snippet status()}<span>…</span>{/snippet}

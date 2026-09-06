@@ -50,6 +50,21 @@
 				book's board.
 			</li>
 			<li>
+				The eight emoji sets the last two chapters learn to draw, every one of them redistributable
+				and every one of them attributed here because that is the condition:
+				<a href="https://github.com/googlefonts/noto-emoji" rel="external">Noto Color Emoji</a>
+				(Google, Apache&nbsp;2.0),
+				<a href="https://github.com/jdecked/twemoji" rel="external">Twemoji</a>
+				(Twitter, now maintained by jdecked, CC&nbsp;BY&nbsp;4.0),
+				<a href="https://openmoji.org" rel="external">OpenMoji</a>
+				in colour and in line art (HfG Schwäbisch Gmünd, CC&nbsp;BY-SA&nbsp;4.0),
+				<a href="https://github.com/microsoft/fluentui-emoji" rel="external">Fluent Emoji</a>
+				in three renderings (Microsoft, MIT), and
+				<a href="https://github.com/C1710/blobmoji" rel="external">Blobmoji</a>, which keeps alive
+				the blobs Google retired in 2017 (Apache&nbsp;2.0). Eight hands drawing the same thousand
+				ideas is what makes style something a model can be asked for separately.
+			</li>
+			<li>
 				Kenneth Li et&nbsp;al.,
 				<a href="https://arxiv.org/abs/2210.13382" rel="external"
 					><em>Emergent World Representations</em></a

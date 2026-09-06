@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>emoji denoiser — offline trainer</title>
+		<style>
+			body {
+				background: #141310;
+				color: #e9e6dc;
+				font:
+					13px/1.6 ui-monospace,
+					monospace;
+				padding: 20px;
+			}
+			pre {
+				white-space: pre-wrap;
+			}
+			canvas {
+				image-rendering: pixelated;
+				background: #888;
+				margin-top: 12px;
+			}
+		</style>
+	</head>
+	<body>
+		<pre id="out">booting…</pre>
+		<canvas id="preview" width="512" height="128"></canvas>
+		<script type="module" src="/src/main.ts"></script>
+	</body>
+</html>

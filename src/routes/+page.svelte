@@ -146,8 +146,9 @@
 		This book makes that idea physical. It is arranged as a descent: a prologue, then chapter by
 		chapter, each one lower on the loss surface than the last. You’ll fit curves, bend space until
 		tangled spirals come apart, teach a network to read handwriting, watch a map of meaning assemble
-		itself without a single label, and end by training a small language model three different ways —
-		the same pipeline, in miniature, that produced the models everyone is talking about.
+		itself without a single label, train a small language model three different ways — the same
+		pipeline, in miniature, that produced the models everyone is talking about — and end by pulling
+		pictures out of pure noise.
 	</p>
 	<p>
 		Nothing here is a recording. The numbers move because a network is training on your GPU as you
