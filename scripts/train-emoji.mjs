@@ -52,8 +52,13 @@ try {
 	await new Promise((r) => setTimeout(r, 3500));
 	const page = await browser.newPage();
 	page.on('pageerror', (e) => console.log(`${stamp()} PAGEERROR ${e}`));
+	// anything not passed falls back to the trainer page's own defaults
+	const recipe = ['patch', 'dim', 'layers', 'heads', 'jitter', 'tsample', 'clip', 'ema']
+		.map((k) => (flag(k, null) === null ? null : `&${k}=${flag(k, null)}`))
+		.filter(Boolean)
+		.join('');
 	await page.goto(
-		`http://localhost:${port}/?objective=${objective}&batch=${batch}&lr=${lr}&horizon=${horizon}`,
+		`http://localhost:${port}/?objective=${objective}&batch=${batch}&lr=${lr}&horizon=${horizon}${recipe}`,
 		{ waitUntil: 'load' }
 	);
 	await page.waitForFunction(() => window.__state?.ready === true, null, { timeout: 180_000 });

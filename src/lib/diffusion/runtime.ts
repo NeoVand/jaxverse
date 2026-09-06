@@ -112,6 +112,32 @@ export interface Corpus {
 /** Bytes to the [-1, 1] the network trains on. */
 export const toUnit = (b: number) => b / 127.5 - 1;
 
+export interface BatchOptions {
+	/**
+	 * Where along the ruin to spend training effort.
+	 *
+	 * `uniform` treats every noise level as equally worth learning. It is the
+	 * obvious choice and it is not the best one: the levels near either end are
+	 * nearly free — at the clean end there is almost nothing to remove, at the
+	 * noisy end almost nothing to recover — while the middle is where the
+	 * picture is actually decided. `logit-normal` draws the level as a
+	 * sigmoid of a standard normal, which puts most of the samples in that
+	 * middle. It is the change Stable Diffusion 3 reported the largest gain from.
+	 */
+	tSample?: 'uniform' | 'logit-normal';
+	/**
+	 * Shift each picture by up to this many pixels in each direction.
+	 *
+	 * The corpus has exactly one image per concept per style, so without this
+	 * the model sees the same 8,656 pictures over and over and starts
+	 * memorizing pixel positions rather than shapes. Emoji are drawn with a
+	 * margin, so a few pixels of slop costs nothing.
+	 */
+	jitter?: number;
+	/** Mirror half the batch. Doubles the data; wrong for arrows and letters. */
+	flip?: boolean;
+}
+
 export function allocBatch(c: DiffusionConfig, batch: number): TrainBatch {
 	const dim = c.channels * c.res * c.res;
 	return {
@@ -135,32 +161,62 @@ export function makeBatch(
 	c: DiffusionConfig,
 	batch: number,
 	rand: () => number,
-	out: TrainBatch
+	out: TrainBatch,
+	opts: BatchOptions = {}
 ): void {
-	const dim = c.channels * c.res * c.res;
+	const { res } = c;
+	const plane = res * res;
+	const dim = c.channels * plane;
 	const noise = new Float32Array(dim);
+	const clean = new Float32Array(dim);
+	const jitter = opts.jitter ?? 0;
+
 	for (let b = 0; b < batch; b++) {
 		const idx = Math.floor(rand() * corpus.count);
 		const style = Math.floor(rand() * corpus.styles);
 		const src = (style * corpus.count + idx) * dim;
 		gaussianFill(noise, rand);
 
-		// Noise levels are drawn uniformly: every level has to be learned, and
-		// the schedule decides what each one means, not how often it is seen.
-		const tau = rand();
+		// Read the picture out with its augmentation applied. Pixels shifted in
+		// from outside the frame are transparent black, which premultiplied
+		// alpha makes an exact zero — the same value the empty background
+		// already has, so the shift introduces no edge.
+		const dx = jitter ? Math.round((rand() * 2 - 1) * jitter) : 0;
+		const dy = jitter ? Math.round((rand() * 2 - 1) * jitter) : 0;
+		const mirror = opts.flip === true && rand() < 0.5;
+		if (dx === 0 && dy === 0 && !mirror) {
+			for (let i = 0; i < dim; i++) clean[i] = toUnit(corpus.images[src + i]);
+		} else {
+			clean.fill(-1);
+			for (let y = 0; y < res; y++) {
+				const sy = y - dy;
+				if (sy < 0 || sy >= res) continue;
+				for (let x = 0; x < res; x++) {
+					const sx = mirror ? res - 1 - (x - dx) : x - dx;
+					if (sx < 0 || sx >= res) continue;
+					for (let ch = 0; ch < c.channels; ch++) {
+						clean[ch * plane + y * res + x] = toUnit(
+							corpus.images[src + ch * plane + sy * res + sx]
+						);
+					}
+				}
+			}
+		}
+
+		const tau = opts.tSample === 'logit-normal' ? 1 / (1 + Math.exp(-gaussian1(rand))) : rand();
+
 		const o = b * dim;
 		if (c.objective === 'flow') {
 			for (let i = 0; i < dim; i++) {
-				const x0 = toUnit(corpus.images[src + i]);
-				out.x[o + i] = (1 - tau) * x0 + tau * noise[i];
-				out.target[o + i] = noise[i] - x0;
+				out.x[o + i] = (1 - tau) * clean[i] + tau * noise[i];
+				out.target[o + i] = noise[i] - clean[i];
 			}
 		} else {
 			const ab = alphaBar(tau);
 			const sa = Math.sqrt(ab);
 			const sn = Math.sqrt(1 - ab);
 			for (let i = 0; i < dim; i++) {
-				out.x[o + i] = sa * toUnit(corpus.images[src + i]) + sn * noise[i];
+				out.x[o + i] = sa * clean[i] + sn * noise[i];
 				out.target[o + i] = noise[i];
 			}
 		}
@@ -170,6 +226,12 @@ export function makeBatch(
 			style: rand() < 0.1 ? null : style
 		});
 	}
+}
+
+/** One standard normal draw. */
+function gaussian1(rand: () => number): number {
+	const u = Math.max(rand(), 1e-7);
+	return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rand());
 }
 
 export interface Optimizer {
@@ -189,7 +251,21 @@ export interface Optimizer {
  * in as one traced triple instead, so the shape signature never changes and
  * the kernel compiles once.
  */
-export function makeOptimizer(c: DiffusionConfig, batch: number, params: Arr): Optimizer {
+export function makeOptimizer(
+	c: DiffusionConfig,
+	batch: number,
+	params: Arr,
+	/**
+	 * Clip the gradient to this global norm before the Adam step.
+	 *
+	 * Standard in diffusion training and omitted from the first version of this
+	 * model, which was fine at 64 tokens and diverged outright at 256: a single
+	 * unlucky batch at a high noise level produces a gradient large enough to
+	 * throw the weights somewhere they never recover from. Clipping costs one
+	 * extra reduction per step and removes the failure mode.
+	 */
+	clipNorm = 1
+): Optimizer {
 	let m: Arr = tree.map((l: Arr) => np.zerosLike(l), tree.ref(params));
 	let v: Arr = tree.map((l: Arr) => np.zerosLike(l), tree.ref(params));
 	let t = 0;
@@ -199,12 +275,27 @@ export function makeOptimizer(c: DiffusionConfig, batch: number, params: Arr): O
 			tree.ref(p)
 		);
 		const [leaves, def] = tree.flatten(p) as [Arr[], Arr];
-		const gl = tree.leaves(grads) as Arr[];
+		let gl = tree.leaves(grads) as Arr[];
 		const ml = tree.leaves(mm) as Arr[];
 		const vl = tree.leaves(vv) as Arr[];
 		const c1 = k.ref.slice([0, 1]);
 		const c2 = k.ref.slice([1, 2]);
 		const lr = k.slice([2, 3]);
+
+		if (clipNorm > 0) {
+			// one global norm across every tensor, then a single shared rescale
+			let sq: Arr = null;
+			for (const g of gl) {
+				const term = np.sum(np.square(g.ref));
+				sq = sq === null ? term : sq.add(term);
+			}
+			const norm = np.sqrt(sq).add(1e-6);
+			const cap = np.array(new Float32Array([clipNorm]));
+			const scale = np.minimum(cap.div(norm), 1);
+			const last = gl.length - 1;
+			gl = gl.map((g, i) => g.mul(i === last ? scale : scale.ref));
+		}
+
 		const nextP: Arr[] = [];
 		const nextM: Arr[] = [];
 		const nextV: Arr[] = [];
