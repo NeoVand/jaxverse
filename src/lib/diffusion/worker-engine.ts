@@ -2,7 +2,6 @@
 // training metrics delivered on a side channel that does not resolve it.
 
 import type { DiffusionInit, SampleOptions, SampleResult, TrainStepMetrics } from './engine';
-import type { EmojiSet } from './corpus';
 
 interface Pending {
 	resolve: (v: unknown) => void;
@@ -12,10 +11,8 @@ interface Pending {
 
 export interface CorpusInfo {
 	count: number;
-	styles: number;
-	tags: string[];
-	sets: EmojiSet[];
-	emoji: { cp: string; name: string }[];
+	/** Class names in label order, straight from the dataset. */
+	classes: string[];
 	hasShipped: boolean;
 }
 
@@ -83,8 +80,8 @@ export class DiffusionEngine {
 		};
 	}
 
-	async tiles(indices: number[], style: number): Promise<Float32Array> {
-		const r = await this.call<{ pixels: ArrayBuffer }>('tiles', { indices, style });
+	async tiles(indices: number[]): Promise<Float32Array> {
+		const r = await this.call<{ pixels: ArrayBuffer }>('tiles', { indices });
 		return new Float32Array(r.pixels);
 	}
 

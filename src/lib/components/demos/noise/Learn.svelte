@@ -11,7 +11,7 @@
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import { inview } from '$lib/components/ui/inview';
-	import Tiles from '$lib/components/demos/emoji/Tiles.svelte';
+	import Tiles from '$lib/components/demos/fashion/Tiles.svelte';
 	import { sparkPath } from '$lib/viz/spark';
 	import { NOTHING } from '$lib/diffusion/runtime';
 	import { lab, SHOWN } from './lab.svelte';
@@ -81,7 +81,7 @@
 <Plate id="learn" live {title} {caption}>
 	{#snippet status()}
 		{#if lab.phase === 'loading'}
-			<span>fetching the emoji sheets…</span>
+			<span>fetching the garment sheets…</span>
 		{:else if lab.phase === 'no-webgpu'}
 			<span>needs WebGPU</span>
 		{:else if lab.phase === 'error'}
@@ -137,9 +137,9 @@
 			</div>
 		{:else if lab.phase === 'loading' || lab.phase === 'idle'}
 			<div class="flex h-[240px] flex-col items-center justify-center gap-1">
-				<span class="eyebrow">fetching 8,656 pictures (≈2.3 MB) · warming up the worker…</span>
+				<span class="eyebrow">fetching 12,000 pictures · warming up the worker…</span>
 				<span class="text-[12.5px] text-ink-3">
-					a 2.6-million-parameter image model, trained in this tab
+					a 2.5-million-parameter image model, trained in this tab
 				</span>
 			</div>
 		{:else}
@@ -167,7 +167,7 @@
 						<div class="mb-1.5 flex h-4 items-baseline justify-between gap-3">
 							<span class="eyebrow" style="color: var(--warm);">the same eight seeds · shipped</span
 							>
-							<span class="text-[10.5px] text-ink-3">23,200 steps, same code</span>
+							<span class="text-[10.5px] text-ink-3">same code, already trained</span>
 						</div>
 						<Tiles
 							pixels={shipped}

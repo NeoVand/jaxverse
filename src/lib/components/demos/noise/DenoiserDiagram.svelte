@@ -38,7 +38,7 @@
 			viewBox="0 0 660 252"
 			class="mx-auto block w-full max-w-[950px]"
 			role="img"
-			aria-label="The denoiser drawn as a pipeline. A noisy 32-pixel square enters at the left and is cut into an 8 by 8 grid of four-by-four patches; each patch becomes one token. Four transformer blocks pass the tokens through attention and a small network, and every block is modulated by a scale and a shift computed from the noise level, which enters from above. The tokens are reassembled into a square at the right, and that square is the model's guess at which noise is present. Underneath, the update rule shows that guess being subtracted to give a slightly cleaner picture."
+			aria-label="The denoiser drawn as a pipeline. A noisy 28-pixel square enters at the left and is cut into a grid of four-by-four patches; each patch becomes one token. Four transformer blocks pass the tokens through attention and a small network, and every block is modulated by a scale and a shift computed from the noise level, which enters from above. The tokens are reassembled into a square at the right, and that square is the model's guess at which noise is present. Underneath, the update rule shows that guess being subtracted to give a slightly cleaner picture."
 		>
 			<defs>
 				<marker

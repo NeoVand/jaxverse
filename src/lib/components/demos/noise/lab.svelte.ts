@@ -6,11 +6,11 @@ import { DiffusionLab } from '$lib/diffusion/lab.svelte';
 
 export const lab = new DiffusionLab({
 	objective: 'eps',
-	checkpoint: 'emoji-eps.bin',
+	checkpoint: 'fashion-eps.bin',
 	batch: 32,
 	lr: 3e-4,
 	// far short of a finished model, but far enough that the top row of the
-	// training plate has stopped being static and started being emoji-shaped
+	// training plate has stopped being static and started being garment-shaped
 	milestone: { at: 1500, key: 'noise:drew' }
 });
 

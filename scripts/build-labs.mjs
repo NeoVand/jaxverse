@@ -12,16 +12,11 @@ const dataDir = join(root, 'static', 'data');
 const outDir = join(root, 'static', 'labs');
 
 const MNIST = ['mnist-train.png', 'mnist-test.png', 'mnist-labels.bin', 'mnist-meta.json'];
-const EMOJI = [
-	'emoji-meta.json',
-	'emoji-noto.png',
-	'emoji-twemoji.png',
-	'emoji-openmoji.png',
-	'emoji-openmoji-b.png',
-	'emoji-blob.png',
-	'emoji-fluent-3d.png',
-	'emoji-fluent-color.png',
-	'emoji-fluent-flat.png'
+const FASHION = [
+	'fashion-meta.json',
+	'fashion-train.png',
+	'fashion-test.png',
+	'fashion-labels.bin'
 ];
 const DATA = {
 	descent: [],
@@ -33,8 +28,8 @@ const DATA = {
 	reward: [],
 	taste: [],
 	rook: ['rook-tokens.bin', 'rook-vocab.json'],
-	noise: EMOJI,
-	flow: EMOJI
+	noise: FASHION,
+	flow: FASHION
 };
 
 mkdirSync(outDir, { recursive: true });

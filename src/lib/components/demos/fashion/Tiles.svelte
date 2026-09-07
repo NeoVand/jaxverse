@@ -2,11 +2,11 @@
 	// A grid of model output, drawn crisp and composited onto the plate.
 	// Shared by both diffusion chapters — nine plates draw pictures this way,
 	// and the theme-repaint dance should only be written once.
-	import { paintTiles } from '$lib/viz/emoji-paint';
+	import { paintTiles } from '$lib/viz/fashion-paint';
 	import { readTokens, themePulse, watchTheme } from '$lib/viz/tokens.svelte';
 
 	interface Props {
-		/** [count · 4 · res · res], premultiplied RGBA in [-1, 1]. */
+		/** [count · res · res], ink coverage in [-1, 1]. */
 		pixels: Float32Array | null;
 		count: number;
 		columns: number;
@@ -22,7 +22,7 @@
 		pixels,
 		count,
 		columns,
-		res = 32,
+		res = 28,
 		gap = 3,
 		limit,
 		class: klass = '',
@@ -43,11 +43,17 @@
 		const tk = readTokens(canvas);
 		if (!pixels) {
 			// empty slots, so the plate has its final height before the first draw
-			const blank = new Float32Array(count * 4 * res * res).fill(-1);
-			paintTiles(canvas, blank, count, res, { columns, background: tk.band, gap });
+			const blank = new Float32Array(count * res * res).fill(-1);
+			paintTiles(canvas, blank, count, res, { columns, background: tk.band, ink: tk.ink, gap });
 			return;
 		}
-		paintTiles(canvas, pixels, count, res, { columns, background: tk.band, gap, limit });
+		paintTiles(canvas, pixels, count, res, {
+			columns,
+			background: tk.band,
+			ink: tk.ink,
+			gap,
+			limit
+		});
 	});
 </script>
 

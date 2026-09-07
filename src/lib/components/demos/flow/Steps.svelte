@@ -6,7 +6,7 @@
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import { Shuffle } from 'lucide-svelte';
 	import { inview } from '$lib/components/ui/inview';
-	import Tiles from '$lib/components/demos/emoji/Tiles.svelte';
+	import Tiles from '$lib/components/demos/fashion/Tiles.svelte';
 	import { NOTHING } from '$lib/diffusion/runtime';
 	import type { DiffusionLab } from '$lib/diffusion/lab.svelte';
 	import { lab, rival } from './lab.svelte';
@@ -94,7 +94,7 @@
 				>
 					This plate needs WebGPU to run both models. What it shows: as the step budget falls from
 					fifty to two, the diffusion model degrades into coloured smoke while the flow model is
-					still producing recognizable emoji at four steps and something arguable at two.
+					still producing a recognizable garment at four steps and something arguable at two.
 				</p>
 			</div>
 		{:else}
@@ -109,7 +109,7 @@
 								count={SHOWN}
 								columns={SHOWN}
 								class="h-10 sm:h-12"
-								label="Five emoji drawn by the diffusion model in {b} steps"
+								label="Five garments drawn by the diffusion model in {b} steps"
 							/>
 						</div>
 					{/each}
@@ -124,7 +124,7 @@
 								count={SHOWN}
 								columns={SHOWN}
 								class="h-10 sm:h-12"
-								label="Five emoji drawn by the flow model in {b} steps"
+								label="Five garments drawn by the flow model in {b} steps"
 							/>
 						</div>
 					{/each}

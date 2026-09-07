@@ -32,7 +32,7 @@ while :; do
 	[ "$CHUNK" -gt "$CHUNK_MAX" ] && CHUNK=$CHUNK_MAX
 	ATTEMPT=$(( ATTEMPT + 1 ))
 	echo "[supervisor] $OBJECTIVE: chunk $ATTEMPT, $CHUNK min, $LEFT_MIN min left" | tee -a "$LOG"
-	node scripts/train-emoji.mjs --objective "$OBJECTIVE" --minutes "$CHUNK" --resume "$@" >>"$LOG" 2>&1
+	node scripts/train-fashion.mjs --objective "$OBJECTIVE" --minutes "$CHUNK" --resume "$@" >>"$LOG" 2>&1
 	echo "[supervisor] $OBJECTIVE: chunk $ATTEMPT exited $?" | tee -a "$LOG"
 	# let the GPU settle before the next renderer asks for a device
 	sleep 20

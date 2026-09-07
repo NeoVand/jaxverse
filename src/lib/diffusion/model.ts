@@ -1,10 +1,10 @@
-// The emoji denoiser, shared by the training worker and the offline trainer.
+// The garment denoiser, shared by the training worker and the offline trainer.
 //
-// A diffusion transformer: patchify 32x32 RGBA into 8x8 tokens, run four
-// pre-norm attention blocks over them, un-patchify back to pixels. A conv
+// A diffusion transformer: patchify a 28x28 grayscale picture into 7x7 tokens,
+// run pre-norm attention blocks over them, un-patchify back to pixels. A conv
 // U-Net was built and timed first and lost — 264 ms per step against the
 // transformer's 88 — because a U-Net spends its whole budget on 3x3 kernels
-// at full resolution, while everything here happens on 64 tokens, which is
+// at full resolution, while everything here happens on 49 tokens, which is
 // the shape jax-js is fastest at. It is also the architecture the current
 // generation of image models actually uses.
 //
@@ -26,37 +26,35 @@ export interface DiffusionConfig {
 	name?: string;
 	/** Side of the square image. */
 	res: number;
-	/** RGBA, premultiplied. */
+	/** Grayscale ink, one channel. */
 	channels: number;
 	/** Token side; res/patch must be a whole number. */
 	patch: number;
 	dim: number;
 	layers: number;
 	heads: number;
-	/** Size of the tag vocabulary the prompt is encoded into. */
-	tags: number;
-	/** How many drawing styles the style one-hot covers. */
-	styles: number;
+	/** How many garment classes the label one-hot covers. */
+	classes: number;
 	objective: Objective;
 }
 
-export const EMOJI_SHAPE = {
-	name: 'emoji',
-	res: 32,
-	channels: 4,
+export const FASHION_SHAPE = {
+	name: 'fashion',
+	res: 28,
+	channels: 1,
 	patch: 4,
 	dim: 192,
 	layers: 4,
 	heads: 4,
-	styles: 8
+	classes: 10
 } as const;
 
 /** Sinusoidal features for the noise level; 16 frequencies, sin and cos. */
 export const TIME_FEATURES = 32;
 
 export const tokenCount = (c: DiffusionConfig) => (c.res / c.patch) ** 2;
-/** time ‖ tags ‖ style ‖ two flags saying which of those two are present */
-export const condWidth = (c: DiffusionConfig) => TIME_FEATURES + c.tags + c.styles + 2;
+/** time ‖ label one-hot ‖ one flag saying whether the label is present */
+export const condWidth = (c: DiffusionConfig) => TIME_FEATURES + c.classes + 1;
 
 export function paramCount(c: DiffusionConfig): number {
 	const { dim: d, layers, channels: ch, patch } = c;

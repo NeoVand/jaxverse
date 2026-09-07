@@ -180,11 +180,11 @@ export class DiffusionLab {
 		});
 	}
 
-	tiles(indices: number[], style: number): Promise<Float32Array> {
+	tiles(indices: number[]): Promise<Float32Array> {
 		return this.run(async () => {
 			await this.boot();
 			if (!this.engine) throw new Error('no engine');
-			return this.engine.tiles(indices, style);
+			return this.engine.tiles(indices);
 		});
 	}
 

@@ -6,34 +6,32 @@ export const noise: HoodChapter = {
 		{
 			id: 'denoise',
 			lesson: 'one training example, from scratch',
-			lede: `There is no dataset of noisy pictures anywhere in this chapter. Every training example is manufactured on the spot out of a clean picture, a fresh Gaussian and a number drawn uniformly from zero to one — which is why the corpus is eight thousand images and the model never sees the same example twice.`,
+			lede: `There is no dataset of noisy pictures anywhere in this chapter. Every training example is manufactured on the spot out of a clean picture, a fresh Gaussian and a number drawn uniformly from zero to one — which is why the corpus is twelve thousand images and the model never sees the same example twice.`,
 			ml: [
 				{
 					title: 'Corrupt, and record what would undo it',
-					body: `The whole objective is in the inner loop. Pick a picture, pick how far to ruin it, mix, and store the noise you mixed in as the target. The <code>flow</code> branch is the next chapter's version of the same three lines and is worth reading beside this one: identical machinery, different target. The tenth of rows that drop the prompt or the style are what make guidance possible later — one set of weights has to know both what a cat looks like and what a picture looks like.`,
+					body: `The whole objective is in the inner loop. Pick a picture, pick how far to ruin it, mix, and store the noise you mixed in as the target. The <code>flow</code> branch is the next chapter's version of the same three lines and is worth reading beside this one: identical machinery, different target. The tenth of rows that drop the label are what make guidance possible later — one set of weights has to know both what a boot looks like and what a picture looks like.`,
 					code: {
 						file: 'src/lib/diffusion/runtime.ts',
 						code: `const tau = rand();
 const o = b * dim;
 if (c.objective === 'flow') {
 	for (let i = 0; i < dim; i++) {
-		const x0 = toUnit(corpus.images[src + i]);
-		out.x[o + i] = (1 - tau) * x0 + tau * noise[i];
-		out.target[o + i] = noise[i] - x0;
+		out.x[o + i] = (1 - tau) * clean[i] + tau * noise[i];
+		out.target[o + i] = noise[i] - clean[i];
 	}
 } else {
 	const ab = alphaBar(tau);
 	const sa = Math.sqrt(ab);
 	const sn = Math.sqrt(1 - ab);
 	for (let i = 0; i < dim; i++) {
-		out.x[o + i] = sa * toUnit(corpus.images[src + i]) + sn * noise[i];
+		out.x[o + i] = sa * clean[i] + sn * noise[i];
 		out.target[o + i] = noise[i];
 	}
 }
 
 writeCondition(out.cond, b, c, tau, {
-	tags: rand() < 0.1 ? [] : corpus.tags[idx],
-	style: rand() < 0.1 ? null : style
+	label: rand() < 0.1 ? null : corpus.labels[idx]
 });`
 					}
 				},
@@ -89,8 +87,8 @@ const loss = lossArr.item();`
 					}
 				},
 				{
-					title: 'Why the pictures are premultiplied',
-					body: `Emoji have transparent backgrounds, and an RGBA image stores colour in the transparent regions that no one ever looks at — whatever the artist happened to leave there. To a model trained on squared error that garbage is a real target with real gradients. Multiplying colour by alpha at build time collapses all of it to a single value the network can actually hit. (The PNG encoder then writes its own constant into the fully transparent pixels, and the canvas hands back <code>(0, 0, 0, 0)</code> for them on the way in, so the loader sees exact zeros either way — but the premultiply is what makes the <em>partly</em> transparent edges consistent, and those are most of an emoji's outline.) It also makes drawing the result one line: premultiplied compositing is <code>src + background · (1 − α)</code>, no division and no halo.`
+					title: 'Why the pictures are ink, not colour',
+					body: `Fashion-MNIST is one channel of ink on an empty field. The network trains on <code>[-1, 1]</code>; the canvas draws coverage <code>(v + 1) / 2</code> over the page colour, so the same weights look right in day and night. There is no alpha to premultiply and no unused channel for the loss to waste capacity on.`
 				}
 			]
 		},
@@ -142,7 +140,7 @@ for (let i = 0; i < state.length; i++) {
 			],
 			lab: {
 				file: 'noise.zip',
-				note: 'A denoising diffusion model on the emoji corpus in one file: corrupt, predict the noise, and walk back out of static, drawing eight fresh pictures every five hundred steps'
+				note: 'A denoising diffusion model on Fashion-MNIST in one file: corrupt, predict the noise, and walk back out of static, drawing eight fresh pictures every five hundred steps'
 			}
 		}
 	]

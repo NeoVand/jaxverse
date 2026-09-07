@@ -1,15 +1,16 @@
 // Proof sheets for the two shipped checkpoints.
 //
-// Two of this book's captions make empirical claims — that the velocity model
-// survives a four-step budget the diffusion model does not, and that prompts
-// and styles steer independently. Claims like that have to be looked at before
-// they are written down. This page draws the evidence; scripts/verify-emoji.mjs
-// pulls the PNGs out so they can be inspected as files.
+// Both chapters make claims that are empirical rather than arguable — that the
+// velocity model survives a step budget the diffusion model does not, that the
+// label steers what gets drawn, that the samples are not copies of the
+// training set. Claims like that have to be looked at before they are written
+// down. This page draws the evidence; scripts/verify-fashion.mjs pulls the
+// PNGs out so they can be inspected as files.
 
 import { init, defaultDevice, tree } from '@jax-js/jax';
-import { EMOJI_SHAPE, initParams, type DiffusionConfig } from '$lib/diffusion/model';
-import { loadEmoji, makeVocab, parsePrompt } from '$lib/diffusion/corpus';
-import { makeSampler, NOTHING, type Condition } from '$lib/diffusion/runtime';
+import { FASHION_SHAPE, initParams, type DiffusionConfig } from '$lib/diffusion/model';
+import { loadFashion } from '$lib/diffusion/corpus';
+import { makeSampler, NOTHING, toUnit } from '$lib/diffusion/runtime';
 import { unpack } from '$lib/diffusion/checkpoint';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -23,10 +24,10 @@ const log = (s: string) => {
 	out.textContent = lines.join('\n');
 };
 
-const RES = 32;
-const DIM = 4 * RES * RES;
+const RES = 28;
+const DIM = RES * RES;
 const BUDGETS = [50, 20, 10, 4, 2];
-const SEEDS = 5;
+const SEEDS = 6;
 
 declare global {
 	interface Window {
@@ -35,21 +36,20 @@ declare global {
 	}
 }
 
-/** Compose tiles into an offscreen canvas over mid grey, with row labels. */
+/** Compose tiles into an offscreen canvas, ink on paper, with row labels. */
 function draw(
 	rows: { label: string; pixels: (Float32Array | null)[] }[],
 	perRow: number,
 	zoom = 3
 ) {
-	const pad = 150;
+	const pad = 130;
 	const w = pad + perRow * RES * zoom;
 	const h = rows.length * (RES * zoom + 6);
 	sheet.width = w;
 	sheet.height = h;
 	const ctx = sheet.getContext('2d')!;
-	ctx.fillStyle = '#8a8a8a';
+	ctx.fillStyle = '#e8e6e0';
 	ctx.fillRect(0, 0, w, h);
-	const plane = RES * RES;
 	rows.forEach((row, r) => {
 		const y0 = r * (RES * zoom + 6);
 		ctx.fillStyle = '#111';
@@ -58,15 +58,15 @@ function draw(
 		row.pixels.forEach((px, k) => {
 			if (!px) return;
 			const img = ctx.createImageData(RES, RES);
-			for (let y = 0; y < RES; y++) {
-				for (let x = 0; x < RES; x++) {
-					const p = y * RES + x;
-					const to = (v: number) => Math.max(0, Math.min(255, (v + 1) * 127.5));
-					const a = to(px[p + 3 * plane]) / 255;
-					const d = p * 4;
-					for (let c = 0; c < 3; c++) img.data[d + c] = to(px[p + c * plane]) + 138 * (1 - a);
-					img.data[d + 3] = 255;
-				}
+			for (let p = 0; p < DIM; p++) {
+				// ink coverage over paper, the same reading the plates use
+				const a = Math.max(0, Math.min(1, (px[p] + 1) / 2));
+				const v = Math.round(232 * (1 - a) + 17 * a);
+				const d = p * 4;
+				img.data[d] = v;
+				img.data[d + 1] = v;
+				img.data[d + 2] = v;
+				img.data[d + 3] = 255;
 			}
 			const tmp = new OffscreenCanvas(RES, RES);
 			tmp.getContext('2d')!.putImageData(img, 0, 0);
@@ -90,37 +90,86 @@ async function main() {
 	defaultDevice('webgpu');
 	window.__sheets = {};
 
-	const emoji = await loadEmoji('');
-	const vocab = makeVocab(emoji.meta.tags);
-	const base = { ...EMOJI_SHAPE, tags: emoji.meta.tags.length, styles: emoji.meta.sets.length };
+	const fashion = await loadFashion('');
+	const names = fashion.meta.classes;
+
+	// A sheet is only worth drawing if it can be drawn from any candidate, not
+	// just the one the book currently ships: the whole point is comparing them.
+	const qs = new URLSearchParams(location.search);
+	const tag = qs.get('tag') ?? '';
+	const base = {
+		...FASHION_SHAPE,
+		dim: Number(qs.get('dim') ?? FASHION_SHAPE.dim),
+		layers: Number(qs.get('layers') ?? FASHION_SHAPE.layers),
+		heads: Number(qs.get('heads') ?? FASHION_SHAPE.heads),
+		patch: Number(qs.get('patch') ?? FASHION_SHAPE.patch),
+		classes: names.length
+	};
 
 	async function load(
 		objective: 'eps' | 'flow'
 	): Promise<{ cfg: DiffusionConfig; w: Arr; steps: number }> {
 		const cfg: DiffusionConfig = { ...base, objective };
-		const buf = await (await fetch(`data/emoji-${objective}.bin`)).arrayBuffer();
+		const file = `data/fashion-${objective}${tag ? `-${tag}` : ''}.bin`;
+		const buf = await (await fetch(file)).arrayBuffer();
 		const { params, steps } = unpack(buf, initParams(cfg, 0));
 		log(`${objective}: checkpoint at step ${steps}`);
 		return { cfg, w: params, steps };
 	}
 
-	const eps = await load('eps');
-	const flow = await load('flow');
+	// A candidate architecture is trained one objective at a time, so the
+	// sheets have to be drawable from whichever half exists yet.
+	const only = qs.get('only');
+	const eps = only === 'flow' ? null : await load('eps');
+	const flow = only === 'eps' ? null : await load('flow');
+	const main = flow ?? eps!;
 
-	// ── sheet 1: the step-count budget, both models ──
+	// ── sheet 1: every class, which is the whole promise of the demo ──
+	const classSampler = makeSampler(main.cfg, SEEDS);
+	const classRows: { label: string; pixels: (Float32Array | null)[] }[] = [];
+	for (let c = 0; c < names.length; c++) {
+		const px = await classSampler.run({
+			params: tree.ref(main.w),
+			steps: 20,
+			a: { label: c },
+			guidanceA: 2,
+			seed: 2026
+		});
+		classRows.push({ label: names[c], pixels: split(px, SEEDS) });
+		log(`  class ${names[c]}`);
+	}
+	window.__sheets.classes = draw(classRows, SEEDS);
+
+	// ── sheet 2: what guidance actually buys, on one class ──
+	const guideRows: { label: string; pixels: (Float32Array | null)[] }[] = [];
+	for (const w of [0, 1, 1.5, 2, 3, 5]) {
+		const px = await classSampler.run({
+			params: tree.ref(main.w),
+			steps: 20,
+			a: { label: 9 },
+			guidanceA: w,
+			seed: 404
+		});
+		guideRows.push({ label: `ankle boot · w = ${w}`, pixels: split(px, SEEDS) });
+	}
+	window.__sheets.guidance = draw(guideRows, SEEDS);
+
+	// ── sheet 3: the step budget, both objectives ──
 	const budgetRows: { label: string; pixels: (Float32Array | null)[] }[] = [];
-	for (const [name, m] of [
-		['noise', eps],
-		['velocity', flow]
-	] as const) {
+	for (const [name, m] of (eps && flow
+		? [
+				['noise', eps],
+				['velocity', flow]
+			]
+		: [[flow ? 'velocity' : 'noise', main]]) as [string, { cfg: DiffusionConfig; w: Arr }][]) {
 		const sampler = makeSampler(m.cfg, SEEDS);
 		for (const steps of BUDGETS) {
 			const px = await sampler.run({
 				params: tree.ref(m.w),
 				steps,
-				a: NOTHING,
-				guidanceA: 1,
-				seed: 31
+				a: { label: 7 },
+				guidanceA: 2,
+				seed: 88
 			});
 			budgetRows.push({ label: `${name} · ${steps} steps`, pixels: split(px, SEEDS) });
 			log(`  ${name} @ ${steps} steps`);
@@ -128,143 +177,76 @@ async function main() {
 	}
 	window.__sheets.budget = draw(budgetRows, SEEDS);
 
-	// ── sheet 2: prompts, at the studio's default guidance ──
-	const PROMPTS = [
-		'smiling cat face',
-		'red heart',
-		'star',
-		'ghost',
-		'fire',
-		'moon',
-		'flower',
-		'tree'
-	];
-	const promptSampler = makeSampler(flow.cfg, 6);
-	const promptRows: { label: string; pixels: (Float32Array | null)[] }[] = [];
-	for (const p of PROMPTS) {
-		const parsed = parsePrompt(p, vocab);
-		const px = await promptSampler.run({
-			params: tree.ref(flow.w),
-			steps: 20,
-			a: { tags: parsed.tags, style: null },
-			guidanceA: 3,
-			seed: 2026
-		});
-		promptRows.push({ label: `${p} (${parsed.matched.length})`, pixels: split(px, 6) });
-		log(`  prompt "${p}" → ${parsed.matched.join(',') || 'no tags'}`);
-	}
-	window.__sheets.prompts = draw(promptRows, 6);
-
-	// ── sheet 3: one idea in every style ──
-	const styleRows: { label: string; pixels: (Float32Array | null)[] }[] = [];
-	const ghost = parsePrompt('ghost', vocab).tags;
-	for (let s = 0; s < emoji.meta.sets.length; s++) {
-		const px = await promptSampler.run({
-			params: tree.ref(flow.w),
-			steps: 20,
-			a: { tags: ghost, style: s },
-			guidanceA: 3,
-			seed: 1212
-		});
-		styleRows.push({ label: emoji.meta.sets[s].label, pixels: split(px, 6) });
-	}
-	window.__sheets.styles = draw(styleRows, 6);
-
-	// ── sheet 4: composing two prompts ──
-	const comboRows: { label: string; pixels: (Float32Array | null)[] }[] = [];
-	const COMBOS: [string, string][] = [
-		['cat face', 'heart'],
-		['ghost', 'flower'],
-		['moon', 'smiling face'],
-		['star', 'clock'],
-		['bird', 'fire']
-	];
-	for (const [pa, pb] of COMBOS) {
-		const a: Condition = { tags: parsePrompt(pa, vocab).tags, style: null };
-		const b: Condition = { tags: parsePrompt(pb, vocab).tags, style: null };
-		for (const [label, cond] of [
-			[pa, { a, b: undefined, wb: 0 }],
-			[pb, { a: b, b: undefined, wb: 0 }],
-			[`${pa} + ${pb}`, { a, b, wb: 3 }]
-		] as const) {
-			const px = await promptSampler.run({
-				params: tree.ref(flow.w),
+	// ── sheet 4: walking the label from one garment to another ──
+	// The conditioning is a one-hot, so a partial mix is simply a vector the
+	// model was never trained on — which is exactly the question worth asking.
+	const morphRows: { label: string; pixels: (Float32Array | null)[] }[] = [];
+	for (const [a, b] of [
+		[7, 9],
+		[0, 3],
+		[8, 5]
+	]) {
+		const frames: (Float32Array | null)[] = [];
+		for (let i = 0; i < SEEDS; i++) {
+			const t = i / (SEEDS - 1);
+			const px = await classSampler.run({
+				params: tree.ref(main.w),
 				steps: 20,
-				a: cond.a,
-				b: cond.b,
-				guidanceA: 3,
-				guidanceB: cond.wb,
-				seed: 515
+				a: { label: a, other: b, mix: t },
+				guidanceA: 2,
+				seed: 5150
 			});
-			comboRows.push({ label, pixels: split(px, 6) });
+			frames.push(px.slice(0, DIM));
 		}
+		morphRows.push({ label: `${names[a]} → ${names[b]}`, pixels: frames });
+		log(`  morph ${names[a]} → ${names[b]}`);
 	}
-	window.__sheets.combos = draw(comboRows, 6);
+	window.__sheets.morph = draw(morphRows, SEEDS);
 
-	// ── sheet 5: the guidance sweep, whose caption names specific behaviour ──
-	const guideSampler = makeSampler(flow.cfg, 4);
-	const heart = parsePrompt('red heart', vocab).tags;
-	const guideRows: { label: string; pixels: (Float32Array | null)[] }[] = [];
-	for (const w of [0, 1, 2, 4, 8]) {
-		const px = await guideSampler.run({
-			params: tree.ref(flow.w),
-			steps: 20,
-			a: { tags: heart, style: null },
-			guidanceA: w,
-			seed: 808
-		});
-		guideRows.push({ label: `w = ${w}`, pixels: split(px, 4) });
-	}
-	window.__sheets.guidance = draw(guideRows, 4);
-
-	// ── sheet 6: is it copying? ──
-	//
-	// The chapters claim these models draw things that are not in the corpus.
-	// With 2.6M parameters and 8,656 pictures that claim has to be checked, not
-	// assumed. For each sample, find the nearest training picture by plain
-	// squared distance over all 8,656 and put them side by side.
-	const nnSampler = makeSampler(flow.cfg, 8);
-	const samples = await nnSampler.run({
-		params: tree.ref(flow.w),
+	// ── sheet 5: is it copying? ──
+	const nnSampler = makeSampler(main.cfg, 8);
+	const drawn = await nnSampler.run({
+		params: tree.ref(main.w),
 		steps: 24,
 		a: NOTHING,
 		guidanceA: 1,
-		seed: 77
+		seed: 31337
 	});
 	const nnRows: { label: string; pixels: (Float32Array | null)[] }[] = [];
-	const drawn = split(samples, 8);
-	const neighbours: (Float32Array | null)[] = [];
+	const made = split(drawn, 8);
+	const nearest: (Float32Array | null)[] = [];
 	const dists: number[] = [];
-	for (const s of drawn) {
+	for (const g of made) {
 		let best = Infinity;
 		let bestIdx = 0;
-		for (let i = 0; i < emoji.images.length / DIM; i++) {
+		for (let i = 0; i < fashion.count; i++) {
 			let d = 0;
-			const off = i * DIM;
-			for (let k = 0; k < DIM; k += 4) {
-				const diff = s[k] - (emoji.images[off + k] / 127.5 - 1);
+			// a quarter of the pixels is enough to rank neighbours and is four
+			// times faster over twelve thousand candidates
+			for (let p = 0; p < DIM; p += 4) {
+				const diff = g[p] - toUnit(fashion.images[i * DIM + p]);
 				d += diff * diff;
-				if (d > best) break;
 			}
 			if (d < best) {
 				best = d;
 				bestIdx = i;
 			}
 		}
-		const nn = new Float32Array(DIM);
-		for (let k = 0; k < DIM; k++) nn[k] = emoji.images[bestIdx * DIM + k] / 127.5 - 1;
-		neighbours.push(nn);
-		dists.push(best);
+		const real = new Float32Array(DIM);
+		for (let p = 0; p < DIM; p++) real[p] = toUnit(fashion.images[bestIdx * DIM + p]);
+		nearest.push(real);
+		dists.push(Math.sqrt(best));
 	}
-	nnRows.push({ label: 'drawn', pixels: drawn });
-	nnRows.push({ label: 'nearest real', pixels: neighbours });
+	nnRows.push({ label: 'drawn', pixels: made });
+	nnRows.push({ label: 'nearest real', pixels: nearest });
 	window.__sheets.nearest = draw(nnRows, 8);
-	log(
-		`nearest-neighbour distances (sampled quarter of channels): ${dists.map((d) => d.toFixed(1)).join(' ')}`
-	);
+	log(`nearest-neighbour distances: ${dists.map((d) => d.toFixed(1)).join(' ')}`);
 
 	log('done');
 	window.__done = true;
 }
 
-void main().catch((e) => log(`error: ${e?.stack ?? e}`));
+main().catch((e) => {
+	log(`error: ${e}`);
+	window.__done = true;
+});

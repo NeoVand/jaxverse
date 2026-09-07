@@ -1,18 +1,18 @@
-// Offline trainer for the shipped emoji checkpoints.
+// Offline trainer for the shipped garment checkpoints.
 //
 // It runs in headless Chromium so that the weights the book ships were
 // produced by the same jax-js, the same kernels and the same code as the
-// weights a reader trains in their own tab. scripts/train-emoji.mjs drives it
-// and pulls snapshots out through window.__snapshot().
+// weights a reader trains in their own tab. scripts/train-fashion.mjs drives
+// it and pulls snapshots out through window.__snapshot().
 
 import { blockUntilReady, init, defaultDevice, jit, numpy as np, tree } from '@jax-js/jax';
 import {
-	EMOJI_SHAPE,
+	FASHION_SHAPE,
 	initParams,
 	type DiffusionConfig,
 	type Objective
 } from '$lib/diffusion/model';
-import { loadEmoji } from '$lib/diffusion/corpus';
+import { loadFashion } from '$lib/diffusion/corpus';
 import {
 	allocBatch,
 	makeBatch,
@@ -50,10 +50,10 @@ const HORIZON = Number(params.get('horizon') ?? 55000);
 const EMA_DECAY = Number(params.get('ema') ?? 0.9995);
 /** Architecture and data recipe, so a run can be launched on whatever
  *  tools/recipe-ablation picked without editing this file. */
-const PATCH = Number(params.get('patch') ?? EMOJI_SHAPE.patch);
-const DIM = Number(params.get('dim') ?? EMOJI_SHAPE.dim);
-const LAYERS = Number(params.get('layers') ?? EMOJI_SHAPE.layers);
-const HEADS = Number(params.get('heads') ?? EMOJI_SHAPE.heads);
+const PATCH = Number(params.get('patch') ?? FASHION_SHAPE.patch);
+const DIM = Number(params.get('dim') ?? FASHION_SHAPE.dim);
+const LAYERS = Number(params.get('layers') ?? FASHION_SHAPE.layers);
+const HEADS = Number(params.get('heads') ?? FASHION_SHAPE.heads);
 const JITTER = Number(params.get('jitter') ?? 3);
 /**
  * Uniform, on the evidence rather than the fashion. Logit-normal sampling is
@@ -100,14 +100,11 @@ function paint(frame: Float32Array, cfg: DiffusionConfig, n: number) {
 		for (let y = 0; y < res; y++) {
 			for (let x = 0; x < res; x++) {
 				const p = y * res + x;
-				const s = k * dim + p;
+				const v = Math.min(Math.max((frame[k * dim + p] + 1) * 127.5, 0), 255);
 				const d = (y * res * n + k * res + x) * 4;
-				const a = Math.min(Math.max((frame[s + 3 * res * res] + 1) * 127.5, 0), 255);
-				for (let c = 0; c < 3; c++) {
-					const v = Math.min(Math.max((frame[s + c * res * res] + 1) * 127.5, 0), 255);
-					// premultiplied over the mid grey the canvas is painted with
-					img.data[d + c] = Math.round(v + 136 * (1 - a / 255));
-				}
+				img.data[d] = v;
+				img.data[d + 1] = v;
+				img.data[d + 2] = v;
 				img.data[d + 3] = 255;
 			}
 		}
@@ -126,18 +123,17 @@ async function main() {
 	defaultDevice('webgpu');
 
 	log('loading corpus…');
-	const emoji = await loadEmoji('');
+	const fashion = await loadFashion('');
 	const cfg: DiffusionConfig = {
-		...EMOJI_SHAPE,
+		...FASHION_SHAPE,
 		patch: PATCH,
 		dim: DIM,
 		layers: LAYERS,
 		heads: HEADS,
-		tags: emoji.meta.tags.length,
-		styles: emoji.meta.sets.length,
+		classes: fashion.meta.classes.length,
 		objective: OBJECTIVE
 	};
-	const corpus: Corpus = emoji;
+	const corpus: Corpus = fashion;
 	const batchOpts: BatchOptions = { tSample: TSAMPLE, jitter: JITTER };
 
 	let weights: Arr = initParams(cfg, 20260905);
@@ -149,7 +145,7 @@ async function main() {
 	}, 0);
 	head =
 		`objective ${OBJECTIVE} · ${(nParams / 1e6).toFixed(2)}M params · batch ${BATCH} · lr ${LR}\n` +
-		`${emoji.count} emoji x ${emoji.styles} styles · ${cfg.tags} tags`;
+		`${fashion.count} garments · ${cfg.classes} classes`;
 
 	let opt = makeOptimizer(cfg, BATCH, weights, CLIP);
 
@@ -272,7 +268,7 @@ async function main() {
 				// draw from the average, which is what ships
 				params: tree.ref(emaWeights),
 				steps: OBJECTIVE === 'flow' ? 24 : 40,
-				a: { tags: [], style: null },
+				a: { label: null },
 				guidanceA: 1,
 				seed: 99
 			});

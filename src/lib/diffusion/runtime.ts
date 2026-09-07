@@ -45,21 +45,29 @@ export function gaussianFill(buf: Float32Array, rand: () => number): void {
 // ------------------------------------------------------------ conditions ---
 
 export interface Condition {
-	/** Indices into the tag vocabulary. Empty means "no prompt". */
-	tags: number[];
-	/** Index into the style list, or null for "any style". */
-	style: number | null;
+	/** Which garment to draw, or null for "anything". */
+	label: number | null;
+	/**
+	 * A second garment to lean towards, with `mix` saying how far.
+	 *
+	 * Training only ever showed the model a one-hot, so a half-and-half vector
+	 * is a question nobody asked it during training. It answers anyway, and
+	 * what it answers is the subject of one of the plates.
+	 */
+	other?: number | null;
+	/** 0 keeps `label`, 1 arrives fully at `other`. */
+	mix?: number;
 }
 
-export const NOTHING: Condition = { tags: [], style: null };
+export const NOTHING: Condition = { label: null };
 
 /**
  * Write one row of the conditioning vector.
  *
- * Tags are scaled by 1/sqrt(n) rather than summed, so a six-word prompt
- * arrives no louder than a two-word one. The two trailing flags say whether
- * the tag block and the style block mean anything, which is what lets
- * guidance drop either of them on its own.
+ * The trailing flag says whether the label block means anything. Without it
+ * an absent label and class zero would arrive as the same all-zero block, and
+ * guidance works by asking the model the same question twice — once with the
+ * label and once without — so the two have to be distinguishable.
  */
 export function writeCondition(
 	dst: Float32Array,
@@ -72,16 +80,17 @@ export function writeCondition(
 	const off = row * w;
 	dst.fill(0, off, off + w);
 	writeTimeFeatures(dst, off, tau);
-	const tagBase = off + TIME_FEATURES;
-	const flagBase = tagBase + c.tags + c.styles;
-	if (cond.tags.length > 0) {
-		const v = 1 / Math.sqrt(cond.tags.length);
-		for (const t of cond.tags) if (t >= 0 && t < c.tags) dst[tagBase + t] = v;
-		dst[flagBase] = 1;
+	const labelBase = off + TIME_FEATURES;
+	const inRange = (l: number | null | undefined): l is number =>
+		l !== null && l !== undefined && l >= 0 && l < c.classes;
+	const mix = cond.mix ?? 0;
+	if (inRange(cond.label)) {
+		dst[labelBase + cond.label] = inRange(cond.other) ? 1 - mix : 1;
+		dst[labelBase + c.classes] = 1;
 	}
-	if (cond.style !== null && cond.style >= 0 && cond.style < c.styles) {
-		dst[tagBase + c.tags + cond.style] = 1;
-		dst[flagBase + 1] = 1;
+	if (inRange(cond.other) && mix > 0) {
+		dst[labelBase + cond.other] += mix;
+		dst[labelBase + c.classes] = 1;
 	}
 }
 
@@ -97,16 +106,14 @@ export interface TrainBatch {
 
 export interface Corpus {
 	/**
-	 * Premultiplied RGBA bytes, style-major: style s, emoji i, channel c and
-	 * pixel p live at ((s · count + i) · channels + c) · res² + p. Kept as
-	 * bytes because that is the precision the artwork arrived in, and because
-	 * the float version of the same thing is 142 MB.
+	 * Grayscale ink, one byte per pixel: picture i, pixel p lives at
+	 * i · res² + p. Kept as bytes because that is the precision the dataset
+	 * arrived in, and because the float version is four times the size.
 	 */
 	images: Uint8Array;
-	/** Tag index lists, one per emoji. */
-	tags: number[][];
+	/** Class index, one per picture. */
+	labels: Uint8Array;
 	count: number;
-	styles: number;
 }
 
 /** Bytes to the [-1, 1] the network trains on. */
@@ -128,13 +135,11 @@ export interface BatchOptions {
 	/**
 	 * Shift each picture by up to this many pixels in each direction.
 	 *
-	 * The corpus has exactly one image per concept per style, so without this
-	 * the model sees the same 8,656 pictures over and over and starts
-	 * memorizing pixel positions rather than shapes. Emoji are drawn with a
-	 * margin, so a few pixels of slop costs nothing.
+	 * Garments are photographed tight to the frame, so a large shift crops a
+	 * sleeve off rather than moving it. Small values only.
 	 */
 	jitter?: number;
-	/** Mirror half the batch. Doubles the data; wrong for arrows and letters. */
+	/** Mirror half the batch. A shoe faces either way, so this is free data. */
 	flip?: boolean;
 }
 
@@ -152,9 +157,8 @@ export function allocBatch(c: DiffusionConfig, batch: number): TrainBatch {
  * destroy it that far, and write down what would undo the damage. The only
  * thing the two chapters disagree about is that last clause.
  *
- * A tenth of the rows drop the prompt and a tenth drop the style, drawn
- * independently, so one set of weights learns the conditional field and the
- * unconditional one that guidance later subtracts from it.
+ * A tenth of the rows drop the label, so one set of weights learns both the
+ * conditional field and the unconditional one that guidance subtracts from it.
  */
 export function makeBatch(
 	corpus: Corpus,
@@ -173,14 +177,12 @@ export function makeBatch(
 
 	for (let b = 0; b < batch; b++) {
 		const idx = Math.floor(rand() * corpus.count);
-		const style = Math.floor(rand() * corpus.styles);
-		const src = (style * corpus.count + idx) * dim;
+		const src = idx * dim;
 		gaussianFill(noise, rand);
 
 		// Read the picture out with its augmentation applied. Pixels shifted in
-		// from outside the frame are transparent black, which premultiplied
-		// alpha makes an exact zero — the same value the empty background
-		// already has, so the shift introduces no edge.
+		// from outside the frame are black, which is the value the empty
+		// background already has, so the shift introduces no edge.
 		const dx = jitter ? Math.round((rand() * 2 - 1) * jitter) : 0;
 		const dy = jitter ? Math.round((rand() * 2 - 1) * jitter) : 0;
 		const mirror = opts.flip === true && rand() < 0.5;
@@ -222,8 +224,7 @@ export function makeBatch(
 		}
 
 		writeCondition(out.cond, b, c, tau, {
-			tags: rand() < 0.1 ? [] : corpus.tags[idx],
-			style: rand() < 0.1 ? null : style
+			label: rand() < 0.1 ? null : corpus.labels[idx]
 		});
 	}
 }

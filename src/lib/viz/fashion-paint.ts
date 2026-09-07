@@ -1,18 +1,20 @@
 // Drawing model output onto the page.
 //
-// The corpus is premultiplied RGBA, so compositing an emoji over the plate is
-// literally `src + background · (1 − α)` — no division, no halo. That is the
-// whole reason the build script premultiplies: it makes the transparent parts
-// of a picture an exact zero the model can predict, and it makes this function
-// one line.
-
-const CHANNELS = 4;
+// Fashion-MNIST is one grayscale channel: bright where the garment is, black
+// where the backdrop is. Painting that literally would put a black square on
+// every plate and invert itself between the book's two themes, so the value is
+// read as ink coverage instead — nothing at -1, full ink at +1 — and composited
+// over whatever colour the page happens to be. A sneaker is then dark on the
+// day theme and pale on the night one, with no second copy of the data and no
+// branch in the loop.
 
 export interface PaintOptions {
 	/** Tiles across. Rows follow from the count. */
 	columns: number;
 	/** Page colour to composite onto, as `#rrggbb`. */
 	background: string;
+	/** Colour of the garment itself, as `#rrggbb`. */
+	ink: string;
 	/** Blank space between tiles, in source pixels. */
 	gap?: number;
 	/** Draw only this many tiles, for progressive reveals. */
@@ -30,14 +32,14 @@ function parseHex(hex: string): [number, number, number] {
 	return [128, 128, 128];
 }
 
-/** Model output in [-1, 1] to an 8-bit channel. */
-const toByte = (v: number) => Math.max(0, Math.min(255, Math.round((v + 1) * 127.5)));
+/** Model output in [-1, 1] to ink coverage in [0, 1]. */
+const coverage = (v: number) => Math.max(0, Math.min(1, (v + 1) / 2));
 
 /**
  * Compose `count` tiles into one ImageData laid out in a grid.
  *
- * `pixels` is planar CHW per tile — the layout the network produces — which is
- * why the inner loop strides rather than walking straight through.
+ * `pixels` is one plane per tile, which for a single channel means the tiles
+ * simply follow one another.
  */
 export function tilesToImageData(
 	pixels: Float32Array,
@@ -47,12 +49,12 @@ export function tilesToImageData(
 ): ImageData {
 	const { columns, gap = 0 } = opts;
 	const [br, bg, bb] = parseHex(opts.background);
+	const [ir, ig, ib] = parseHex(opts.ink);
 	const rows = Math.ceil(count / columns);
 	const w = columns * res + (columns - 1) * gap;
 	const h = rows * res + (rows - 1) * gap;
 	const img = new ImageData(w, h);
 	const plane = res * res;
-	const dim = CHANNELS * plane;
 
 	// start as flat background so the gaps are not black
 	for (let i = 0; i < w * h; i++) {
@@ -66,15 +68,14 @@ export function tilesToImageData(
 	for (let k = 0; k < limit; k++) {
 		const ox = (k % columns) * (res + gap);
 		const oy = Math.floor(k / columns) * (res + gap);
-		const base = k * dim;
+		const base = k * plane;
 		for (let y = 0; y < res; y++) {
 			for (let x = 0; x < res; x++) {
-				const p = y * res + x;
-				const a = toByte(pixels[base + 3 * plane + p]) / 255;
+				const a = coverage(pixels[base + y * res + x]);
 				const d = ((oy + y) * w + ox + x) * 4;
-				img.data[d] = Math.round(toByte(pixels[base + p]) + br * (1 - a));
-				img.data[d + 1] = Math.round(toByte(pixels[base + plane + p]) + bg * (1 - a));
-				img.data[d + 2] = Math.round(toByte(pixels[base + 2 * plane + p]) + bb * (1 - a));
+				img.data[d] = Math.round(ir * a + br * (1 - a));
+				img.data[d + 1] = Math.round(ig * a + bg * (1 - a));
+				img.data[d + 2] = Math.round(ib * a + bb * (1 - a));
 			}
 		}
 	}
@@ -83,7 +84,7 @@ export function tilesToImageData(
 
 /**
  * Blit an ImageData to a canvas at whatever size CSS gave it, without
- * smoothing — these are 32-pixel pictures and they should look like it.
+ * smoothing — these are 28-pixel pictures and they should look like it.
  */
 export function blitCrisp(canvas: HTMLCanvasElement, img: ImageData): void {
 	const dpr = Math.min(typeof devicePixelRatio === 'number' ? devicePixelRatio : 1, 2);

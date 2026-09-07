@@ -31,7 +31,7 @@ export const plateOrder: Record<string, readonly string[]> = {
 	taste: ['balance', 'pairs', 'judge', 'goodhart', 'leash', 'fence'],
 	rook: ['vocab', 'pretrain', 'probe', 'play', 'sft', 'rlvr', 'arena'],
 	noise: ['ladder', 'denoiser', 'learn', 'walk'],
-	flow: ['paths', 'steps', 'studio', 'guidance', 'compose', 'styles']
+	flow: ['paths', 'steps', 'studio', 'guidance', 'morph']
 };
 
 /** 1-based position of a plate in its chapter, or undefined if unregistered. */

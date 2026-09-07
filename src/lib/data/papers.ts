@@ -953,7 +953,6 @@ export const citationOrder: Partial<Record<string, readonly PaperId[]>> = {
 		'radford-2021',
 		'dhariwal-nichol-2021',
 		'ho-salimans-2022',
-		'liu-2022-composable',
 		'rombach-2022'
 	],
 	neuron: [

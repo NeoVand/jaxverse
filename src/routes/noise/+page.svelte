@@ -31,13 +31,14 @@
 		</p>
 		<p>
 			Here is the changed question. It is smaller, not bigger. Do not ask for a picture. Asking for
-			a picture demands four thousand numbers committed at once with nothing in hand, and against
-			that demand hedging is genuinely the best available strategy. Ask instead for something close
-			to trivial: <em>here is a picture with a little noise sprinkled on it — which noise?</em> That is
-			a question about a small local correction rather than about the whole picture, and a small local
-			correction can be got nearly right. A model that answers it fifty times in a row, each time on its
-			own slightly cleaner output, will have produced an image without ever once being asked to imagine
-			one.
+			a picture demands seven hundred and eighty-four numbers committed at once with nothing in
+			hand, and against that demand hedging is genuinely the best available strategy. Ask instead
+			for something close to trivial: <em
+				>here is a picture with a little noise sprinkled on it — which noise?</em
+			> That is a question about a small local correction rather than about the whole picture, and a small
+			local correction can be got nearly right. A model that answers it fifty times in a row, each time
+			on its own slightly cleaner output, will have produced an image without ever once being asked to
+			imagine one.
 		</p>
 		<p>
 			The idea is from 2015, in a paper that had the whole shape of the thing and then waited five
@@ -64,7 +65,7 @@
 			<em>schedule</em>, the fraction of the original signal still present at that point. The two
 			square roots are chosen so the ingredients always add up to one unit of variance — the
 			<em>variance-preserving</em> convention, which keeps the network's input from growing as the ruin
-			deepens. (It holds exactly for data of unit variance. These emoji sit nearer 0.42, so the scale
+			deepens. (It holds exactly for data of unit variance. These garments sit nearer 0.71, so the scale
 			does drift upward across the ladder; bounded and predictable is all the network needs.) Notice also
 			what the formula does not contain — any mention of the steps in between. You can jump to any noise
 			level in one multiplication, which is why training never has to simulate a chain.
@@ -73,7 +74,7 @@
 
 	<Ladder
 		title="Eleven rungs down"
-		caption="One emoji, mixed with the same fixed noise in eleven increasing proportions, intact at the left and indistinguishable from static at the right. The curve underneath is the schedule — how much of the picture survives at each rung — with the alternative drawn behind it as a dashed line. Switch from cosine to linear and watch the middle of the row collapse: under the schedule diffusion was first published with, the picture is essentially gone by the halfway rung, and everything past it is a level at which there is nothing much left to learn to remove. Change the drawing style, or the picture, and the story is the same."
+		caption="One garment, mixed with the same fixed noise in eleven increasing proportions, intact at the left and indistinguishable from static at the right. The curve underneath is the schedule — how much of the picture survives at each rung — with the alternative drawn behind it as a dashed line. Switch from cosine to linear and watch the middle of the row collapse: under the schedule diffusion was first published with, the picture is essentially gone by the halfway rung, and everything past it is a level at which there is nothing much left to learn to remove. Change the class, or the picture, and the story is the same."
 	/>
 
 	<Prose>
@@ -83,7 +84,7 @@
 			at which there is nothing left to learn to remove. Replacing it with a cosine, so the picture
 			gives way gradually and holds through the middle, buys a clear improvement in likelihood and a
 			real one in sample quality — but only at small sizes. The linear schedule is fine at 256
-			pixels square and bad at 32, which is exactly the size this chapter works at.<Cite
+			pixels square and bad at 32, which is nearly the size this chapter works at.<Cite
 				id="nichol-dhariwal-2021"
 			/> Most of the constants in a working diffusion model are like this: not derived, but found by someone
 			who plotted the right thing.<Cite id="karras-2022" />
@@ -146,7 +147,7 @@
 
 	<DenoiserDiagram
 		title="What answers the question"
-		caption="The denoiser is the transformer from The Next Token with three changes. The sequence is not words but the sixty-four four-by-four patches of a 32 × 32 square. Nothing is masked — a patch in the corner may attend to a patch in the middle, because an image has no past. And the noise level does not enter as a token; it is turned into a scale and a shift applied inside every block, which is how one set of weights behaves differently at every rung of the ladder. Out the far side comes a square the same size as the input, holding the model's claim about which noise is present. That side input has room for more than a noise level, and the next chapter uses it."
+		caption="The denoiser is the transformer from The Next Token with three changes. The sequence is not words but the forty-nine four-by-four patches of a 28 × 28 square. Nothing is masked — a patch in the corner may attend to a patch in the middle, because an image has no past. And the noise level does not enter as a token; it is turned into a scale and a shift applied inside every block, which is how one set of weights behaves differently at every rung of the ladder. Out the far side comes a square the same size as the input, holding the model's claim about which noise is present. That side input has room for more than a noise level, and the next chapter uses it."
 	/>
 
 	<Prose>
@@ -155,38 +156,36 @@
 			the picture at full resolution. The first version of this chapter used one and it lost on the
 			clock: 264 milliseconds a step against the transformer's 88, at the same batch on the same
 			laptop, because everything the transformer does happens after the image has been cut down to
-			sixty-four tokens. That is also the direction the field went, and for better reasons than ours
+			forty-nine tokens. That is also the direction the field went, and for better reasons than ours
 			— the patch transformer scales more gracefully,<Cite id="peebles-xie-2023" /> and the current generation
 			of image models is built from it.
 		</p>
 		<p>
-			The corpus is 1,082 emoji drawn eight times over, once in each of eight styles by eight
-			different hands — glossy, flat, blobby, and in one case nothing but a black outline. Eight
-			thousand six hundred and fifty-six pictures at 32 × 32, small enough to train on in a browser
-			tab and various enough that the model cannot get away with learning one house style. The next
-			chapter makes that variety do some work; here it is just the diet.
+			The corpus is twelve thousand training pictures at 28 × 28, drawn from Zalando's
+			Fashion-MNIST: ten classes of clothing, grayscale, photographed against an empty field. A
+			boot, a bag, a shirt — each a silhouette a reader already knows how to judge. That is the
+			whole point of the diet. The next chapter will ask the model for one of those ten by name;
+			here the pictures are just the thing being ruined and restored.
 		</p>
 		<p>
-			So press Train and watch. The first thing to appear is not shape but colour — the model learns
-			the average palette of an emoji long before it learns that an emoji is a compact blob in the
-			middle of an empty square. Then the blob arrives. Then, some thousands of steps later, the
-			blob starts having parts, and faces get them first, because faces are what a set of emoji is
-			mostly made of.
+			So press Train and watch. The first thing to appear is not a sleeve but a silhouette — the
+			model learns that a garment is a compact blob of ink in the middle of an empty square long
+			before the blob has a neckline. Then the outline arrives. Then, some thousands of steps later,
+			a boot grows a shaft and a shirt grows sleeves.
 		</p>
 		<p>
 			Settle one question before any pictures arrive, because it decides whether the rest of this is
 			interesting: will the model be drawing, or remembering? Two and a half million parameters
-			against 8,656 pictures is not obviously room enough to memorize, and not obviously too little
+			against 12,000 pictures is not obviously room enough to memorize, and not obviously too little
 			either. The check is cheap. Take a sample and search the whole corpus for the picture it most
-			resembles. Do that with the trained weights and what comes back is not a match but a
-			coincidence of colour and mass — an onion for a spiky orange thing, a t-shirt for a purple
-			one. It is inventing. Crudely, at this size, but genuinely.
+			resembles. Do that with the trained weights and what comes back is a cousin, not a copy — a
+			different boot, a different bag. It is inventing. Crudely, at this size, but genuinely.
 		</p>
 	</Prose>
 
 	<Learn
 		title="From static, here"
-		caption="The top row is eight pictures drawn from eight fixed seeds by weights that started as noise when you pressed Train; the bottom row is the same eight seeds drawn from the checkpoint that came down with this page, which had 23,200 steps behind it. Nothing is cached and nothing is replayed — the top row is your GPU. Reset re-rolls the weights and starts the top row over. The gap between the rows is not a difference of architecture, data or objective; it is only steps, and the top row will close a visible fraction of it in the time it takes to read the next page."
+		caption="The top row is eight pictures drawn from eight fixed seeds by weights that started as noise when you pressed Train; the bottom row is the same eight seeds drawn from the checkpoint that came down with this page. Nothing is cached and nothing is replayed — the top row is your GPU. Reset re-rolls the weights and starts the top row over. The gap between the rows is not a difference of architecture, data or objective; it is only steps, and the top row will close a visible fraction of it in the time it takes to read the next page."
 	/>
 
 	<UnderTheHood slug="noise" block="denoise" />

@@ -7,7 +7,7 @@
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import Slider from '$lib/components/ui/Slider.svelte';
 	import { inview } from '$lib/components/ui/inview';
-	import Tiles from '$lib/components/demos/emoji/Tiles.svelte';
+	import Tiles from '$lib/components/demos/fashion/Tiles.svelte';
 	import { NOTHING } from '$lib/diffusion/runtime';
 	import { coalesce } from '$lib/diffusion/lab.svelte';
 	import { lab } from './lab.svelte';
@@ -20,7 +20,7 @@
 
 	const STEP_CHOICES = [100, 50, 20, 10, 5];
 	const FRAMES = 8;
-	const DIM = 4 * 32 * 32;
+	const DIM = 28 * 28;
 
 	let steps = $state(50);
 	let eta = $state(0);
@@ -100,7 +100,7 @@
 					style="font-variation-settings: 'opsz' 14;"
 				>
 					This plate walks a picture out of static on your GPU, which needs WebGPU. What it shows: a
-					row that begins as pure noise and resolves, left to right, into one emoji.
+					row that begins as pure noise and resolves, left to right, into one garment.
 				</p>
 			</div>
 		{:else}

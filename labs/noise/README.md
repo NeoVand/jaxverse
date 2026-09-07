@@ -1,8 +1,9 @@
 # Lab 9 · Out of the Static
 
-A denoising diffusion model on 32 × 32 emoji: corrupt a picture by a random amount, learn to name
-the noise that was added, then walk a fresh sheet of static back into a picture fifty steps at a
-time.
+A denoising diffusion model on 28 × 28 Fashion-MNIST: corrupt a garment by a random amount, learn to
+name the noise that was added, then walk a fresh sheet of static back into a picture fifty steps at a
+time. Sampling is unconditional DDIM; training still sees the class label (and drops it 10% of the
+time, so the same weights know the unconditional field).
 
 This is a standalone lab from [jaxverse](https://github.com/NeoVand/jaxverse). It has no build
 requirements beyond Node:

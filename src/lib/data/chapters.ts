@@ -125,7 +125,7 @@ export const chapters: Chapter[] = [
 		n: 10,
 		title: 'The Straight Path',
 		kicker: 'Flow matching',
-		deck: 'Aim the model at the shortest route from noise to picture, then learn to steer it. Ask for two things at once and watch it draw a combination it was never shown.',
+		deck: 'Aim the model at the shortest route from noise to picture, then learn to steer it. Ask for a boot, or walk the label from sneaker to boot, and watch it draw a garment it was never shown.',
 		minutes: 16,
 		live: true
 	}

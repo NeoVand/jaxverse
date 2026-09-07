@@ -105,99 +105,61 @@ const CLAIMS: { slug: string; says: string; actual: () => number; is: number }[]
 		actual: () => corpusWords().filter((w) => w === 'king').length,
 		is: 9
 	},
-	// ── noise & flow: the emoji corpus and the model it trains ──
+	// ── noise & flow: Fashion-MNIST and the model it trains ──
 	{
 		slug: 'noise',
-		says: 'The corpus is 1,082 emoji',
-		actual: () => json('emoji-meta.json').count,
-		is: 1082
-	},
-	{
-		slug: 'noise',
-		says: 'once in each of eight styles',
-		actual: () => json('emoji-meta.json').sets.length,
-		is: 8
+		says: 'twelve thousand training pictures at 28 × 28',
+		actual: () => json('fashion-meta.json').train,
+		is: 12000
 	},
 	{
 		slug: 'noise',
-		says: 'Eight thousand six hundred and fifty-six pictures at 32 × 32',
-		actual: () => json('emoji-meta.json').count * json('emoji-meta.json').sets.length,
-		is: 8656
+		says: 'seven hundred and eighty-four numbers committed at once',
+		actual: () => json('fashion-meta.json').side ** 2,
+		is: 784
 	},
 	{
 		slug: 'noise',
-		says: 'four thousand numbers committed at once',
-		actual: () => 4 * json('emoji-meta.json').tile ** 2,
-		is: 4096
+		says: 'forty-nine four-by-four patches',
+		actual: () => (json('fashion-meta.json').side / DIFFUSION.patch) ** 2,
+		is: 49
 	},
 	{
 		slug: 'noise',
-		says: 'sixty-four four-by-four patches',
-		actual: () => (json('emoji-meta.json').tile / DIFFUSION.patch) ** 2,
-		is: 64
+		says: 'against 12,000 pictures',
+		actual: () => json('fashion-meta.json').train,
+		is: 12000
 	},
 	{
 		slug: 'flow',
-		says: 'a 310-word vocabulary',
-		actual: () => json('emoji-meta.json').tags.length,
-		is: 310
+		says: 'which of ten garment classes',
+		actual: () => json('fashion-meta.json').classes.length,
+		is: 10
 	},
 	{
 		slug: 'flow',
-		says: 'which of 310 tag words',
-		actual: () => json('emoji-meta.json').tags.length,
-		is: 310
+		says: '12,000 pictures at 28 × 28',
+		actual: () => json('fashion-meta.json').train,
+		is: 12000
 	},
 	{
 		slug: 'flow',
-		says: 'eight drawing styles',
-		actual: () => json('emoji-meta.json').sets.length,
-		is: 8
-	},
-	{
-		slug: 'flow',
-		says: '8,656 pictures at 32 × 32',
-		actual: () => json('emoji-meta.json').count * json('emoji-meta.json').sets.length,
-		is: 8656
-	},
-	{
-		slug: 'flow',
-		says: '2.6 million parameters',
+		says: '2.5 million parameters',
 		actual: () => Math.round(diffusionParams() / 1e5) / 10,
-		is: 2.6
-	},
-	{
-		// the shipped checkpoint carries its own step count in its header, so the
-		// sentence quoting it cannot survive a retrain that forgets to update it
-		slug: 'noise',
-		says: 'which had 23,200 steps behind it',
-		actual: () => checkpointSteps('emoji-eps.bin'),
-		is: 23200
+		is: 2.5
 	}
 ];
-
-/** Step count from a diffusion checkpoint's JSON header. */
-function checkpointSteps(name: string): number {
-	const buf = readFileSync(`static/data/${name}`);
-	const len = buf.readUInt32BE(8);
-	return JSON.parse(
-		buf
-			.subarray(12, 12 + len)
-			.toString('utf8')
-			.replace(/\0+$/, '')
-	).steps;
-}
 
 // The denoiser's shape, and the parameter count the prose rounds to. Kept
 // here rather than imported so the test fails if the model grows and the
 // sentence describing it does not.
-const DIFFUSION = { dim: 192, layers: 4, patch: 4, channels: 4, styles: 8, time: 32 };
+const DIFFUSION = { dim: 192, layers: 4, patch: 4, channels: 1, time: 32 };
 
 function diffusionParams(): number {
-	const { dim: d, layers, patch, channels: ch, styles, time } = DIFFUSION;
-	const meta = json('emoji-meta.json');
-	const tokens = (meta.tile / patch) ** 2;
-	const condWidth = time + meta.tags.length + styles + 2;
+	const { dim: d, layers, patch, channels: ch, time } = DIFFUSION;
+	const meta = json('fashion-meta.json');
+	const tokens = (meta.side / patch) ** 2;
+	const condWidth = time + meta.classes.length + 1;
 	return (
 		condWidth * d +
 		d * d +

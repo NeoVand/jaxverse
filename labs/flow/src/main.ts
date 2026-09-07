@@ -1,12 +1,12 @@
 // Lab 10 — the straight path.
 //
-// Rectified flow on 32x32 emoji, with prompts. The picture and the noise are
-// joined by a straight line; the model is trained to predict the velocity
-// along it; sampling is Euler's method and nothing else.
+// Rectified flow on 28x28 Fashion-MNIST. The picture and the noise are joined
+// by a straight line; the model is trained to predict the velocity along it;
+// sampling is Euler's method and nothing else.
 //
 // The last third of the file is the part worth reading: guidance and
-// composition are the same expression, and drawing a cat with a heart for a
-// face costs one extra term.
+// interpolation are the same expression. Two class indices at the top, and a
+// sneaker that is also a boot costs one extra term.
 
 import {
 	init,
@@ -31,25 +31,29 @@ const log = (s: string) => {
 
 // ------------------------------------------------------------- constants ---
 
-const RES = 32;
-const CH = 4;
+const RES = 28;
+const CH = 1;
 const PATCH = 4;
 const TOK = (RES / PATCH) ** 2;
 const DIM = 192;
 const HEADS = 4;
 const LAYERS = 4;
+const CLASSES = 10;
+const TIME = 32;
+const CONDW = TIME + CLASSES + 1; // time ‖ one-hot ‖ presence flag
 const BATCH = 32;
 const LR = 3e-4;
-const TIME = 32;
 const SAMPLE_EVERY = 500;
 const SHOWN = 8;
 const PIXELS = CH * RES * RES;
 
-/** Change these. Words outside the vocabulary are reported and ignored. */
-const PROMPT_A = 'cat face';
-const PROMPT_B = 'heart';
+// 0 T-shirt  1 Trouser  2 Pullover  3 Dress  4 Coat
+// 5 Sandal   6 Shirt    7 Sneaker   8 Bag    9 Ankle boot
+const LABEL_A = 7;
+const LABEL_B = 9;
 const GUIDE_A = 3;
 const GUIDE_B = 3;
+const MIX = 0; // 0 keeps A, 1 arrives at B — a half-and-half one-hot is a question nobody asked
 const SAMPLE_STEPS = 16;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -77,26 +81,23 @@ function gauss(buf: Float32Array, rand: () => number) {
 
 // ------------------------------------------------------------------ data ---
 
-async function loadSheet(id: string, cols: number, rows: number, count: number) {
-	const bmp = await createImageBitmap(await (await fetch(`data/emoji-${id}.png`)).blob());
-	const c = new OffscreenCanvas(cols * RES, rows * RES);
+/** Cut a grayscale spritesheet into one plane per picture. Red carries the ink. */
+async function loadSheet(path: string, cols: number, side: number, count: number) {
+	const bmp = await createImageBitmap(await (await fetch(path)).blob());
+	const rows = Math.ceil(count / cols);
+	const c = new OffscreenCanvas(cols * side, rows * side);
 	const ctx = c.getContext('2d')!;
 	ctx.drawImage(bmp, 0, 0);
-	const px = ctx.getImageData(0, 0, cols * RES, rows * RES).data;
-	const plane = RES * RES;
-	const imgs = new Uint8Array(count * PIXELS);
+	const px = ctx.getImageData(0, 0, cols * side, rows * side).data;
+	bmp.close();
+	const plane = side * side;
+	const imgs = new Uint8Array(count * plane);
 	for (let i = 0; i < count; i++) {
-		const tx = (i % cols) * RES;
-		const ty = Math.floor(i / cols) * RES;
-		for (let y = 0; y < RES; y++) {
-			for (let x = 0; x < RES; x++) {
-				const o = ((ty + y) * cols * RES + tx + x) * 4;
-				const p = y * RES + x;
-				const d = i * PIXELS + p;
-				imgs[d] = px[o];
-				imgs[d + plane] = px[o + 1];
-				imgs[d + 2 * plane] = px[o + 2];
-				imgs[d + 3 * plane] = px[o + 3];
+		const tx = (i % cols) * side;
+		const ty = Math.floor(i / cols) * side;
+		for (let y = 0; y < side; y++) {
+			for (let x = 0; x < side; x++) {
+				imgs[i * plane + y * side + x] = px[((ty + y) * cols * side + tx + x) * 4];
 			}
 		}
 	}
@@ -104,10 +105,6 @@ async function loadSheet(id: string, cols: number, rows: number, count: number) 
 }
 
 // ----------------------------------------------------------------- model ---
-
-let CONDW = 0; // time ‖ tags ‖ styles ‖ two flags — filled in once meta loads
-let NTAGS = 0;
-let NSTYLES = 0;
 
 function initParams(seed: number): Arr {
 	const n = 8 + LAYERS * 8;
@@ -180,13 +177,18 @@ function forward(p: Arr, B: number, x: Arr, cond: Arr): Arr {
 	return lax.convTranspose(h, p.unpatch, [PATCH, PATCH], 'VALID');
 }
 
-/** One row of the conditioning vector: noise level, tags, style, two flags. */
+/**
+ * One row of the conditioning vector: noise level, a class one-hot, and a
+ * flag. `mix` walks the one-hot from `label` toward `other` — training only
+ * ever showed a single 1, so a half-and-half is a question nobody asked.
+ */
 function writeCond(
 	dst: Float32Array,
 	row: number,
 	tau: number,
-	tags: number[],
-	style: number | null
+	label: number | null,
+	other: number | null = null,
+	mix = 0
 ) {
 	const off = row * CONDW;
 	dst.fill(0, off, off + CONDW);
@@ -195,37 +197,46 @@ function writeCond(
 		dst[off + 2 * k] = Math.sin(tau * freq);
 		dst[off + 2 * k + 1] = Math.cos(tau * freq);
 	}
-	const tagBase = off + TIME;
-	const flagBase = tagBase + NTAGS + NSTYLES;
-	if (tags.length) {
-		const w = 1 / Math.sqrt(tags.length);
-		for (const t of tags) dst[tagBase + t] = w;
-		dst[flagBase] = 1;
+	const base = off + TIME;
+	if (label !== null) {
+		dst[base + label] = other !== null ? 1 - mix : 1;
+		dst[base + CLASSES] = 1;
 	}
-	if (style !== null) {
-		dst[tagBase + NTAGS + style] = 1;
-		dst[flagBase + 1] = 1;
+	if (other !== null && mix > 0) {
+		dst[base + other] += mix;
+		dst[base + CLASSES] = 1;
 	}
 }
 
 // ------------------------------------------------------------------- run ---
 
+function parseHex(hex: string): [number, number, number] {
+	const h = hex.trim().replace('#', '');
+	if (h.length >= 6) {
+		return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+	}
+	return [128, 128, 128];
+}
+
+/** Ink coverage (v+1)/2 onto the page colour — a sneaker is dark by day, pale by night. */
 function paint(frame: Float32Array, n: number) {
 	stage.hidden = false;
 	stage.width = n * RES;
 	stage.height = RES;
 	const ctx = stage.getContext('2d')!;
 	const img = ctx.createImageData(n * RES, RES);
-	const plane = RES * RES;
+	const css = getComputedStyle(document.documentElement);
+	const [br, bg, bb] = parseHex(css.getPropertyValue('--paper'));
+	const [ir, ig, ib] = parseHex(css.getPropertyValue('--ink'));
 	for (let k = 0; k < n; k++) {
 		for (let y = 0; y < RES; y++) {
 			for (let x = 0; x < RES; x++) {
-				const p = y * RES + x;
-				const s = k * PIXELS + p;
+				const s = k * PIXELS + y * RES + x;
 				const d = (y * n * RES + k * RES + x) * 4;
-				const to = (v: number) => Math.max(0, Math.min(255, (v + 1) * 127.5));
-				const a = to(frame[s + 3 * plane]) / 255;
-				for (let c = 0; c < 3; c++) img.data[d + c] = to(frame[s + c * plane]) + 128 * (1 - a);
+				const a = Math.max(0, Math.min(1, (frame[s] + 1) / 2));
+				img.data[d] = ir * a + br * (1 - a);
+				img.data[d + 1] = ig * a + bg * (1 - a);
+				img.data[d + 2] = ib * a + bb * (1 - a);
 				img.data[d + 3] = 255;
 			}
 		}
@@ -239,33 +250,16 @@ async function main() {
 		log('note: no WebGPU — falling back to wasm; expect slow steps.');
 	defaultDevice(devices.includes('webgpu') ? 'webgpu' : 'wasm');
 
-	const meta = await (await fetch('data/emoji-meta.json')).json();
-	const SETS = meta.sets.map((s: { id: string }) => s.id);
-	NTAGS = meta.tags.length;
-	NSTYLES = SETS.length;
-	CONDW = TIME + NTAGS + NSTYLES + 2;
-	const tagIndex = new Map<string, number>(meta.tags.map((t: string, i: number) => [t, i]));
-	const parse = (text: string) => {
-		const ids: number[] = [];
-		const missed: string[] = [];
-		for (const w of text.toLowerCase().split(/[^a-z]+/)) {
-			if (w.length < 2) continue;
-			const i = tagIndex.get(w);
-			if (i === undefined) missed.push(w);
-			else ids.push(i);
-		}
-		if (missed.length) log(`  (not in vocabulary, ignored: ${missed.join(', ')})`);
-		return ids;
-	};
-
-	log(`loading ${meta.count} emoji x ${NSTYLES} styles, ${NTAGS} tags…`);
-	const sheets: Uint8Array[] = [];
-	for (const id of SETS) sheets.push(await loadSheet(id, meta.cols, meta.rows, meta.count));
-	const tagsFor: number[][] = meta.emoji.map((e: { tags: number[] }) => e.tags);
-
-	const tagsA = parse(PROMPT_A);
-	const tagsB = parse(PROMPT_B);
-	log(`prompt A "${PROMPT_A}" → ${tagsA.length} tags · B "${PROMPT_B}" → ${tagsB.length} tags`);
+	const meta = await (await fetch('data/fashion-meta.json')).json();
+	const names: string[] = meta.classes;
+	log(`loading ${meta.train} garments, ${names.length} classes…`);
+	const [images, labelBuf] = await Promise.all([
+		loadSheet('data/fashion-train.png', meta.cols, meta.side, meta.train),
+		fetch('data/fashion-labels.bin').then((r) => r.arrayBuffer())
+	]);
+	const labels = new Uint8Array(labelBuf).subarray(0, meta.train);
+	log(`corpus: ${meta.train} pictures at ${RES}x${RES}`);
+	log(`A ${names[LABEL_A]} · B ${names[LABEL_B]} · mix ${MIX}`);
 
 	let params = initParams(20260905);
 	const nParams = (tree.leaves(tree.ref(params)) as Arr[]).reduce((s: number, l: Arr) => {
@@ -309,8 +303,8 @@ async function main() {
 		return [loss, tree.unflatten(def, np2), tree.unflatten(def, nm), tree.unflatten(def, nv)];
 	});
 
-	// Three branches per picture: no prompt, prompt A, prompt B. Fixing the
-	// count keeps one compiled shape whether you compose one prompt or two.
+	// Three branches per picture: no label, class A (maybe mixed), class B.
+	// Fixing the count keeps one compiled shape whether you guide one class or two.
 	const BR = 3;
 	const sampleNet = jit((p: Arr, x: Arr, c: Arr) => forward(p, BR * SHOWN, x, c));
 
@@ -325,17 +319,17 @@ async function main() {
 			const dt = 1 / steps;
 			for (let br = 0; br < BR; br++) xb.set(state, br * SHOWN * PIXELS);
 			for (let n = 0; n < SHOWN; n++) {
-				writeCond(cb, n, tau, [], null);
-				writeCond(cb, SHOWN + n, tau, tagsA, null);
-				writeCond(cb, 2 * SHOWN + n, tau, tagsB, null);
+				writeCond(cb, n, tau, null);
+				writeCond(cb, SHOWN + n, tau, LABEL_A, LABEL_B, MIX);
+				writeCond(cb, 2 * SHOWN + n, tau, LABEL_B);
 			}
 			const o = await sampleNet(
 				tree.ref(params),
 				np.array(xb).reshape([BR * SHOWN, CH, RES, RES]),
 				np.array(cb).reshape([BR * SHOWN, CONDW])
 			).data();
-			// guidance and composition, in one expression: start from what any
-			// picture would do, then add each prompt's difference from it
+			// guidance and interpolation, in one expression: start from what any
+			// picture would do, then add each class's difference from it
 			const aOff = SHOWN * PIXELS;
 			const bOff = 2 * SHOWN * PIXELS;
 			for (let i = 0; i < field.length; i++) {
@@ -357,20 +351,19 @@ async function main() {
 	let ema = NaN;
 	for (let it = 1; ; it++) {
 		for (let b = 0; b < BATCH; b++) {
-			const style = Math.floor(rand() * NSTYLES);
-			const idx = Math.floor(rand() * meta.count);
+			const idx = Math.floor(rand() * meta.train);
 			const src = idx * PIXELS;
 			gauss(noise, rand);
 			const tau = rand();
 			const o = b * PIXELS;
 			for (let i = 0; i < PIXELS; i++) {
-				const x0 = sheets[style][src + i] / 127.5 - 1;
+				const x0 = images[src + i] / 127.5 - 1;
 				xb[o + i] = (1 - tau) * x0 + tau * noise[i]; // the straight line
 				tb[o + i] = noise[i] - x0; // and its slope
 			}
-			// drop the prompt a tenth of the time, and the style a tenth, so one
-			// model learns the conditional and unconditional fields at once
-			writeCond(cb, b, tau, rand() < 0.1 ? [] : tagsFor[idx], rand() < 0.1 ? null : style);
+			// drop the label a tenth of the time so one model learns the
+			// conditional and unconditional fields at once
+			writeCond(cb, b, tau, rand() < 0.1 ? null : labels[idx]);
 		}
 		const kk = np.array(
 			new Float32Array([1 / (1 - Math.pow(0.9, it)), 1 / (1 - Math.pow(0.99, it))])
@@ -398,7 +391,7 @@ async function main() {
 		}
 		if (it % SAMPLE_EVERY === 0) {
 			paint(await sample(SAMPLE_STEPS), SHOWN);
-			log(`  ↑ "${PROMPT_A}" + "${PROMPT_B}" in ${SAMPLE_STEPS} Euler steps`);
+			log(`  ↑ ${names[LABEL_A]} + ${names[LABEL_B]} in ${SAMPLE_STEPS} Euler steps`);
 			await new Promise((r) => setTimeout(r, 0));
 		}
 	}

@@ -9,7 +9,7 @@ import { DiffusionLab } from '$lib/diffusion/lab.svelte';
 
 export const lab = new DiffusionLab({
 	objective: 'flow',
-	checkpoint: 'emoji-flow.bin',
+	checkpoint: 'fashion-flow.bin',
 	batch: 32,
 	lr: 3e-4
 });
@@ -17,7 +17,7 @@ export const lab = new DiffusionLab({
 /** The chapter-9 model, for the two comparison plates. */
 export const rival = new DiffusionLab({
 	objective: 'eps',
-	checkpoint: 'emoji-eps.bin',
+	checkpoint: 'fashion-eps.bin',
 	batch: 32,
 	lr: 3e-4
 });
@@ -25,36 +25,18 @@ export const rival = new DiffusionLab({
 export const SHOWN = 8;
 
 /**
- * Prompts for the studio's opening state and its "surprise me" button.
+ * Pairs for the morph plate, by label index.
  *
- * Every word here is in the 310-tag vocabulary — checked, because a suggested
- * prompt that the model cannot read would be the worst possible first
- * impression. "ghost", "rocket" and "rainbow" were all tried and dropped for
- * exactly that reason.
+ * Chosen so that both ends are legible at 28 pixels and the halfway point is
+ * genuinely ambiguous rather than simply one of the two: a sneaker and a boot
+ * share a sole, a shirt and a dress share a torso, a bag and a sandal share
+ * almost nothing, which is the interesting one.
  */
-export const SUGGESTIONS = [
-	'smiling cat face',
-	'red heart',
-	'yellow star',
-	'angry face',
-	'fire',
-	'moon face',
-	'purple flower',
-	'crying face',
-	'green tree',
-	'bird',
-	'blue water',
-	'dog face'
-];
-
-/** Pairs chosen because neither picture exists and both halves stay legible. */
-export const COMBOS: [string, string][] = [
-	// first because it is the cleanest fusion the model manages: a plain disc
-	// from one prompt, a set of features from the other, and a face on the moon
-	['moon', 'smiling face'],
-	['cat face', 'heart'],
-	['star', 'clock'],
-	['bird', 'fire'],
-	['dog face', 'flower'],
-	['sun', 'angry face']
+export const MORPHS: [number, number][] = [
+	[7, 9], // sneaker → ankle boot
+	[0, 3], // t-shirt → dress
+	[2, 4], // pullover → coat
+	[8, 5], // bag → sandal
+	[1, 3], // trouser → dress
+	[6, 2] // shirt → pullover
 ];

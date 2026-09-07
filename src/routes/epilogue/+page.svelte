@@ -50,19 +50,10 @@
 				book's board.
 			</li>
 			<li>
-				The eight emoji sets the last two chapters learn to draw, every one of them redistributable
-				and every one of them attributed here because that is the condition:
-				<a href="https://github.com/googlefonts/noto-emoji" rel="external">Noto Color Emoji</a>
-				(Google, Apache&nbsp;2.0),
-				<a href="https://github.com/jdecked/twemoji" rel="external">Twemoji</a>
-				(Twitter, now maintained by jdecked, CC&nbsp;BY&nbsp;4.0),
-				<a href="https://openmoji.org" rel="external">OpenMoji</a>
-				in colour and in line art (HfG Schwäbisch Gmünd, CC&nbsp;BY-SA&nbsp;4.0),
-				<a href="https://github.com/microsoft/fluentui-emoji" rel="external">Fluent Emoji</a>
-				in three renderings (Microsoft, MIT), and
-				<a href="https://github.com/C1710/blobmoji" rel="external">Blobmoji</a>, which keeps alive
-				the blobs Google retired in 2017 (Apache&nbsp;2.0). Eight hands drawing the same thousand
-				ideas is what makes style something a model can be asked for separately.
+				<a href="https://github.com/zalandoresearch/fashion-mnist" rel="external">Fashion-MNIST</a>
+				(Zalando Research, MIT) — the ten classes of clothing the last two chapters learn to draw, a drop-in
+				replacement for MNIST that is still small enough to train on in a browser tab and various enough
+				that a silhouette can be judged by eye.
 			</li>
 			<li>
 				Kenneth Li et&nbsp;al.,

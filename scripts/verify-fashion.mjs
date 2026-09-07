@@ -2,7 +2,7 @@
 // .cache/proof/, so the captions that make empirical claims about them can be
 // checked against pictures rather than against hope.
 //
-// Usage: node scripts/verify-emoji.mjs
+// Usage: node scripts/verify-fashion.mjs
 
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -12,6 +12,18 @@ import { chromium } from 'playwright';
 const ROOT = new URL('..', import.meta.url).pathname;
 const OUT = path.join(ROOT, '.cache/proof');
 const port = 5600 + Math.floor(Math.random() * 200);
+// pass an architecture through so a candidate checkpoint can be compared
+// against the shipping one: node scripts/verify-fashion.mjs --tag v2 --dim 320 --layers 6 --heads 8
+const argv = process.argv.slice(2);
+const flag = (n) => {
+	const i = argv.indexOf(`--${n}`);
+	return i === -1 ? null : argv[i + 1];
+};
+const query = ['tag', 'dim', 'layers', 'heads', 'patch', 'only']
+	.map((k) => (flag(k) === null ? null : `${k}=${flag(k)}`))
+	.filter(Boolean)
+	.join('&');
+const suffix = flag('tag') ? `-${flag('tag')}` : '';
 
 await mkdir(OUT, { recursive: true });
 const server = spawn(
@@ -31,7 +43,7 @@ try {
 	await new Promise((r) => setTimeout(r, 3500));
 	const page = await browser.newPage();
 	page.on('pageerror', (e) => console.log('PAGEERROR', String(e)));
-	await page.goto(`http://localhost:${port}/`, { waitUntil: 'load' });
+	await page.goto(`http://localhost:${port}/?${query}`, { waitUntil: 'load' });
 
 	const deadline = Date.now() + 600_000;
 	let seen = '';
@@ -51,7 +63,7 @@ try {
 	const sheets = await page.evaluate(() => window.__sheets ?? {});
 	for (const [name, dataUrl] of Object.entries(sheets)) {
 		const buf = Buffer.from(String(dataUrl).split(',')[1], 'base64');
-		const file = path.join(OUT, `${name}.png`);
+		const file = path.join(OUT, `${name}${suffix}.png`);
 		await writeFile(file, buf);
 		console.log(`\n  ${path.relative(ROOT, file)} (${(buf.length / 1024).toFixed(0)} KB)`);
 	}

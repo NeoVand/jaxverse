@@ -10,7 +10,7 @@ export const flow: HoodChapter = {
 			ml: [
 				{
 					title: 'Three branches, always',
-					body: `jit compiles per shape, so a sampler that ran two branches for one prompt and three for two would recompile the moment a reader typed in the second box — a visible stall in the middle of a demo. The sampler therefore always runs three: unconditional, prompt A, prompt B. A single-prompt request pays for one branch it does not need, which is far cheaper than a recompile, and prompt B simply carries a weight of zero.`,
+					body: `jit compiles per shape, so a sampler that ran two branches for one label and three for a morph would recompile the moment a reader asked for the second class — a visible stall in the middle of a demo. The sampler therefore always runs three: unconditional, condition A, condition B. A single-label request pays for one branch it does not need, which is far cheaper than a recompile, and condition B simply carries a weight of zero.`,
 					code: {
 						file: 'src/lib/diffusion/runtime.ts',
 						code: `for (let br = 0; br < BRANCHES; br++) {
@@ -31,7 +31,7 @@ const out = await net(
 				},
 				{
 					title: 'The combination, in four lines',
-					body: `This is the equation from the chapter, and it is worth seeing how little it is. <code>u</code> is what the model would do with no prompt; each conditional branch is read as a difference from it; the differences are scaled and added. Composition is not a separate code path from guidance — it is the same expression with a second term that is usually zero.`,
+					body: `This is the equation from the chapter, and it is worth seeing how little it is. <code>u</code> is what the model would do with no label; each conditional branch is read as a difference from it; the differences are scaled and added. A second condition is not a separate code path from guidance — it is the same expression with a second term that is usually zero.`,
 					code: {
 						file: 'src/lib/diffusion/runtime.ts',
 						code: `const aOff = count * dim;
@@ -43,20 +43,14 @@ for (let i = 0; i < field.length; i++) {
 					}
 				},
 				{
-					title: 'What a prompt actually is',
-					body: `The conditioning vector is time features, then a tag block, then a style block, then two flags. The flags are the part worth explaining: an all-zero tag block could mean either "no prompt" or "a prompt whose words all missed", and those should not look the same to the model. Scaling by the inverse square root of the tag count is the other deliberate choice — without it a six-word prompt arrives six times louder than a one-word prompt and guidance behaves differently for long and short requests.`,
+					title: 'What a label actually is',
+					body: `The conditioning vector is time features, then a ten-wide one-hot, then a flag. The flag is the part worth explaining: an all-zero label block could mean either "no class" or "class zero", and those should not look the same to the model. Guidance works by asking the same question twice — once with the label and once without — so the two have to be distinguishable.`,
 					code: {
 						file: 'src/lib/diffusion/runtime.ts',
-						code: `const tagBase = off + TIME_FEATURES;
-const flagBase = tagBase + c.tags + c.styles;
-if (cond.tags.length > 0) {
-	const v = 1 / Math.sqrt(cond.tags.length);
-	for (const t of cond.tags) if (t >= 0 && t < c.tags) dst[tagBase + t] = v;
-	dst[flagBase] = 1;
-}
-if (cond.style !== null && cond.style >= 0 && cond.style < c.styles) {
-	dst[tagBase + c.tags + cond.style] = 1;
-	dst[flagBase + 1] = 1;
+						code: `const labelBase = off + TIME_FEATURES;
+if (cond.label !== null && cond.label >= 0 && cond.label < c.classes) {
+	dst[labelBase + cond.label] = 1;
+	dst[labelBase + c.classes] = 1;
 }`
 					}
 				},
@@ -81,7 +75,7 @@ if (cond.style !== null && cond.style >= 0 && cond.style < c.styles) {
 						file: 'src/lib/components/demos/flow/lab.svelte.ts',
 						code: `export const lab = new DiffusionLab({
 	objective: 'flow',
-	checkpoint: 'emoji-flow.bin',
+	checkpoint: 'fashion-flow.bin',
 	batch: 32,
 	lr: 3e-4
 });
@@ -89,7 +83,7 @@ if (cond.style !== null && cond.style >= 0 && cond.style < c.styles) {
 /** The chapter-9 model, for the two comparison plates. */
 export const rival = new DiffusionLab({
 	objective: 'eps',
-	checkpoint: 'emoji-eps.bin',
+	checkpoint: 'fashion-eps.bin',
 	batch: 32,
 	lr: 3e-4
 });`
@@ -110,7 +104,7 @@ export const rival = new DiffusionLab({
 			],
 			lab: {
 				file: 'flow.zip',
-				note: 'Rectified flow on the emoji corpus in one file: interpolate, regress the velocity, integrate back with plain Euler, and compose two prompts you can change at the top of the file'
+				note: 'Rectified flow on Fashion-MNIST in one file: interpolate, regress the velocity, integrate back with plain Euler, and guide two class labels you can change at the top of the file'
 			}
 		}
 	]

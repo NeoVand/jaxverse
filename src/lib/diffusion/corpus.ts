@@ -1,45 +1,27 @@
-// Loading the emoji corpus: eight spritesheets and a metadata file, decoded
-// once and shared by every plate on the page.
+// Load the Fashion-MNIST spritesheet the build script wrote and hand back the
+// bytes the trainer and the plates both want.
 //
-// The sheets are PNG because PNG is a decompressor every browser already
-// ships. `scripts/build-emoji.mjs` writes them; nothing here downloads from
-// the internet.
+// The pictures arrive as one grayscale PNG of 28-pixel tiles because a PNG is
+// the only decompressor a browser already ships. Decoding is done once and
+// cached: several plates on the same page share a single download.
 
 import type { Corpus } from './runtime';
 
-export interface EmojiSet {
-	id: string;
-	label: string;
-	credit: string;
-	license: string;
-	url: string;
-}
-
-export interface EmojiEntry {
-	/** The character itself, for labels and for the reader to recognize. */
-	cp: string;
-	name: string;
-	group: string;
-	tags: number[];
-}
-
-export interface EmojiMeta {
-	tile: number;
+export interface FashionMeta {
+	side: number;
 	cols: number;
-	rows: number;
-	count: number;
-	sets: EmojiSet[];
-	tags: string[];
-	emoji: EmojiEntry[];
+	train: number;
+	test: number;
+	/** Zalando's ordering; the label byte indexes straight into this. */
+	classes: string[];
 }
 
-export interface EmojiCorpus extends Corpus {
-	meta: EmojiMeta;
-	/** Tag string to its index, for turning a typed prompt into a condition. */
-	tagIndex: Map<string, number>;
+export interface FashionCorpus extends Corpus {
+	meta: FashionMeta;
+	/** Held-out pictures, same layout, for the memorization check. */
+	test: Uint8Array;
+	testLabels: Uint8Array;
 }
-
-const CHANNELS = 4;
 
 async function rasterize(url: string, w: number, h: number): Promise<Uint8ClampedArray> {
 	const res = await fetch(url);
@@ -52,108 +34,54 @@ async function rasterize(url: string, w: number, h: number): Promise<Uint8Clampe
 	const ctx = canvas.getContext('2d', {
 		willReadFrequently: true
 	}) as CanvasRenderingContext2D | null;
-	if (!ctx) throw new Error('no 2d context for the emoji sheets');
+	if (!ctx) throw new Error('no 2d context for the garment sheets');
 	ctx.clearRect(0, 0, w, h);
 	ctx.drawImage(bitmap, 0, 0);
 	bitmap.close();
 	return ctx.getImageData(0, 0, w, h).data;
 }
 
-let pending: Promise<EmojiCorpus> | null = null;
+/** Cut a sheet of tiles into one grayscale plane per picture. */
+function untile(px: Uint8ClampedArray, cols: number, side: number, count: number): Uint8Array {
+	const plane = side * side;
+	const out = new Uint8Array(count * plane);
+	const width = cols * side;
+	for (let i = 0; i < count; i++) {
+		const tx = (i % cols) * side;
+		const ty = Math.floor(i / cols) * side;
+		for (let y = 0; y < side; y++) {
+			for (let x = 0; x < side; x++) {
+				// the sheet is written single-channel, so red carries the ink
+				out[i * plane + y * side + x] = px[((ty + y) * width + tx + x) * 4];
+			}
+		}
+	}
+	return out;
+}
 
-/** Fetch and decode every sheet. Cached — several plates share one download. */
-export function loadEmoji(base = ''): Promise<EmojiCorpus> {
+let pending: Promise<FashionCorpus> | null = null;
+
+/** Fetch and decode both sheets. Cached — several plates share one download. */
+export function loadFashion(base = ''): Promise<FashionCorpus> {
 	pending ??= (async () => {
-		const meta: EmojiMeta = await fetch(`${base}/data/emoji-meta.json`).then((r) => r.json());
-		const { tile, cols, count, sets } = meta;
-		const dim = CHANNELS * tile * tile;
-		const images = new Uint8Array(sets.length * count * dim);
+		const meta: FashionMeta = await fetch(`${base}/data/fashion-meta.json`).then((r) => r.json());
+		const { side, cols, train, test } = meta;
 
-		await Promise.all(
-			sets.map(async (set, s) => {
-				const px = await rasterize(
-					`${base}/data/emoji-${set.id}.png`,
-					cols * tile,
-					meta.rows * tile
-				);
-				for (let i = 0; i < count; i++) {
-					const tx = (i % cols) * tile;
-					const ty = Math.floor(i / cols) * tile;
-					// planar CHW, because the network wants channels on axis 1
-					const dst = (s * count + i) * dim;
-					for (let y = 0; y < tile; y++) {
-						for (let x = 0; x < tile; x++) {
-							const o = ((ty + y) * cols * tile + tx + x) * 4;
-							const p = y * tile + x;
-							images[dst + p] = px[o];
-							images[dst + tile * tile + p] = px[o + 1];
-							images[dst + 2 * tile * tile + p] = px[o + 2];
-							images[dst + 3 * tile * tile + p] = px[o + 3];
-						}
-					}
-				}
-			})
-		);
+		const [trainPx, testPx, labelBuf] = await Promise.all([
+			rasterize(`${base}/data/fashion-train.png`, cols * side, (train / cols) * side),
+			rasterize(`${base}/data/fashion-test.png`, cols * side, (test / cols) * side),
+			fetch(`${base}/data/fashion-labels.bin`).then((r) => r.arrayBuffer())
+		]);
 
+		const labels = new Uint8Array(labelBuf);
 		return {
 			meta,
-			images,
-			tags: meta.emoji.map((e) => e.tags),
-			count,
-			styles: sets.length,
-			tagIndex: new Map(meta.tags.map((t, i) => [t, i]))
+			images: untile(trainPx, cols, side, train),
+			labels: labels.slice(0, train),
+			count: train,
+			test: untile(testPx, cols, side, test),
+			testLabels: labels.slice(train, train + test)
 		};
 	})();
 	return pending;
-}
-
-/** Undo the plural folding the corpus builder applied, the same way it did. */
-function singular(w: string): string {
-	if (/(ss|us|is|as)$/.test(w) || w.length < 5) return w;
-	if (/ies$/.test(w)) return `${w.slice(0, -3)}y`;
-	if (/(ch|sh|s|x|z)es$/.test(w)) return w.slice(0, -2);
-	if (/ves$/.test(w)) return `${w.slice(0, -3)}f`;
-	if (/s$/.test(w)) return w.slice(0, -1);
-	return w;
-}
-
-export interface TagVocab {
-	tags: string[];
-	index: Map<string, number>;
-}
-
-export function makeVocab(tags: string[]): TagVocab {
-	return { tags, index: new Map(tags.map((t, i) => [t, i])) };
-}
-
-export interface ParsedPrompt {
-	tags: number[];
-	matched: string[];
-	ignored: string[];
-}
-
-/**
- * Turn what the reader typed into tag indices.
- *
- * Words the vocabulary has never seen are reported rather than dropped in
- * silence — a prompt that quietly did nothing is the most confusing thing a
- * demo like this can do to someone.
- */
-export function parsePrompt(text: string, vocab: TagVocab): ParsedPrompt {
-	const tags: number[] = [];
-	const matched: string[] = [];
-	const ignored: string[] = [];
-	const seen = new Set<number>();
-	for (const raw of text.toLowerCase().split(/[^a-z]+/)) {
-		if (raw.length < 2) continue;
-		const idx = vocab.index.get(raw) ?? vocab.index.get(singular(raw));
-		if (idx === undefined) {
-			ignored.push(raw);
-		} else if (!seen.has(idx)) {
-			seen.add(idx);
-			tags.push(idx);
-			matched.push(vocab.tags[idx]);
-		}
-	}
-	return { tags, matched, ignored };
 }

@@ -7,10 +7,10 @@
 	import Plate from '$lib/components/ui/Plate.svelte';
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import { inview } from '$lib/components/ui/inview';
-	import { loadEmoji, type EmojiCorpus } from '$lib/diffusion/corpus';
+	import { loadFashion, type FashionCorpus } from '$lib/diffusion/corpus';
 	import { alphaBar, alphaBarLinear } from '$lib/diffusion/model';
 	import { mulberry32 } from '$lib/diffusion/runtime';
-	import { corrupt, tilesToImageData, blitCrisp } from '$lib/viz/emoji-paint';
+	import { corrupt, tilesToImageData, blitCrisp } from '$lib/viz/fashion-paint';
 	import { readTokens, themePulse, watchTheme } from '$lib/viz/tokens.svelte';
 
 	interface Props {
@@ -20,33 +20,34 @@
 	let { title, caption }: Props = $props();
 
 	const STEPS = 11; // τ from 0 to 1 inclusive
-	const RES = 32;
-	const DIM = 4 * RES * RES;
+	const RES = 28;
+	const DIM = RES * RES;
 
-	let corpus = $state<EmojiCorpus | null>(null);
+	let corpus = $state<FashionCorpus | null>(null);
 	let phase = $state<'idle' | 'loading' | 'ready' | 'error'>('idle');
 	let schedule = $state<'cosine' | 'linear'>('cosine');
-	let pick = $state(0);
-	let style = $state(0);
+	let klass = $state(8); // a bag: solid, so the ruin is easy to follow
+	let nth = $state(0);
+
 	let canvas: HTMLCanvasElement | undefined = $state();
 
-	/** Pictures with a lot of ink survive noise longer; start on one of those. */
-	const OPENERS = ['🔥', '🐱', '🍕', '🚀', '❤️', '🌈', '🎈', '👻', '🍄', '⭐'];
-	let order: number[] = [];
+	/** Row indices grouped by label, so the chips can flip between garments. */
+	let byClass: number[][] = [];
 
 	const alpha = $derived(schedule === 'cosine' ? alphaBar : alphaBarLinear);
-	const label = $derived(corpus ? (corpus.meta.emoji[pick]?.name ?? '') : '');
+	const names = $derived(corpus?.meta.classes ?? []);
+	const pick = $derived(byClass[klass]?.[nth % (byClass[klass]?.length || 1)] ?? 0);
 
 	async function boot() {
 		if (phase !== 'idle') return;
 		phase = 'loading';
 		try {
-			corpus = await loadEmoji(base);
-			const byCp = new Map(corpus.meta.emoji.map((e, i) => [e.cp, i]));
-			const seeds = OPENERS.map((c) => byCp.get(c)).filter((i): i is number => i !== undefined);
-			const rest = corpus.meta.emoji.map((_, i) => i).filter((i) => !seeds.includes(i));
-			order = [...seeds, ...rest];
-			pick = order[0] ?? 0;
+			const c = await loadFashion(base);
+			byClass = Array.from({ length: c.meta.classes.length }, () => []);
+			// a few dozen of each is plenty for a shuffle button and keeps the
+			// arrays small
+			for (let i = 0; i < c.count && i < 4000; i++) byClass[c.labels[i]].push(i);
+			corpus = c;
 			phase = 'ready';
 		} catch (e) {
 			phase = 'error';
@@ -54,23 +55,16 @@
 		}
 	}
 
-	function shuffle() {
-		if (!corpus) return;
-		const i = order.indexOf(pick);
-		pick = order[(i + 1) % Math.min(order.length, 240)];
-	}
-
-	// Repaint on any change, and on theme flips: the background the emoji is
-	// composited over is a token, so day and night are the same code path.
+	// Repaint on any change, and on theme flips: the paper the garment is drawn
+	// on is a token, so day and night are the same code path.
 	$effect(() => {
 		void themePulse.tick;
 		void pick;
-		void style;
 		void schedule;
 		if (phase !== 'ready' || !canvas || !corpus) return;
 		const tk = readTokens(canvas);
 		const src = new Float32Array(DIM);
-		const off = (style * corpus.count + pick) * DIM;
+		const off = pick * DIM;
 		for (let i = 0; i < DIM; i++) src[i] = corpus.images[off + i] / 127.5 - 1;
 
 		const strip = new Float32Array(STEPS * DIM);
@@ -82,7 +76,12 @@
 		}
 		blitCrisp(
 			canvas,
-			tilesToImageData(strip, STEPS, RES, { columns: STEPS, background: tk.band, gap: 3 })
+			tilesToImageData(strip, STEPS, RES, {
+				columns: STEPS,
+				background: tk.band,
+				ink: tk.ink,
+				gap: 3
+			})
 		);
 	});
 
@@ -103,23 +102,23 @@
 <Plate id="ladder" {title} {caption}>
 	{#snippet status()}
 		{#if phase === 'ready'}
-			<span>{label}</span>
+			<span>{names[klass] ?? ''}</span>
 		{:else if phase === 'loading'}
-			<span>decoding the emoji sheets…</span>
+			<span>decoding the garment sheet…</span>
 		{/if}
 	{/snippet}
 	{#snippet actions()}
-		<Btn disabled={phase !== 'ready'} onclick={shuffle} title="Another picture">
+		<Btn disabled={phase !== 'ready'} onclick={() => (nth += 1)} title="Another picture">
 			<Shuffle size={12} aria-hidden="true" /> Another
 		</Btn>
 	{/snippet}
 
 	<div class="flex flex-col" use:inview={() => void boot()}>
 		{#if phase === 'error'}
-			<div class="px-4 py-8 text-[12.5px] text-bad">The emoji sheets did not load.</div>
+			<div class="px-4 py-8 text-[12.5px] text-bad">The garment sheet did not load.</div>
 		{:else if phase !== 'ready'}
 			<div class="flex h-[190px] items-center justify-center">
-				<span class="eyebrow">fetching the emoji sheets (≈2.3 MB, cached)…</span>
+				<span class="eyebrow">fetching the garment sheet (≈5.3 MB, cached)…</span>
 			</div>
 		{:else}
 			<div class="flex flex-col gap-3 p-4 sm:p-5">
@@ -130,7 +129,7 @@
 				<canvas
 					bind:this={canvas}
 					class="block h-14 w-full sm:h-20"
-					aria-label="One emoji shown at eleven noise levels, intact at the left and indistinguishable from static at the right"
+					aria-label="One garment shown at eleven noise levels, intact at the left and indistinguishable from static at the right"
 				></canvas>
 				<div class="num flex justify-between text-[10px] text-ink-3">
 					{#each Array.from({ length: STEPS }, (_, i) => i) as s (s)}
@@ -180,21 +179,23 @@
 							/>
 						</svg>
 					</span>
+				</div>
 
-					<span class="flex items-center gap-1" role="group" aria-label="Drawing style">
-						<span class="eyebrow mr-1">style</span>
-						{#each corpus?.meta.sets ?? [] as set, i (set.id)}
-							<button
-								class="chip"
-								class:chip-on={style === i}
-								aria-pressed={style === i}
-								title={set.credit}
-								onclick={() => (style = i)}
-							>
-								{set.label}
-							</button>
-						{/each}
-					</span>
+				<div class="flex flex-wrap items-center gap-1" role="group" aria-label="Garment">
+					<span class="eyebrow mr-1">garment</span>
+					{#each names as name, i (name)}
+						<button
+							class="chip"
+							class:chip-on={klass === i}
+							aria-pressed={klass === i}
+							onclick={() => {
+								klass = i;
+								nth = 0;
+							}}
+						>
+							{name}
+						</button>
+					{/each}
 				</div>
 			</div>
 		{/if}

@@ -1,9 +1,9 @@
 // Lab 9 — out of the static.
 //
-// A denoising diffusion model on 32x32 emoji, in one file. Corrupt a picture
-// by a random amount, ask a small transformer which noise was added, and score
-// it on squared error. Then walk a fresh sheet of static back into a picture
-// by asking that question fifty times.
+// A denoising diffusion model on 28x28 Fashion-MNIST, in one file. Corrupt a
+// garment by a random amount, ask a small transformer which noise was added,
+// and score it on squared error. Then walk a fresh sheet of static back into
+// a picture by asking that question fifty times.
 //
 // Everything that matters is a constant at the top or a loop below. Change a
 // number and watch what happens.
@@ -31,13 +31,16 @@ const log = (s: string) => {
 
 // ------------------------------------------------------------- constants ---
 
-const RES = 32;
-const CH = 4; // premultiplied RGBA
+const RES = 28;
+const CH = 1; // grayscale ink
 const PATCH = 4;
-const TOK = (RES / PATCH) ** 2; // 64
+const TOK = (RES / PATCH) ** 2; // 49
 const DIM = 192;
 const HEADS = 4;
 const LAYERS = 4;
+const CLASSES = 10;
+const TIME = 32;
+const CONDW = TIME + CLASSES + 1; // time ‖ one-hot ‖ presence flag
 const BATCH = 32;
 const LR = 3e-4;
 const SAMPLE_EVERY = 500;
@@ -76,27 +79,23 @@ function gauss(buf: Float32Array, rand: () => number) {
 
 // ------------------------------------------------------------------ data ---
 
-/** Load one emoji spritesheet as planar CHW bytes. */
-async function loadSheet(id: string, cols: number, rows: number, count: number) {
-	const bmp = await createImageBitmap(await (await fetch(`data/emoji-${id}.png`)).blob());
-	const c = new OffscreenCanvas(cols * RES, rows * RES);
+/** Cut a grayscale spritesheet into one plane per picture. Red carries the ink. */
+async function loadSheet(path: string, cols: number, side: number, count: number) {
+	const bmp = await createImageBitmap(await (await fetch(path)).blob());
+	const rows = Math.ceil(count / cols);
+	const c = new OffscreenCanvas(cols * side, rows * side);
 	const ctx = c.getContext('2d')!;
 	ctx.drawImage(bmp, 0, 0);
-	const px = ctx.getImageData(0, 0, cols * RES, rows * RES).data;
-	const plane = RES * RES;
-	const imgs = new Uint8Array(count * PIXELS);
+	const px = ctx.getImageData(0, 0, cols * side, rows * side).data;
+	bmp.close();
+	const plane = side * side;
+	const imgs = new Uint8Array(count * plane);
 	for (let i = 0; i < count; i++) {
-		const tx = (i % cols) * RES;
-		const ty = Math.floor(i / cols) * RES;
-		for (let y = 0; y < RES; y++) {
-			for (let x = 0; x < RES; x++) {
-				const o = ((ty + y) * cols * RES + tx + x) * 4;
-				const p = y * RES + x;
-				const d = i * PIXELS + p;
-				imgs[d] = px[o];
-				imgs[d + plane] = px[o + 1];
-				imgs[d + 2 * plane] = px[o + 2];
-				imgs[d + 3 * plane] = px[o + 3];
+		const tx = (i % cols) * side;
+		const ty = Math.floor(i / cols) * side;
+		for (let y = 0; y < side; y++) {
+			for (let x = 0; x < side; x++) {
+				imgs[i * plane + y * side + x] = px[((ty + y) * cols * side + tx + x) * 4];
 			}
 		}
 	}
@@ -118,7 +117,7 @@ function initParams(seed: number): Arr {
 	const u = (shape: number[], k: number) =>
 		random.uniform(nk(), shape, { minval: -k * s, maxval: k * s });
 	const p: Arr = {
-		condIn: g([32, DIM], 0.05),
+		condIn: g([CONDW, DIM], 0.05),
 		condOut: g([DIM, DIM], 0.05),
 		patchify: g([DIM, CH, PATCH, PATCH], 0.05),
 		pos: g([TOK, DIM], 0.02),
@@ -176,34 +175,54 @@ function forward(p: Arr, B: number, x: Arr, cond: Arr): Arr {
 	return lax.convTranspose(h, p.unpatch, [PATCH, PATCH], 'VALID');
 }
 
-/** Sinusoidal features for the noise level — the model's only other input. */
-function timeFeatures(dst: Float32Array, off: number, tau: number) {
-	for (let k = 0; k < 16; k++) {
-		const freq = Math.exp((k / 15) * Math.log(1000));
+/**
+ * One row of the conditioning vector. The trailing flag says whether the
+ * one-hot means anything — without it, "no label" and "class zero" would
+ * arrive as the same all-zero block.
+ */
+function writeCond(dst: Float32Array, row: number, tau: number, label: number | null) {
+	const off = row * CONDW;
+	dst.fill(0, off, off + CONDW);
+	for (let k = 0; k < TIME / 2; k++) {
+		const freq = Math.exp((k / (TIME / 2 - 1)) * Math.log(1000));
 		dst[off + 2 * k] = Math.sin(tau * freq);
 		dst[off + 2 * k + 1] = Math.cos(tau * freq);
+	}
+	if (label !== null) {
+		dst[off + TIME + label] = 1;
+		dst[off + TIME + CLASSES] = 1;
 	}
 }
 
 // ------------------------------------------------------------------- run ---
 
+function parseHex(hex: string): [number, number, number] {
+	const h = hex.trim().replace('#', '');
+	if (h.length >= 6) {
+		return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+	}
+	return [128, 128, 128];
+}
+
+/** Ink coverage (v+1)/2 onto the page colour — a sneaker is dark by day, pale by night. */
 function paint(frame: Float32Array, n: number) {
 	stage.hidden = false;
 	stage.width = n * RES;
 	stage.height = RES;
 	const ctx = stage.getContext('2d')!;
 	const img = ctx.createImageData(n * RES, RES);
-	const plane = RES * RES;
+	const css = getComputedStyle(document.documentElement);
+	const [br, bg, bb] = parseHex(css.getPropertyValue('--paper'));
+	const [ir, ig, ib] = parseHex(css.getPropertyValue('--ink'));
 	for (let k = 0; k < n; k++) {
 		for (let y = 0; y < RES; y++) {
 			for (let x = 0; x < RES; x++) {
-				const p = y * RES + x;
-				const s = k * PIXELS + p;
+				const s = k * PIXELS + y * RES + x;
 				const d = (y * n * RES + k * RES + x) * 4;
-				const to = (v: number) => Math.max(0, Math.min(255, (v + 1) * 127.5));
-				const a = to(frame[s + 3 * plane]) / 255;
-				// premultiplied, composited over a mid grey
-				for (let c = 0; c < 3; c++) img.data[d + c] = to(frame[s + c * plane]) + 128 * (1 - a);
+				const a = Math.max(0, Math.min(1, (frame[s] + 1) / 2));
+				img.data[d] = ir * a + br * (1 - a);
+				img.data[d + 1] = ig * a + bg * (1 - a);
+				img.data[d + 2] = ib * a + bb * (1 - a);
 				img.data[d + 3] = 255;
 			}
 		}
@@ -217,12 +236,14 @@ async function main() {
 		log('note: no WebGPU — falling back to wasm; expect slow steps.');
 	defaultDevice(devices.includes('webgpu') ? 'webgpu' : 'wasm');
 
-	const meta = await (await fetch('data/emoji-meta.json')).json();
-	const SETS = meta.sets.map((s: { id: string }) => s.id);
-	log(`loading ${meta.count} emoji x ${SETS.length} styles…`);
-	const sheets: Uint8Array[] = [];
-	for (const id of SETS) sheets.push(await loadSheet(id, meta.cols, meta.rows, meta.count));
-	log(`corpus: ${meta.count * SETS.length} pictures at ${RES}x${RES}`);
+	const meta = await (await fetch('data/fashion-meta.json')).json();
+	log(`loading ${meta.train} garments, ${meta.classes.length} classes…`);
+	const [images, labelBuf] = await Promise.all([
+		loadSheet('data/fashion-train.png', meta.cols, meta.side, meta.train),
+		fetch('data/fashion-labels.bin').then((r) => r.arrayBuffer())
+	]);
+	const labels = new Uint8Array(labelBuf).subarray(0, meta.train);
+	log(`corpus: ${meta.train} pictures at ${RES}x${RES} · ${meta.classes.join(', ')}`);
 
 	let params = initParams(20260905);
 	const nParams = (tree.leaves(tree.ref(params)) as Arr[]).reduce((s: number, l: Arr) => {
@@ -273,22 +294,23 @@ async function main() {
 	const rand = mulberry32(1234);
 	const xb = new Float32Array(BATCH * PIXELS);
 	const tb = new Float32Array(BATCH * PIXELS);
-	const cb = new Float32Array(BATCH * 32);
+	const cb = new Float32Array(BATCH * CONDW);
 	const noise = new Float32Array(PIXELS);
 
 	/** Walk pure static back into pictures, deterministically (DDIM, η = 0). */
 	async function sample(steps: number) {
 		const state = new Float32Array(SHOWN * PIXELS);
-		const cond = new Float32Array(SHOWN * 32);
+		const cond = new Float32Array(SHOWN * CONDW);
 		gauss(state, mulberry32(99));
 		for (let s = 0; s < steps; s++) {
 			const tau = 1 - s / steps;
 			const tauNext = 1 - (s + 1) / steps;
-			for (let n = 0; n < SHOWN; n++) timeFeatures(cond, n * 32, tau);
+			// unconditional: the one-hot stays empty, the flag stays off
+			for (let n = 0; n < SHOWN; n++) writeCond(cond, n, tau, null);
 			const eps = await sampleNet(
 				tree.ref(params),
 				np.array(state).reshape([SHOWN, CH, RES, RES]),
-				np.array(cond).reshape([SHOWN, 32])
+				np.array(cond).reshape([SHOWN, CONDW])
 			).data();
 			const ab = alphaBar(tau);
 			const abN = tauNext <= 0 ? 1 : alphaBar(tauNext);
@@ -307,8 +329,7 @@ async function main() {
 	for (let it = 1; ; it++) {
 		// build a batch: corrupt, and record the noise that would undo it
 		for (let b = 0; b < BATCH; b++) {
-			const style = Math.floor(rand() * SETS.length);
-			const idx = Math.floor(rand() * meta.count);
+			const idx = Math.floor(rand() * meta.train);
 			const src = idx * PIXELS;
 			gauss(noise, rand);
 			const tau = rand();
@@ -317,11 +338,12 @@ async function main() {
 			const sn = Math.sqrt(1 - ab);
 			const o = b * PIXELS;
 			for (let i = 0; i < PIXELS; i++) {
-				xb[o + i] = sa * (sheets[style][src + i] / 127.5 - 1) + sn * noise[i];
+				xb[o + i] = sa * (images[src + i] / 127.5 - 1) + sn * noise[i];
 				tb[o + i] = noise[i];
 			}
-			cb.fill(0, b * 32, b * 32 + 32);
-			timeFeatures(cb, b * 32, tau);
+			// a tenth of the rows drop the label, so one set of weights learns
+			// both the conditional field and the unconditional one sampling uses
+			writeCond(cb, b, tau, rand() < 0.1 ? null : labels[idx]);
 		}
 		const kk = np.array(
 			new Float32Array([1 / (1 - Math.pow(0.9, it)), 1 / (1 - Math.pow(0.99, it))])
@@ -332,7 +354,7 @@ async function main() {
 			v,
 			kk,
 			np.array(xb).reshape([BATCH, CH, RES, RES]),
-			np.array(cb).reshape([BATCH, 32]),
+			np.array(cb).reshape([BATCH, CONDW]),
 			np.array(tb).reshape([BATCH, CH, RES, RES])
 		);
 		params = p2;

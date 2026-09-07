@@ -41,10 +41,12 @@ const WARMUP = 300;
 const EMA_DECAY = 0.9995;
 const RES = 32;
 const SHOWN = 6;
+/** How many distinct faces to memorize. */
+const FACES = 12;
 
 /** The prompts the sheet is judged on — faces first, since faces are what
  *  went wrong, then a few solid shapes to check colour and silhouette. */
-const PROMPTS = ['smiling cat face', 'crying face', 'red heart', 'fire', 'moon', 'green tree'];
+const PROMPTS = ['', 'smiling face', 'grinning face', 'crying face', 'face', 'smiling cat face'];
 
 interface Recipe {
 	name: string;
@@ -53,6 +55,8 @@ interface Recipe {
 	layers: number;
 	heads: number;
 	batchOpts: BatchOptions;
+	/** Patch 2 diverges at the default rate; it needs its own. */
+	lr?: number;
 }
 
 // Round two, one variable at a time. Round one changed the timestep
@@ -60,9 +64,22 @@ interface Recipe {
 // the control — washed out, with the colour gone — so logit-normal is dropped
 // here rather than carried into every row as a confound. Every recipe below
 // has the weight average and the gradient clip; those two are settled.
+// Round three: can the architecture draw a face AT ALL?
+//
+// Faces come out smeared while hearts come out clean, and there are five times
+// as many face pictures in the corpus as heart pictures — so it is not a
+// shortage of examples. The suspicion is the decoder: at patch 4 a single
+// token has to produce a 4x4 block of pixels through one linear layer, and an
+// eye is two pixels across, so an eye lives entirely inside one token with no
+// way for neighbouring tokens to help draw it.
+//
+// This is the test that settles it. Give each architecture ninety-six face
+// pictures and long enough to memorize them outright. Anything that still
+// cannot render a sharp eye is bottlenecked by its own shape, and no amount of
+// training on the full corpus will rescue it.
 const RECIPES: Recipe[] = [
 	{
-		name: 'A control: p4 d192 L4, uniform, no aug',
+		name: 'A patch 4 (shipping now)',
 		patch: 4,
 		dim: 192,
 		layers: 4,
@@ -70,28 +87,31 @@ const RECIPES: Recipe[] = [
 		batchOpts: {}
 	},
 	{
-		name: 'E +jitter 2px',
-		patch: 4,
-		dim: 192,
-		layers: 4,
-		heads: 4,
-		batchOpts: { jitter: 2 }
-	},
-	{
-		name: 'F +patch 2',
+		name: 'B patch 2, lr 1e-4',
 		patch: 2,
 		dim: 192,
 		layers: 4,
 		heads: 4,
-		batchOpts: {}
+		batchOpts: {},
+		lr: 1e-4
 	},
 	{
-		name: 'G +capacity d256 L6',
-		patch: 4,
-		dim: 256,
-		layers: 6,
-		heads: 8,
-		batchOpts: {}
+		name: 'C patch 2, lr 5e-5',
+		patch: 2,
+		dim: 192,
+		layers: 4,
+		heads: 4,
+		batchOpts: {},
+		lr: 5e-5
+	},
+	{
+		name: 'D patch 1, lr 5e-5',
+		patch: 1,
+		dim: 128,
+		layers: 4,
+		heads: 4,
+		batchOpts: {},
+		lr: 5e-5
 	}
 ];
 
@@ -187,7 +207,8 @@ async function runRecipe(
 		const warm = Math.min(1, (step + 1) / WARMUP);
 		// anneal over the budget this recipe actually gets
 		const frac = 1 - (deadline - performance.now()) / (MINUTES * 60_000);
-		const lr = LR * warm * (0.1 + 0.9 * 0.5 * (1 + Math.cos(Math.PI * Math.min(1, frac))));
+		const baseLr = r.lr ?? LR;
+		const lr = baseLr * warm * (0.1 + 0.9 * 0.5 * (1 + Math.cos(Math.PI * Math.min(1, frac))));
 		const [lossArr, next] = opt.step(weights, batch, lr);
 		weights = next;
 		makeBatch(corpus, cfg, BATCH, rand, spare, r.batchOpts);
@@ -251,12 +272,38 @@ async function main() {
 	const vocab = makeVocab(emoji.meta.tags);
 	const tagsFor: Record<string, number[]> = {};
 	for (const p of PROMPTS) tagsFor[p] = parsePrompt(p, vocab).tags;
-	log(`corpus ${emoji.count} x ${emoji.styles}, ${nTags} tags · ${MINUTES} min per recipe`);
-	log(`columns: ${PROMPTS.join(' | ')}`);
+
+	// Cut the corpus down to a handful of faces, every style. Small enough to
+	// memorize, so what is left on the page is the architecture's ceiling
+	// rather than its progress.
+	const faceTag = vocab.index.get('face')!;
+	const keep: number[] = [];
+	for (let i = 0; i < emoji.count && keep.length < FACES; i++) {
+		if (emoji.tags[i].includes(faceTag)) keep.push(i);
+	}
+	const dim = 4 * RES * RES;
+	const small: Corpus = {
+		images: new Uint8Array(keep.length * emoji.styles * dim),
+		tags: keep.map((i) => emoji.tags[i]),
+		count: keep.length,
+		styles: emoji.styles
+	};
+	for (let s = 0; s < emoji.styles; s++) {
+		keep.forEach((src, k) => {
+			small.images.set(
+				emoji.images.subarray((s * emoji.count + src) * dim, (s * emoji.count + src + 1) * dim),
+				(s * keep.length + k) * dim
+			);
+		});
+	}
+	log(
+		`overfit set: ${keep.length} faces x ${emoji.styles} styles = ${keep.length * emoji.styles} pictures · ${MINUTES} min each`
+	);
+	log(`faces: ${keep.map((i) => emoji.meta.emoji[i].cp).join(' ')}`);
 
 	for (const r of RECIPES) {
 		log(`\n▸ ${r.name}`);
-		await runRecipe(r, emoji, tagsFor, nTags);
+		await runRecipe(r, small, tagsFor, nTags);
 	}
 	log('\ndone');
 	window.__done = true;

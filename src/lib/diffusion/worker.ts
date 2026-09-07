@@ -7,8 +7,8 @@
 /// <reference lib="webworker" />
 
 import { init, defaultDevice, tree, blockUntilReady } from '@jax-js/jax';
-import { EMOJI_SHAPE, initParams, type DiffusionConfig } from './model';
-import { loadEmoji, type EmojiCorpus } from './corpus';
+import { FASHION_SHAPE, initParams, type DiffusionConfig } from './model';
+import { loadFashion, type FashionCorpus } from './corpus';
 import {
 	allocBatch,
 	makeBatch,
@@ -34,7 +34,7 @@ interface RpcRequest {
 }
 
 let cfg: DiffusionConfig | null = null;
-let corpus: EmojiCorpus | null = null;
+let corpus: FashionCorpus | null = null;
 let params: Arr = null;
 /** The shipped checkpoint, kept alongside so plates can compare the two. */
 let shipped: Arr = null;
@@ -67,11 +67,10 @@ async function handleInit(req: RpcRequest) {
 	if (!devices.includes('webgpu')) throw new Error('WebGPU unavailable in worker');
 	defaultDevice('webgpu');
 
-	corpus = await loadEmoji((req.base as string) ?? '');
+	corpus = await loadFashion((req.base as string) ?? '');
 	cfg = {
-		...EMOJI_SHAPE,
-		tags: corpus.meta.tags.length,
-		styles: corpus.meta.sets.length,
+		...FASHION_SHAPE,
+		classes: corpus.meta.classes.length,
 		objective: (req.objective as DiffusionConfig['objective']) ?? 'flow'
 	};
 	batchSize = (req.batch as number) ?? 32;
@@ -94,10 +93,7 @@ async function handleInit(req: RpcRequest) {
 
 	return {
 		count: corpus.count,
-		styles: corpus.styles,
-		tags: corpus.meta.tags,
-		sets: corpus.meta.sets,
-		emoji: corpus.meta.emoji.map((e) => ({ cp: e.cp, name: e.name })),
+		classes: corpus.meta.classes,
 		hasShipped: shipped !== null
 	};
 }
@@ -177,11 +173,10 @@ async function handleSample(req: RpcRequest) {
 function handleTiles(req: RpcRequest) {
 	if (!corpus || !cfg) throw new Error('tiles before init');
 	const indices = req.indices as number[];
-	const style = (req.style as number) ?? 0;
 	const dim = cfg.channels * cfg.res * cfg.res;
 	const out = new Float32Array(indices.length * dim);
 	for (let k = 0; k < indices.length; k++) {
-		const src = (style * corpus.count + indices[k]) * dim;
+		const src = indices[k] * dim;
 		for (let i = 0; i < dim; i++) out[k * dim + i] = corpus.images[src + i] / 127.5 - 1;
 	}
 	return { pixels: out.buffer, count: indices.length, __transfer: [out.buffer as ArrayBuffer] };

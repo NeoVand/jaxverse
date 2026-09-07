@@ -10,7 +10,7 @@
 	import Btn from '$lib/components/ui/Btn.svelte';
 	import { Shuffle } from 'lucide-svelte';
 	import { inview } from '$lib/components/ui/inview';
-	import Tiles from '$lib/components/demos/emoji/Tiles.svelte';
+	import Tiles from '$lib/components/demos/fashion/Tiles.svelte';
 	import { NOTHING } from '$lib/diffusion/runtime';
 	import { lab, rival } from './lab.svelte';
 
@@ -22,7 +22,7 @@
 
 	const FRAMES = 8;
 	const STEPS = 48;
-	const DIM = 4 * 32 * 32;
+	const DIM = 28 * 28;
 
 	let seed = $state(7);
 	let flowStrip = $state<Float32Array | null>(null);
