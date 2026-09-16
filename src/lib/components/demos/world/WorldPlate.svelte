@@ -42,7 +42,7 @@
 	const captions: Record<Mode, string> = {
 		history: '',
 		train:
-			'The same unseen examples, before and during learning. The model predicts an embedding; the pictures let you inspect which observed future it matches. No goal or reward trains this model.',
+			'Keep the test fixed while the model changes. Learning is useful when it predicts what happens next more often than simply assuming the present will persist.',
 		forecast:
 			'Ink is the simulator; blue is a diagnostic readout of predicted embeddings. The same torque sequence drives both. Longer rollouts feed predictions back into the model.',
 		collapse:
@@ -424,6 +424,9 @@
 			{:else if lab.training}<span>step {lab.step} · {lab.metrics?.stepMs.toFixed(0)} ms/step</span>
 			{:else if lab.step}<span>{frozen ? 'weights frozen · ' : ''}step {lab.step}</span>
 			{:else}<span>from random weights</span>{/if}
+			{#if mode === 'train' && lab.metrics}
+				<span>· loss {lab.metrics.loss.toFixed(4)}</span>
+			{/if}
 		{/snippet}
 		{#snippet actions()}
 			{#if mode === 'train'}
@@ -576,7 +579,19 @@
 					/>
 				{/if}
 				{#if mode === 'train'}
+					<div class="training-telemetry">
+						<LearningCurve
+							history={lab.history}
+							regularization={lab.info?.config.regularization ?? 0.01}
+						/>
+						<p class="loss-guide">
+							Training minimizes the sum of these two terms: predict the next embedding, while
+							keeping different observations distinguishable. The unseen-picture test above checks
+							what that buys us.
+						</p>
+					</div>
 					<div class="training-strip">
+						<span>5,000 updates per training run</span>
 						<span
 							>{lab.info
 								? `${lab.info.transitions.toLocaleString()} collected transitions`
@@ -587,12 +602,8 @@
 								: 'No downloaded weights'}</span
 						>
 					</div>
-					<p class="quiet">
-						Train for 5,000 updates. Switch between Before and Now on any example; mistakes stay
-						visible.
-					</p>
 					<details class="training-detail">
-						<summary>Inspect the training experience and loss</summary>
+						<summary>Replay the experience used for training</summary>
 						<Instrument
 							state={displayed}
 							{pixels}
@@ -603,17 +614,6 @@
 								>{previewPlaying ? 'Pause experience' : 'Replay experience'}</Btn
 							>
 						</div>
-						<LearningCurve
-							history={lab.history}
-							regularization={lab.info?.config.regularization ?? 0.01}
-						/>
-						{#if lab.evaluation}<p class="quiet">
-								Held-out prediction loss <span class="num"
-									>{lab.evaluation.predictionLoss.toFixed(4)}</span
-								>
-								· copy-last-embedding baseline
-								<span class="num">{lab.evaluation.persistenceLoss.toFixed(4)}</span>
-							</p>{/if}
 					</details>
 				{:else if mode === 'forecast'}
 					<div class="controls forecast-controls">
@@ -733,7 +733,7 @@
 							<div class="choice-group" role="group" aria-label="Joint damping">
 								<span class="eyebrow">Change the world · damping</span>
 								<div class="seg">
-									{#each [{ value: DEFAULT_DAMPING * 0.25, name: 'Slipperier' }, { value: DEFAULT_DAMPING, name: 'Familiar' }, { value: DEFAULT_DAMPING * 2.5, name: 'Heavier' }] as choice (choice.name)}
+									{#each [{ value: DEFAULT_DAMPING * 0.25, name: 'Less drag' }, { value: DEFAULT_DAMPING, name: 'Familiar' }, { value: DEFAULT_DAMPING * 2.5, name: 'More drag' }] as choice (choice.name)}
 										<button
 											class={{ on: damping === choice.value }}
 											aria-pressed={damping === choice.value}
@@ -763,7 +763,7 @@
 							selectedIndex={gallery.selectedIndex}
 							label={mode === 'transfer'
 								? 'Same predictions · a different preference'
-								: 'Three actions, three predicted futures'}
+								: 'Three action sequences, three predicted futures'}
 						/>
 						<p class="quiet">
 							{mode === 'transfer'
@@ -801,6 +801,17 @@
 {/if}
 
 <style>
+	.training-telemetry {
+		max-width: 852px;
+		margin: 0 auto;
+		padding: 16px 16px 0;
+		border-top: 1px solid var(--line-soft);
+	}
+	.loss-guide {
+		margin: 10px 0 0;
+		font: 11px/1.65 var(--font-sans);
+		color: var(--ink-2);
+	}
 	.program-choices {
 		flex-wrap: wrap;
 	}

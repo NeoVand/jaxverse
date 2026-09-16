@@ -56,53 +56,37 @@
 </script>
 
 <section class="evidence" aria-label="Visual evidence of learning">
-	<div class="evidence-heading">
-		<div>
-			<span class="eyebrow">An unseen moment</span>
-			<h3>Which picture comes next?</h3>
-		</div>
-		<span class="checkpoint">
-			{#if evaluation}
-				Measured at {evaluation.step.toLocaleString()} updates
-				{#if training}<span class="measuring">Learning continues</span>{/if}
-			{:else}
-				Pictures held out of training
-			{/if}
-		</span>
-	</div>
-
-	<div class="score-views" role="group" aria-label="Compare predictions before and after learning">
-		{#each choices as choice (choice.id)}
-			<button
-				type="button"
-				class={['score-view', { active: view === choice.id }]}
-				aria-pressed={view === choice.id}
-				onclick={() => (view = choice.id)}
-			>
-				<span class="score-label">{choice.label}</span>
-				<span class="score-value">{choice.correct ?? '—'}<span> / {choice.total ?? '—'}</span></span
+	<div class="evidence-controls">
+		<div class="seg" role="group" aria-label="Compare predictions before and after learning">
+			{#each choices as choice (choice.id)}
+				<button
+					type="button"
+					class={{ on: view === choice.id }}
+					aria-pressed={view === choice.id}
+					onclick={() => (view = choice.id)}>{choice.label}</button
 				>
-				<span class="score-note">correct matches{choice.ties ? ` · ${choice.ties} tied` : ''}</span>
-			</button>
-		{/each}
+			{/each}
+		</div>
+		{#if example}
+			<div class="case-nav">
+				<span class="eyebrow">Moment</span>
+				<div class="cases" role="group" aria-label="Held-out examples">
+					{#each examples as item, index (item.id)}
+						<button
+							type="button"
+							class={['case', { active: example.id === item.id }]}
+							aria-label={`Example ${index + 1}`}
+							aria-pressed={example.id === item.id}
+							onclick={() => (selectedId = item.id)}>{index + 1}</button
+						>
+					{/each}
+				</div>
+			</div>
+		{/if}
 	</div>
 
+	<p class="question">Two pictures, their motor commands. What comes next?</p>
 	{#if example}
-		<div class="case-nav">
-			<span class="eyebrow">Look closely</span>
-			<div class="cases" role="group" aria-label="Held-out examples">
-				{#each examples as item, index (item.id)}
-					<button
-						type="button"
-						class={['case', { active: example.id === item.id }]}
-						aria-label={`Example ${index + 1}`}
-						aria-pressed={example.id === item.id}
-						onclick={() => (selectedId = item.id)}>{index + 1}</button
-					>
-				{/each}
-			</div>
-		</div>
-
 		<div class="observations">
 			<figure class="observation">
 				<div class="sensor">
@@ -142,7 +126,7 @@
 				<span aria-hidden="true">?</span><span>+{interval.toFixed(2)} s</span>
 			</div>
 		</div>
-		<p class="action-key">Motor commands: base above, elbow below.</p>
+		<p class="action-key">Turning forces at the base and elbow, shown from top to bottom.</p>
 
 		<div class="answer-heading">
 			<span
@@ -171,17 +155,11 @@
 					<div class="candidate-top">
 						<span>{letters[index]}</span>{#if selected === index}<span
 								class="choice-symbol"
-								aria-label={`${choiceLabel} selection`}
-								>{view === 'before' ? '◇' : view === 'copy' ? '□' : '●'}</span
+								aria-label={`${choiceLabel} selection`}>● {choiceLabel}</span
 							>{/if}
 					</div>
 					<div class="sensor"><Sensor {pixels} size={Math.sqrt(pixels.length)} /></div>
 					<figcaption>
-						<span class="chosen-caption"
-							>{#if selected === index}{choiceLabel} chooses {letters[index]}{:else}<span
-									aria-hidden="true">&nbsp;</span
-								>{/if}</span
-						>
 						<span class="actual-caption"
 							>{#if example.correctIndex === index}<span aria-hidden="true">✓</span> Actual outcome{:else}<span
 									aria-hidden="true">&nbsp;</span
@@ -217,92 +195,98 @@
 		</div>
 	{/if}
 
+	<div class="matching-results">
+		<div class="score-heading">
+			<span class="eyebrow">Correct on {probe?.total ?? 64} unseen moments</span>
+			<span class="checkpoint"
+				>{#if evaluation}Measured at step {evaluation.step.toLocaleString()}{:else}Before training{/if}{#if training}
+					· updating as it learns{/if}</span
+			>
+		</div>
+		<dl class="scores">
+			{#each choices as choice (choice.id)}
+				<div>
+					<dt>{choice.label}</dt>
+					<dd class="score-value">{choice.correct ?? '—'}<span> / {choice.total ?? '—'}</span></dd>
+				</div>
+			{/each}
+		</dl>
+	</div>
 	<p class="method-note">
-		{probe?.total ?? 64} fixed held-out moments, {probe?.candidatesPerExample ?? 6} choices each. Ties
-		count as misses. The pictures are recorded observations; the model predicts an embedding, not an image.
+		{#if view === 'copy'}Copy the present assumes nothing changes: it matches the current embedding
+			to the six pictures, without using the predictor or actions.
+		{:else}The model predicts a vector. Its marked picture is the closest match in embedding space;
+			the green check identifies what actually happened.{/if}
+		{probe?.candidatesPerExample ?? 6} recorded pictures per moment; ties count as misses.
 	</p>
 </section>
 
 <style>
 	.evidence {
-		max-width: 860px;
-		margin: 22px auto 28px;
+		max-width: 852px;
+		margin: 18px auto 20px;
 		padding-inline: 16px;
 	}
-	.evidence-heading {
+	.evidence-controls {
 		display: flex;
+		align-items: center;
 		justify-content: space-between;
-		align-items: end;
-		gap: 20px;
-		margin-bottom: 22px;
+		flex-wrap: wrap;
+		gap: 14px;
 	}
-	h3 {
-		margin: 5px 0 0;
-		font: 400 clamp(25px, 3vw, 32px)/1.12 var(--font-serif);
-		letter-spacing: -0.025em;
-		color: var(--ink);
+	.question {
+		margin: 16px 0;
+		font: 400 18px/1.45 var(--font-serif);
+		color: var(--ink-2);
+		text-align: center;
 	}
 	.checkpoint {
-		display: grid;
-		gap: 4px;
-		text-align: right;
 		font: 10px/1.5 var(--font-mono);
-		color: var(--ink-2);
-	}
-	.measuring {
-		color: var(--accent);
-	}
-	.score-views {
-		display: grid;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-		border-top: 1px solid var(--line);
-		border-bottom: 1px solid var(--line);
-	}
-	.score-view {
-		display: grid;
-		align-content: start;
-		gap: 7px;
-		min-width: 0;
-		padding: 14px 16px;
-		text-align: left;
-		color: var(--ink-2);
-		background: transparent;
-		border-bottom: 2px solid transparent;
-	}
-	.score-view + .score-view {
-		border-left: 1px solid var(--line);
-	}
-	.score-view:hover {
-		background: var(--surface-2);
-	}
-	.score-view.active {
-		background: var(--accent-soft);
-		border-bottom-color: var(--accent);
-		color: var(--accent);
-	}
-	.score-label {
-		font: 11px/1.4 var(--font-sans);
-	}
-	.score-value {
-		font: 26px/1 var(--font-mono);
-		font-variant-numeric: tabular-nums;
-	}
-	.score-value > span {
-		font-size: 13px;
 		color: var(--ink-3);
-	}
-	.score-note {
-		display: block;
-		font: 10px/1.4 var(--font-sans);
-		color: var(--ink-2);
 	}
 	.case-nav {
 		display: flex;
-		justify-content: center;
 		align-items: center;
+		justify-content: center;
 		flex-wrap: wrap;
-		gap: 14px;
-		margin: 22px 0 18px;
+		gap: 10px;
+	}
+	.matching-results {
+		margin-top: 10px;
+		padding-top: 10px;
+		border-top: 1px solid var(--line-soft);
+	}
+	.score-heading {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		flex-wrap: wrap;
+		gap: 5px 16px;
+	}
+	.scores {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px 28px;
+		margin: 10px 0 0;
+	}
+	.scores > div {
+		display: flex;
+		align-items: baseline;
+		gap: 10px;
+	}
+	.scores dt {
+		font: 11px/1.5 var(--font-sans);
+		color: var(--ink-2);
+	}
+	.score-value {
+		margin: 0;
+		font: 14px/1.5 var(--font-mono);
+		font-variant-numeric: tabular-nums;
+		color: var(--ink);
+	}
+	.score-value > span {
+		font-size: 11px;
+		color: var(--ink-3);
 	}
 	.cases {
 		display: flex;
@@ -389,7 +373,7 @@
 		white-space: nowrap;
 	}
 	.action-key {
-		margin: 10px 0 24px;
+		margin: 4px 0 12px;
 		text-align: center;
 		color: var(--ink-3);
 		font: 10px/1.5 var(--font-sans);
@@ -421,7 +405,8 @@
 	}
 	.candidate.chosen {
 		border-color: var(--accent);
-		box-shadow: 0 0 0 1px var(--accent);
+		outline: 1px solid var(--accent);
+		outline-offset: -1px;
 	}
 	.candidate.chosen.before {
 		border-style: dashed;
@@ -440,7 +425,7 @@
 	}
 	.choice-symbol {
 		color: var(--accent);
-		font-size: 13px;
+		font-size: 10px;
 	}
 	.candidate :global(canvas) {
 		border: 0;
@@ -451,9 +436,6 @@
 		margin-top: 7px;
 		font: 9px/1.4 var(--font-sans);
 	}
-	.chosen-caption {
-		color: var(--accent);
-	}
 	.actual-caption {
 		color: var(--good);
 	}
@@ -461,8 +443,7 @@
 		font-weight: 600;
 	}
 	.result {
-		margin: 14px 0 0;
-		min-height: 34px;
+		margin: 10px 0 0;
 		color: var(--ink-2);
 		font: 12px/1.6 var(--font-sans);
 		text-align: center;
@@ -475,10 +456,8 @@
 	}
 	.method-note {
 		margin: 12px auto 0;
-		max-width: 650px;
-		color: var(--ink-3);
-		font: 10px/1.6 var(--font-sans);
-		text-align: center;
+		color: var(--ink-2);
+		font: 11px/1.65 var(--font-sans);
 	}
 	.empty-evidence {
 		min-height: 350px;
@@ -504,30 +483,18 @@
 		max-width: 360px;
 	}
 	@media (max-width: 600px) {
-		.evidence-heading {
-			flex-direction: column;
-			align-items: start;
-			gap: 10px;
+		.evidence-controls {
+			justify-content: center;
 		}
-		.checkpoint {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 4px 12px;
-			text-align: left;
+		.evidence-controls .seg > button {
+			padding-inline: 9px;
 			font-size: 10px;
 		}
-		.score-view {
-			padding: 12px 9px;
+		.scores {
+			gap: 8px 20px;
 		}
-		.score-label {
-			min-height: 30px;
-			font-size: 10px;
-		}
-		.score-value {
-			font-size: 22px;
-		}
-		.score-note {
-			font-size: 10px;
+		.question {
+			font-size: 17px;
 		}
 		.observations {
 			grid-template-columns: minmax(0, 1fr) 42px minmax(0, 1fr) 42px 42px;

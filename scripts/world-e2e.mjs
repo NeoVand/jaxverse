@@ -48,6 +48,13 @@ try {
 	await plate('train').scrollIntoViewIfNeeded();
 	await button('train', 'Train').waitFor();
 	await plate('train').locator('.candidate').first().waitFor({ timeout: 120_000 });
+	assert.equal(await plate('train').locator('button.score-view').count(), 0);
+	const lossCurve = plate('train').getByRole('img', { name: /Training objective terms/ });
+	assert.ok(
+		await lossCurve.isVisible(),
+		'Training loss is visible before training without opening details'
+	);
+	assert.equal(await lossCurve.locator('xpath=ancestor::details').count(), 0);
 	const sensor = plate('train').locator('.observation canvas').first();
 	const rawPixels = await sensor.evaluate((canvas) => canvas.toDataURL());
 	for (const [preference, system, inverted] of [
@@ -98,6 +105,9 @@ try {
 		{ timeout: 180_000 }
 	);
 	await report('train');
+	assert.ok(await lossCurve.isVisible(), 'Training loss stays visible after learning');
+	assert.ok((await lossCurve.locator('.prediction-path').getAttribute('d')).length > 0);
+	assert.match(await plate('train').locator('.plate-head').innerText(), /loss \d+\.\d+/);
 	const learnedScore = Number.parseInt(
 		await plate('train').locator('.score-value').nth(1).innerText()
 	);
@@ -110,6 +120,20 @@ try {
 	await plate('train').getByRole('button', { name: 'Before learning', exact: false }).click();
 	assert.ok(await plate('train').locator('.candidate.before.chosen').count());
 	await plate('train').getByRole('button', { name: /^Now/ }).click();
+	await plate('train').getByRole('button', { name: 'Copy the present', exact: true }).click();
+	assert.match(
+		await plate('train').locator('.method-note').innerText(),
+		/without using the predictor or actions/
+	);
+	await plate('train').getByRole('button', { name: 'Example 2', exact: true }).click();
+	assert.equal(
+		await plate('train')
+			.getByRole('button', { name: 'Example 2', exact: true })
+			.getAttribute('aria-pressed'),
+		'true'
+	);
+	await plate('train').getByRole('button', { name: 'Example 1', exact: true }).click();
+	await plate('train').getByRole('button', { name: 'Now', exact: true }).click();
 	for (const width of [1280, 640, 390]) {
 		await page.setViewportSize({ width, height: 900 });
 		for (const theme of ['light', 'dark']) {

@@ -11,9 +11,13 @@ The plates now hold questions fixed while the model's answers change. The MLP, t
 | V · Planning      | Compare three candidate futures, then execute one action.                | Predicted costs explain the choice; its predicted pose remains beside the observed result.      |
 | VI · Reuse        | Change the destination or scoring window after rehearsing.               | Cached predictions stay fixed while preferences change their scores and ranking.                |
 
-Plate II gives the visual test the main area; recorded experience and the loss curve are available in an expandable section. Later plates distinguish changing a request from changing physical damping. A fresh observation helps planning react to errors; it does not retrain the frozen world model.
+Plate II gives the visual test the main area. Before/Now/Copy use the book’s compact segmented control; correct-match counts are passive readings, not large selectable cards. Training loss remains visible in the header and in a shared logarithmic chart with exact values for prediction and weighted distribution terms. Only replay of recorded experience is expandable. Later plates distinguish changing a request from changing physical damping. A fresh observation helps planning react to errors; it does not retrain the frozen world model.
 
 Plate III starts every action choice after the same 0.96-second push. Its two context pictures and connecting motor command come from that actual simulation. Keeping the push, reversing the torques, and releasing the motors each hold their selected commands for the entire forecast. Release therefore tests coasting from existing momentum, with the usual damping, instead of zero torque applied to a stationary arm. Long learned rollouts can still drift from the observed trajectory.
+
+The chapter now teaches one complete training example before asking the reader to train: three recorded pictures, two aligned actions, a shared encoder, the predicted next embedding, and the gradient update. The text interprets the loss and matching test separately, explains why the current-encoder copying baseline changes during training, and why random weights do not imply uniformly random choices. Later experiments distinguish optimizing weights from searching over actions, rescoring a fixed gallery from searching again, and changing a goal from changing the mechanics.
+
+The content review checked these explanations against the implementation and the primary LeWM, LeJEPA, and V-JEPA 2-AC descriptions. SIGReg is described as a penalty on encoded observations; the diagnostic readout uses angle labels only for its display fit; a new goal need not be an unseen pose. Damping controls say “Less drag” and “More drag,” since they do not change mass.
 
 ## The matching diagnostic
 
@@ -43,4 +47,6 @@ Regression checks cover held-out provenance, candidate stability, unchanged trai
 
 Sensor images invert for dark display, including system dark mode. The canvas backing pixels and model inputs are unchanged. Layouts were inspected at 390, 640, and 1280 CSS pixels in both themes.
 
-Final verification: 148 unit tests pass, Svelte reports zero errors and warnings, lint and production build pass, and the complete production browser flow passes. Browser checks cover manual and system theme preferences and verify unchanged canvas pixels across theme changes.
+Verification of the initial learning-evidence implementation: 148 unit tests pass, Svelte reports zero errors and warnings, lint and production build pass, and the complete production browser flow passes. Browser checks cover manual and system theme preferences and verify unchanged canvas pixels across theme changes.
+
+The subsequent design and teaching revision passes all 36 world-model unit tests, Svelte checking, lint, and the production build. The full browser flow additionally verifies that loss is visible before and after training without opening details, that both checkpoint controls and example selection work, and that training improves the fixed matching score. Trained layouts were checked at 390, 640, and 1280 pixels in light and dark themes. No model or planner parameters changed in this revision.
