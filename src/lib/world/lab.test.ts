@@ -48,6 +48,7 @@ describe('world-model training diagnostics', () => {
 				if (step === 43) void lab.stop();
 			};
 			await lab.toggleTrain();
+			expect(lab.initialEvaluation?.step).toBe(0);
 			expect(lab.step).toBe(43);
 			expect(lab.evaluation?.step).toBe(43);
 			expect(lab.phase).toBe('ready');
@@ -55,12 +56,13 @@ describe('world-model training diagnostics', () => {
 			fake.onStep = null;
 			await lab.toggleTrain();
 			expect(lab.step).toBe(5043);
-			expect(fake.evaluations[1]).toBe(143);
+			expect(fake.evaluations.slice(0, 3)).toEqual([0, 43, 143]);
 			expect(fake.evaluations.at(-1)).toBe(5043);
 			expect(fake.evaluations.slice(1).every((step, i) => step - fake.evaluations[i] <= 100)).toBe(
 				true
 			);
 			expect(lab.evaluation?.step).toBe(lab.step);
+			expect(lab.initialEvaluation?.step).toBe(0);
 			expect(lab.training).toBe(false);
 			expect(lab.phase).toBe('ready');
 		} finally {

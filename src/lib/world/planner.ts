@@ -1,5 +1,7 @@
 /** Latent-only planning. This module deliberately cannot step the simulator. */
 import { numpy as np, jit, tree } from '@jax-js/jax';
+import { latentGoalCost } from './goal-cost';
+export { latentGoalCost } from './goal-cost';
 import { normalRandom, predict, seededRandom, type Tensor, type WorldConfig } from './model';
 
 export interface LatentContext {
@@ -87,21 +89,6 @@ export function createLatentRollout(config: WorldConfig) {
 }
 
 export type LatentRollout = ReturnType<typeof createLatentRollout>;
-
-/** The actual controller scores embeddings, never the display readout. */
-export function latentGoalCost(
-	latents: Float32Array,
-	goal: Float32Array,
-	horizon: number,
-	hold: boolean
-): number {
-	const window = hold ? Math.min(4, horizon) : 1;
-	let sum = 0;
-	for (let t = horizon - window; t < horizon; t++) {
-		for (let d = 0; d < goal.length; d++) sum += (latents[t * goal.length + d] - goal[d]) ** 2;
-	}
-	return sum / (window * goal.length);
-}
 
 /**
  * Bounded CEM. Samples have two-frame torque knots to reduce search dimension.

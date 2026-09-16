@@ -47,18 +47,16 @@
 		</p>
 		<h2 class="h2">Learning before wanting</h2>
 		<p>
-			For learning, the joints have damping: without a sustained push, motion gradually subsides.
-			The browser collects exploratory episodes for you to inspect. Each example records pictures,
-			the torques applied between them, and what happened next. A <em>torque</em> is a turning force;
-			it changes motion rather than assigning a joint its next angle. Exploration supplies a variety of
-			pushes, releases, and reversals. There is no desired pose in this collection task and no reward
-			for getting somewhere.
+			First, collect experience without a destination: observations, actions, and what followed.
+			Here the actions are joint torques, or turning forces. Exploration supplies pushes, releases,
+			and reversals; damping gradually slows motion. None of these episodes was collected to reach a
+			goal. Later, the same knowledge will serve several requests.
 		</p>
 		<p>
-			The model receives the small pictures shown in the sensor view. The crisp links, their motion
-			trace, and the goal outline are drawings for you. The trace and goal are absent from those
-			pictures. The simulator knows joint angles and velocities so that it can advance the
-			mechanism; those numbers do not enter the world model's training inputs.
+			The model receives the small sensor pictures and motor commands. Joint angles and velocities
+			belong to the simulator, not its training inputs. The crisp links, motion traces, and goal
+			outlines are drawings for you. <PlateRef id="train" /> tests learning with pictures held out of
+			training: can a predicted embedding identify the right next observation among similar alternatives?
 		</p>
 		<p>
 			We need a way to represent each picture. The encoder in <ChapterRef slug="latent" /> was taught
@@ -97,8 +95,9 @@
 
 	<Prose>
 		<p>
-			Now hold the weights fixed. Give the predictor a sequence of actions and let its first
-			prediction become part of the context for its second. Continue. The resulting
+			Now hold the weights and starting observation fixed. Change only the proposed actions. This is
+			the question a world model lets us ask before acting. Let its first prediction become part of
+			the context for its second. Continue. The resulting
 			<em>rollout</em> is a forecast that must live with its own mistakes. Compare it with the real mechanism
 			replaying exactly those actions.
 		</p>
@@ -228,9 +227,10 @@
 		<p>
 			We replace the goal term with this average over the last four predictions,
 			<Math tex={'\\htmlClass{eq-knob}{K} = 4'} />; the effort term and its weight stay the same.
-			The model is unchanged. The request has changed. A movement that passes through the outline
-			may now be worse than one that brakes before reaching it. Matching several embeddings
-			encourages settling; the actual pose and time spent nearby tell us whether it happened.
+			Rehearse once in the next plate, then change the destination or intention. The displayed
+			futures stay fixed; only their scores and ranking change. A movement that passes through the
+			outline may now be worse than one that settles nearby. This small gallery isolates preference
+			from prediction. Rehearse again to search for new actions under the new request.
 		</p>
 	</Prose>
 

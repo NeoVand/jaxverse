@@ -16,10 +16,13 @@
 	} from '$lib/world/simulator';
 	import { renderSensor } from '$lib/world/sensor';
 	import type { WorldPlan, WorldForecast } from '$lib/world/engine';
+	import { rescoreFutures } from '$lib/world/future-choices';
 	import HistoryPlate from './HistoryPlate.svelte';
 	import Instrument from './Instrument.svelte';
 	import Projection from './Projection.svelte';
 	import LearningCurve from './LearningCurve.svelte';
+	import LearningEvidence from './LearningEvidence.svelte';
+	import CandidateFutures from './CandidateFutures.svelte';
 
 	type Mode = 'history' | 'train' | 'forecast' | 'collapse' | 'plan' | 'transfer';
 	let { mode, lab }: { mode: Mode; lab: WorldLab } = $props();
@@ -34,14 +37,14 @@
 	const captions: Record<Mode, string> = {
 		history: '',
 		train:
-			'These pictures and torques come from exploration collected in this browser. The encoder and predictor begin with random weights. No goal, reward, or joint coordinates train them.',
+			'The same unseen examples, before and during learning. The model predicts an embedding; the pictures let you inspect which observed future it matches. No goal or reward trains this model.',
 		forecast:
 			'Ink is the simulator; blue is a diagnostic readout of predicted embeddings. The same torque sequence drives both. Longer rollouts feed predictions back into the model.',
 		collapse:
 			'Watch the prediction-only representation as it learns. Your trained model stays fixed on the left. At the end, both runs have the same initialization, examples, and training budget; only the distribution term differs.',
-		plan: 'Rehearse holds the instrument still while the model evaluates possible actions. Step executes the selected first action. Run repeats observation, planning, and action with frozen weights.',
+		plan: 'Rehearse considers actions without moving. Step tests the first action in the world; its predicted pose stays visible. Run repeats this loop with fresh observations and frozen weights.',
 		transfer:
-			'Change the goal or ask the instrument to remain nearby. The learned weights stay fixed. Changing damping changes the actual mechanics, without informing the predictor.'
+			'Rehearse once, then change the request: the same three predicted futures receive new scores. Step tests the preferred first action. Rehearse again to search beyond this small gallery.'
 	};
 	const goals: { name: string; pose: ArmState }[] = [
 		{ name: 'Unfold', pose: { q1: -0.9, q2: 1.0, v1: 0, v2: 0 } },
@@ -55,11 +58,18 @@
 	let goalIndex = $state(0);
 	let horizon = $state(6);
 	let forecastHorizon = $state(3);
+	let forecastProgram = $state(0);
+	const forecastPrograms = ['Push', 'Reverse', 'Release'];
 	let hold = $state(true);
 	let damping = $state(DEFAULT_DAMPING);
 	let rehearsed = $state.raw<WorldPlan | null>(null);
+	let rehearsedStart = $state.raw<ArmState>(initialArm());
 	let forecast = $state.raw<WorldForecast | null>(null);
 	let ghost = $state.raw<ArmState | null>(null);
+	let actionPrediction = $state.raw<ArmState | null>(null);
+	let actionPredictionStep = $state(-1);
+	let actionPredictionCheckpoint = $state(-1);
+	let actionReadoutError = $state(0);
 	let forecastActual = $state.raw<ArmState[]>([]);
 	let forecastError = $state<number | null>(null);
 	let previewIndex = $state(0);
@@ -75,6 +85,8 @@
 	let rehearsedStep = $state(-1);
 	let forecastStep = $state(-1);
 	let rehearsedCheckpoint = $state(-1);
+	let rehearsedGoal = $state(0);
+	let rehearsedHold = $state(true);
 	let forecastCheckpoint = $state(-1);
 	let generation = 0;
 	let gone = false;
@@ -93,9 +105,25 @@
 	const canInfer = $derived(
 		lab.step > 0 && lab.phase === 'ready' && !executing && !running && !lab.motionOwner
 	);
-	const visiblePlan = $derived(
+	const validRehearsal = $derived(
 		lab.checkpoint === rehearsedCheckpoint && lab.step === rehearsedStep && !lab.training
 			? rehearsed
+			: null
+	);
+	const gallery = $derived(
+		validRehearsal && mode === 'transfer'
+			? rescoreFutures(validRehearsal, goalIndex, hold)
+			: { plan: validRehearsal, selectedIndex: 0 }
+	);
+	const visiblePlan = $derived(gallery.plan);
+	const rescored = $derived(
+		mode === 'transfer' && (goalIndex !== rehearsedGoal || hold !== rehearsedHold)
+	);
+	const visibleActionPrediction = $derived(
+		lab.checkpoint === actionPredictionCheckpoint &&
+			lab.step === actionPredictionStep &&
+			!lab.training
+			? actionPrediction
 			: null
 	);
 	const visibleForecast = $derived(
@@ -109,7 +137,12 @@
 				? [visibleForecast.poses]
 				: []
 			: visiblePlan
-				? [visiblePlan.poses, ...visiblePlan.candidates.slice(1).map((c) => c.poses)]
+				? [
+						visiblePlan.poses,
+						...visiblePlan.candidates
+							.filter((_, i) => i !== gallery.selectedIndex)
+							.map((c) => c.poses)
+					]
 				: []
 	);
 	const frozen = $derived(mode === 'forecast' || mode === 'plan' || mode === 'transfer');
@@ -160,6 +193,7 @@
 		rehearsed = null;
 		forecast = null;
 		ghost = null;
+		actionPrediction = null;
 		time = 0;
 		dwell = 0;
 		forecastError = null;
@@ -167,7 +201,7 @@
 	}
 	function changedGoal() {
 		stopLocal();
-		rehearsed = null;
+		if (mode !== 'transfer') rehearsed = null;
 		dwell = 0;
 		localNotice = '';
 	}
@@ -204,23 +238,32 @@
 	async function rehearse() {
 		localNotice = '';
 		const token = generation;
+		const start = physical;
 		const result = await lab.plan({
 			observations: observations(),
 			previousAction,
 			goal: renderSensor(goal),
 			horizon,
 			hold: mode === 'plan' ? false : hold,
-			seed: 300 + Math.round(time / interval)
+			seed: 300 + Math.round(time / interval),
+			comparisonGoals: mode === 'transfer' ? goals.map((g) => renderSensor(g.pose)) : undefined
 		});
 		if (gone || token !== generation) return null;
 		if (result) {
 			rehearsed = result;
+			rehearsedStart = start;
 			rehearsedStep = lab.step;
 			rehearsedCheckpoint = lab.checkpoint;
+			rehearsedGoal = goalIndex;
+			rehearsedHold = hold;
 		}
 		return result;
 	}
-	async function execute(action: Action) {
+	async function execute(action: Action, prediction: ArmState, readoutError: number) {
+		actionPrediction = prediction;
+		actionPredictionStep = lab.step;
+		actionPredictionCheckpoint = lab.checkpoint;
+		actionReadoutError = readoutError;
 		executing = true;
 		const start = physical;
 		const token = generation;
@@ -265,7 +308,7 @@
 		const token = generation;
 		const selected = visiblePlan ?? (await rehearse());
 		if (selected && !gone && token === generation) {
-			await execute(selected.action);
+			await execute(selected.action, selected.poses[0], selected.readoutError);
 			rehearsed = null;
 		}
 		if (lab.motionOwner === mode) lab.motionOwner = null;
@@ -283,7 +326,7 @@
 		for (let i = 0; i < 60 && running && token === generation && !gone; i++) {
 			const selected = await rehearse();
 			if (!selected || !running || token !== generation) break;
-			await execute(selected.action);
+			await execute(selected.action, selected.poses[0], selected.readoutError);
 			if (dwell >= 5 * interval - 1e-8) {
 				localNotice = 'Within 0.15 rad for five consecutive observations.';
 				break;
@@ -300,8 +343,9 @@
 		lab.motionOwner = mode;
 		const actions = new Float32Array(forecastHorizon * 2);
 		for (let i = 0; i < forecastHorizon; i++) {
-			actions[2 * i] = i < 6 ? 0.55 : -0.3;
-			actions[2 * i + 1] = i < 6 ? -0.45 : 0.5;
+			const direction = forecastProgram === 2 ? 0 : forecastProgram === 1 ? -1 : 1;
+			actions[2 * i] = direction * (i < 6 ? 0.55 : -0.3);
+			actions[2 * i + 1] = direction * (i < 6 ? -0.45 : 0.5);
 		}
 		const token = generation;
 		const result = await lab.forecast({ observations: observations(), previousAction, actions });
@@ -373,9 +417,6 @@
 		{/snippet}
 		{#snippet actions()}
 			{#if mode === 'train'}
-				<Btn onclick={togglePreview} disabled={!preview}
-					>{previewPlaying ? 'Pause experience' : 'Experience'}</Btn
-				>
 				<Btn
 					kind={lab.training ? 'ghost' : 'primary'}
 					onclick={() => void lab.toggleTrain()}
@@ -465,6 +506,14 @@
 									<dt>Prediction loss</dt>
 									<dd>{formatMetric(result?.predictionLoss, 4)}</dd>
 								</div>
+								<div>
+									<dt>Matched unseen futures</dt>
+									<dd>
+										{result
+											? `${result.futureMatching.correct} / ${result.futureMatching.total}`
+											: '—'}
+									</dd>
+								</div>
 							</dl>
 						</div>
 					{/each}
@@ -491,18 +540,30 @@
 					</div>
 				{/if}
 				<p class="quiet comparison-note">{comparisonDescription}</p>
+				<p class="quiet">
+					The matching test is the same one used above. A smaller loss can accompany a loss of
+					useful distinctions.
+				</p>
 			{:else}
-				<Instrument
-					state={displayed}
-					goal={mode === 'plan' || mode === 'transfer' ? goal : null}
-					{trail}
-					{forecasts}
-					ghost={visibleForecast ? ghost : null}
-					{pixels}
-					label={mode === 'train'
-						? 'A recorded exploratory movement from the training corpus'
-						: 'Actual instrument with diagnostic forecasts and a desired pose'}
-				/>
+				{#if mode === 'train'}
+					<LearningEvidence
+						evaluation={lab.evaluation}
+						initial={lab.initialEvaluation}
+						training={lab.training}
+						{interval}
+					/>
+				{:else}
+					<Instrument
+						state={displayed}
+						compact={mode === 'plan' || mode === 'transfer'}
+						goal={mode === 'plan' || mode === 'transfer' ? goal : null}
+						{trail}
+						{forecasts}
+						ghost={visibleForecast ? ghost : visibleActionPrediction}
+						{pixels}
+						label="Actual instrument with diagnostic forecasts and a desired pose"
+					/>
+				{/if}
 				{#if mode === 'train'}
 					<div class="training-strip">
 						<span
@@ -516,21 +577,49 @@
 						>
 					</div>
 					<p class="quiet">
-						One training session runs 5,000 updates. Pause at any time to try the current model.
+						Train for 5,000 updates. Switch between Before and Now on any example; mistakes stay
+						visible.
 					</p>
-					<LearningCurve
-						history={lab.history}
-						regularization={lab.info?.config.regularization ?? 0.01}
-					/>
-					{#if lab.evaluation}<p class="quiet">
-							Held-out prediction loss <span class="num"
-								>{lab.evaluation.predictionLoss.toFixed(4)}</span
+					<details class="training-detail">
+						<summary>Inspect the training experience and loss</summary>
+						<Instrument
+							state={displayed}
+							{pixels}
+							label="A recorded exploratory movement from the training corpus"
+						/>
+						<div class="experience-actions">
+							<Btn onclick={togglePreview} disabled={!preview}
+								>{previewPlaying ? 'Pause experience' : 'Replay experience'}</Btn
 							>
-							· copy-last-embedding baseline
-							<span class="num">{lab.evaluation.persistenceLoss.toFixed(4)}</span>
-						</p>{/if}
+						</div>
+						<LearningCurve
+							history={lab.history}
+							regularization={lab.info?.config.regularization ?? 0.01}
+						/>
+						{#if lab.evaluation}<p class="quiet">
+								Held-out prediction loss <span class="num"
+									>{lab.evaluation.predictionLoss.toFixed(4)}</span
+								>
+								· copy-last-embedding baseline
+								<span class="num">{lab.evaluation.persistenceLoss.toFixed(4)}</span>
+							</p>{/if}
+					</details>
 				{:else if mode === 'forecast'}
 					<div class="controls forecast-controls">
+						<div class="choice-group" role="group" aria-label="Proposed actions">
+							<span class="eyebrow">Same start, different action</span>
+							<div class="seg">
+								{#each forecastPrograms as program, i (program)}<button
+										class={{ on: forecastProgram === i }}
+										aria-pressed={forecastProgram === i}
+										disabled={lab.busy || executing}
+										onclick={() => {
+											forecastProgram = i;
+											resetInstrument();
+										}}>{program}</button
+									>{/each}
+							</div>
+						</div>
 						<div class="choice-group" role="group" aria-label="Forecast length">
 							<span class="eyebrow">Forecast length</span>
 							<div class="choice-row">
@@ -565,7 +654,9 @@
 				{:else}
 					<div class="controls planning-controls">
 						<div class="choice-group" role="group" aria-label="Desired pose">
-							<span class="eyebrow">Desired pose</span>
+							<span class="eyebrow"
+								>{mode === 'transfer' ? 'Change the request · destination' : 'Desired pose'}</span
+							>
 							<div class="choice-row pose-choices">
 								{#each goals as g, i (g.name)}
 									<button
@@ -608,7 +699,7 @@
 						</div>
 						{#if mode === 'transfer'}
 							<div class="choice-group" role="group" aria-label="Intention">
-								<span class="eyebrow">Intention</span>
+								<span class="eyebrow">Change the request · intention</span>
 								<div class="seg">
 									{#each [{ value: false, name: 'Match the pose' }, { value: true, name: 'Arrive and remain' }] as choice (choice.name)}
 										<button
@@ -617,7 +708,6 @@
 											disabled={running || executing || lab.busy}
 											onclick={() => {
 												hold = choice.value;
-												rehearsed = null;
 												dwell = 0;
 											}}>{choice.name}</button
 										>
@@ -625,7 +715,7 @@
 								</div>
 							</div>
 							<div class="choice-group" role="group" aria-label="Joint damping">
-								<span class="eyebrow">Joint damping</span>
+								<span class="eyebrow">Change the world · damping</span>
 								<div class="seg">
 									{#each [{ value: DEFAULT_DAMPING * 0.25, name: 'Slipperier' }, { value: DEFAULT_DAMPING, name: 'Familiar' }, { value: DEFAULT_DAMPING * 2.5, name: 'Heavier' }] as choice (choice.name)}
 										<button
@@ -634,7 +724,6 @@
 											disabled={running || executing || lab.busy}
 											onclick={() => {
 												damping = choice.value;
-												rehearsed = null;
 												dwell = 0;
 											}}>{choice.name}</button
 										>
@@ -646,14 +735,40 @@
 					<div class="plan-readout">
 						<span class="num">pose error {error.toFixed(2)} rad · {time.toFixed(1)} s</span><span
 							>{visiblePlan
-								? `plan cost ${visiblePlan.cost.toFixed(4)} · ${visiblePlan.ms.toFixed(0)} ms`
+								? `plan cost ${visiblePlan.cost.toFixed(4)} · ${rescored ? 'cached futures rescored' : `${visiblePlan.ms.toFixed(0)} ms`}`
 								: 'Observe → rehearse → act'}</span
 						>
 					</div>
-					{#if visiblePlan}<p class="quiet">
-							Three action alternatives, drawn through a diagnostic readout. Readout error on
-							held-out observations: {visiblePlan.readoutError.toFixed(2)} rad.
-						</p>{/if}
+					{#if visiblePlan}
+						<CandidateFutures
+							candidates={visiblePlan.candidates}
+							start={rehearsedStart}
+							{goal}
+							selectedIndex={gallery.selectedIndex}
+							label={mode === 'transfer'
+								? 'Same predictions · a different preference'
+								: 'Three actions, three predicted futures'}
+						/>
+						<p class="quiet">
+							{mode === 'transfer'
+								? `Only the scores change when you change the request. ${hold ? 'Last four moments' : 'Final moment'} scored against the goal, plus motor effort. Step uses the best of these three; Run searches afresh.`
+								: 'Step executes only the first action of the selected future. The rest is reconsidered after another observation.'}
+							Drawings use a diagnostic readout ({visiblePlan.readoutError.toFixed(2)} rad held-out error).
+						</p>
+					{:else if mode === 'transfer'}
+						<p class="quiet">
+							Rehearse to collect three possible futures. Then change the destination or intention
+							and watch their ranking.
+						</p>
+					{/if}
+					{#if visibleActionPrediction && !executing}
+						<p class="quiet action-evidence">
+							<span class="legend"
+								><i class="actual"></i>What happened <i class="predicted"></i>What was predicted</span
+							><br />After one action: {poseError(physical, visibleActionPrediction).toFixed(2)} rad apart.
+							This includes display-readout error ({actionReadoutError.toFixed(2)} rad on held-out pictures).
+						</p>
+					{/if}
 				{/if}
 			{/if}
 			{#if mode !== 'train' && lab.step === 0}<p class="training-needed">
@@ -670,6 +785,30 @@
 {/if}
 
 <style>
+	.training-detail {
+		max-width: 820px;
+		margin: 24px auto 0;
+		border-top: 1px solid var(--line-soft);
+		font: 12px/1.5 var(--font-sans);
+		color: var(--ink-2);
+	}
+	.training-detail summary {
+		cursor: pointer;
+		padding: 16px 0;
+	}
+	.training-detail summary:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 4px;
+	}
+	.experience-actions {
+		display: flex;
+		justify-content: center;
+		margin-bottom: 16px;
+	}
+	.action-evidence {
+		padding-top: 16px;
+		border-top: 1px solid var(--line-soft);
+	}
 	.controls {
 		border-top: 1px solid var(--line-soft);
 		padding: 18px 16px 0;

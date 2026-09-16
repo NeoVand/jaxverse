@@ -76,7 +76,7 @@ return np.mean(np.sum(err.mul(np.array(weights)), -1)).mul(batch);`
 					title: 'The goal is a cost on predicted embeddings',
 					body: 'The planner samples bounded torque sequences and evaluates them with the learned predictor. It keeps the better candidates to refine its next samples. The selected sequence is one it actually evaluated. Only its first action reaches the mechanism before a fresh observation starts the next search.',
 					code: {
-						file: 'src/lib/world/planner.ts',
+						file: 'src/lib/world/goal-cost.ts',
 						code: `const window = hold ? Math.min(4, horizon) : 1;
 let sum = 0;
 for (let t = horizon - window; t < horizon; t++) {

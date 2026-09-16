@@ -35,6 +35,10 @@ const plate = (name) => page.locator(`#plate-${name}`);
 const button = (name, text) => plate(name).getByRole('button', { name: text, exact: true });
 const report = async (name) =>
 	console.log(`${name}: ${(await plate(name).innerText()).replace(/\s+/g, ' ')}`);
+const capture = async (name, label) => {
+	if (process.env.WORLD_EVIDENCE_DIR)
+		await plate(name).screenshot({ path: `${process.env.WORLD_EVIDENCE_DIR}/${label}.png` });
+};
 try {
 	await page.goto(`${base}/world`, { waitUntil: 'networkidle' });
 	assert.deepEqual(errors, [], 'The built application must load before testing interactions');
@@ -43,6 +47,43 @@ try {
 	assert.ok((await page.locator('main .math-display .eq-model').count()) > 0);
 	await plate('train').scrollIntoViewIfNeeded();
 	await button('train', 'Train').waitFor();
+	await plate('train').locator('.candidate').first().waitFor({ timeout: 120_000 });
+	const sensor = plate('train').locator('.observation canvas').first();
+	const rawPixels = await sensor.evaluate((canvas) => canvas.toDataURL());
+	for (const [preference, system, inverted] of [
+		['dark', 'light', true],
+		['light', 'dark', false],
+		['system', 'dark', true],
+		['system', 'light', false]
+	]) {
+		await page.emulateMedia({ colorScheme: system, reducedMotion: 'reduce' });
+		await page.evaluate((preference) => {
+			document.documentElement.classList.remove('light', 'dark');
+			if (preference !== 'system') document.documentElement.classList.add(preference);
+		}, preference);
+		// Emulated system-media changes are applied on the browser's rendering tick.
+		await page.waitForFunction(
+			(expected) =>
+				getComputedStyle(document.querySelector('#plate-train .observation canvas')).filter ===
+				expected,
+			inverted ? 'invert(1)' : 'none'
+		);
+		assert.equal(
+			await sensor.evaluate((canvas) => getComputedStyle(canvas).filter),
+			inverted ? 'invert(1)' : 'none',
+			`${preference} preference on a ${system} system`
+		);
+		assert.equal(
+			await sensor.evaluate((canvas) => canvas.toDataURL()),
+			rawPixels,
+			'Theme changes preserve the model-input pixels'
+		);
+	}
+	const initialScore = Number.parseInt(
+		await plate('train').locator('.score-value').first().innerText()
+	);
+	assert.equal(await plate('train').locator('.candidate').count(), 6);
+	await capture('train', 'learning-before');
 	stage = 'training';
 	await button('train', 'Train').click({ timeout: 120_000 });
 	await page.waitForFunction(
@@ -57,6 +98,47 @@ try {
 		{ timeout: 180_000 }
 	);
 	await report('train');
+	const learnedScore = Number.parseInt(
+		await plate('train').locator('.score-value').nth(1).innerText()
+	);
+	assert.ok(learnedScore > initialScore, 'The same held-out matching test improves with learning');
+	assert.equal(
+		Number.parseInt(await plate('train').locator('.score-value').first().innerText()),
+		initialScore,
+		'The before-learning checkpoint stays fixed'
+	);
+	await plate('train').getByRole('button', { name: 'Before learning', exact: false }).click();
+	assert.ok(await plate('train').locator('.candidate.before.chosen').count());
+	await plate('train').getByRole('button', { name: /^Now/ }).click();
+	for (const width of [1280, 640, 390]) {
+		await page.setViewportSize({ width, height: 900 });
+		for (const theme of ['light', 'dark']) {
+			await page.evaluate((theme) => {
+				document.documentElement.classList.remove('light', 'dark');
+				document.documentElement.classList.add(theme);
+			}, theme);
+			await page.waitForFunction(
+				(expected) =>
+					getComputedStyle(document.querySelector('#plate-train .observation canvas')).filter ===
+					expected,
+				theme === 'dark' ? 'invert(1)' : 'none'
+			);
+			assert.equal(
+				await sensor.evaluate((canvas) => getComputedStyle(canvas).filter),
+				theme === 'dark' ? 'invert(1)' : 'none'
+			);
+			assert.ok(
+				await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+				`No overflow at ${width}px`
+			);
+			await capture('train', `learning-${width}-${theme}`);
+		}
+	}
+	await page.setViewportSize({ width: 1280, height: 900 });
+	await page.evaluate(() => {
+		document.documentElement.classList.remove('dark');
+		document.documentElement.classList.add('light');
+	});
 	stage = 'forecasting';
 	assert.match(await plate('train').innerText(), /152,464 parameters/);
 	assert.match(await plate('train').innerText(), /16,384 collected transitions/);
@@ -68,6 +150,16 @@ try {
 		{ timeout: 120_000 }
 	);
 	await report('forecast');
+	await capture('forecast', 'forecast-actions');
+	const pushGhost = await plate('forecast').locator('.ghost-line').getAttribute('d');
+	await plate('forecast').getByRole('button', { name: 'Reverse', exact: true }).click();
+	await button('forecast', 'Forecast & replay').click();
+	await plate('forecast').getByText('Rollout ghost error', { exact: false }).waitFor();
+	assert.notEqual(
+		await plate('forecast').locator('.ghost-line').getAttribute('d'),
+		pushGhost,
+		'Changing actions changes the prediction'
+	);
 	stage = 'planning';
 	await button('plan', 'Rehearse').click();
 	await page.waitForFunction(
@@ -76,11 +168,16 @@ try {
 		{ timeout: 60_000 }
 	);
 	await report('plan');
+	assert.equal(await plate('plan').locator('.future').count(), 3);
+	await capture('plan', 'planning-futures');
 	await button('plan', 'Step').click();
 	await page.waitForFunction(() =>
 		document.querySelector('#plate-plan .plan-readout')?.textContent.includes('0.2 s')
 	);
 	assert.doesNotMatch(await plate('plan').locator('.plan-readout').innerText(), /plan cost/);
+	assert.match(await plate('plan').locator('.action-evidence').innerText(), /After one action/);
+	assert.equal(await plate('plan').locator('.instrument .ghost-line').count(), 1);
+	await capture('plan', 'prediction-and-observation');
 	await button('plan', 'Run').click();
 	await page.waitForFunction(
 		() => {
@@ -96,10 +193,42 @@ try {
 	await report('plan');
 
 	stage = 'changing the goal';
+	await button('transfer', 'Rehearse').click();
+	await plate('transfer').locator('.future').first().waitFor({ timeout: 60_000 });
+	const cachedPaths = await plate('transfer')
+		.locator('.candidate-futures .prediction, .candidate-futures .tip-trail')
+		.evaluateAll((paths) => paths.map((path) => path.getAttribute('d')));
+	const cachedCosts = await plate('transfer').locator('.score-label .num').allTextContents();
 	await plate('transfer')
 		.getByRole('group', { name: 'Desired pose', exact: true })
 		.getByRole('button', { name: 'Curl', exact: true })
 		.click();
+	assert.deepEqual(
+		await plate('transfer')
+			.locator('.candidate-futures .prediction, .candidate-futures .tip-trail')
+			.evaluateAll((paths) => paths.map((path) => path.getAttribute('d'))),
+		cachedPaths,
+		'Changing the goal preserves the predicted futures'
+	);
+	assert.notDeepEqual(
+		await plate('transfer').locator('.score-label .num').allTextContents(),
+		cachedCosts,
+		'Changing the goal changes their costs'
+	);
+	assert.match(await plate('transfer').innerText(), /cached futures rescored/);
+	await capture('transfer', 'same-futures-new-goal');
+	await plate('transfer').getByRole('button', { name: 'Match the pose', exact: true }).click();
+	assert.deepEqual(
+		await plate('transfer')
+			.locator('.candidate-futures .prediction, .candidate-futures .tip-trail')
+			.evaluateAll((paths) => paths.map((path) => path.getAttribute('d'))),
+		cachedPaths,
+		'Changing intention also preserves predictions'
+	);
+	await plate('transfer').getByRole('button', { name: 'Arrive and remain', exact: true }).click();
+	await button('transfer', 'Step').click();
+	await plate('transfer').locator('.action-evidence').waitFor();
+	await button('transfer', 'Reset scene').click();
 	await button('transfer', 'Run').click();
 	await page.waitForFunction(
 		() => {
@@ -164,6 +293,7 @@ try {
 	);
 	assert.doesNotMatch(await plate('forecast').innerText(), /Rollout ghost error/);
 	assert.doesNotMatch(await plate('plan').innerText(), /plan cost/);
+	assert.equal(await plate('plan').locator('.action-evidence').count(), 0);
 	await button('train', 'Train').click();
 	await page.waitForFunction(() =>
 		/step [1-9]\d/.test(document.querySelector('#plate-train .plate-head')?.textContent ?? '')

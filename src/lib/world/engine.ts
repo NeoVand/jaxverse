@@ -10,6 +10,7 @@ import {
 	normalRandom,
 	objective,
 	parameterCount,
+	predict,
 	projectionDirections,
 	seededRandom,
 	type Tensor,
@@ -86,6 +87,34 @@ export interface WorldEvaluation {
 	/** Fixed first coordinate; chart axes should remain fixed across runs. */
 	projection: number[];
 	readout: ReadoutMetrics | null;
+	/** Fixed held-out image retrieval; never fits a decoder or uses state labels. */
+	futureMatching: FutureMatchingProbe;
+}
+
+export interface FutureMatchingExample {
+	/** Index in the fixed validation batch; display cases are chosen before training. */
+	id: number;
+	previous: Float32Array;
+	current: Float32Array;
+	previousAction: [number, number];
+	action: [number, number];
+	candidates: Float32Array[];
+	correctIndex: number;
+	/** Null means that several candidates tied for nearest. */
+	selectedIndex: number | null;
+	persistenceIndex: number | null;
+	distances: number[];
+	persistenceDistances: number[];
+}
+
+export interface FutureMatchingProbe {
+	total: number;
+	correct: number;
+	persistenceCorrect: number;
+	ties: number;
+	persistenceTies: number;
+	candidatesPerExample: number;
+	examples: FutureMatchingExample[];
 }
 
 export interface RolloutMetric {
@@ -117,6 +146,8 @@ export interface WorldPlanRequest {
 	hold?: boolean;
 	seed?: number;
 	effort?: number;
+	/** Extra goal pictures to score the same displayed candidates without new inference. */
+	comparisonGoals?: Float32Array[];
 }
 
 export interface WorldPlan {
@@ -125,7 +156,8 @@ export interface WorldPlan {
 	cost: number;
 	ms: number;
 	poses: ArmState[];
-	candidates: { cost: number; poses: ArmState[] }[];
+	candidates: { cost: number; poses: ArmState[]; latents: Float32Array; actions: Float32Array }[];
+	comparisonGoals?: Float32Array[];
 	readoutError: number;
 }
 
@@ -211,6 +243,8 @@ export class WorldCore {
 	private dataRandom: () => number;
 	private projectionRandom: () => number;
 	private encodeCompiled = jit(encode);
+	private predictCompiled = jit(predict);
+	private matchingCandidates: number[][] | null = null;
 	private rollout: LatentRollout;
 	private latest: WorldMetrics = {
 		step: 0,
@@ -308,6 +342,7 @@ export class WorldCore {
 		this.step = 0;
 		this.trainingMs = 0;
 		this.readout = null;
+		this.matchingCandidates = null;
 		this.latest = { step: 0, loss: 0, predictionLoss: 0, regularizer: 0, stepMs: 0, trainingMs: 0 };
 		return this.info();
 	}
@@ -374,6 +409,116 @@ export class WorldCore {
 		);
 		const values = new Float32Array(await result.data());
 		return values;
+	}
+
+	/** Static pixel-neighbor distractors avoid changing the test as representations learn. */
+	private async matchFutures(batch: WorldBatch, z: Float32Array): Promise<FutureMatchingProbe> {
+		const count = this.batchSize;
+		const size = this.config.resolution ** 2;
+		const d = this.config.latent;
+		if (!this.matchingCandidates) {
+			const identical = (a: number, b: number) => {
+				for (let p = 0; p < size; p++)
+					if (batch.pixels[(2 * count + a) * size + p] !== batch.pixels[(2 * count + b) * size + p])
+						return false;
+				return true;
+			};
+			// The validation sampler uses replacement. Never ask readers to distinguish
+			// two copies of the very same photograph.
+			const unique: number[] = [];
+			for (let i = 0; i < count; i++) if (!unique.some((j) => identical(i, j))) unique.push(i);
+			const candidateCount = Math.min(6, unique.length);
+			this.matchingCandidates = Array.from({ length: count }, (_, i) => {
+				const targetOffset = (2 * count + i) * size;
+				const neighbors = unique
+					.map((j) => {
+						let distance = 0;
+						for (let p = 0; p < size; p++)
+							distance +=
+								(batch.pixels[targetOffset + p] - batch.pixels[(2 * count + j) * size + p]) ** 2;
+						return { index: j, distance };
+					})
+					.filter((item) => item.distance > 0)
+					.sort((a, b) => a.distance - b.distance || a.index - b.index)
+					.slice(0, candidateCount - 1)
+					.map((item) => item.index);
+				// Rotate the correct position without consuming the training random stream.
+				neighbors.splice(i % candidateCount, 0, i);
+				return neighbors;
+			});
+		}
+		const candidateCount = this.matchingCandidates[0].length;
+		const prediction = this.predictCompiled(
+			tree.ref(this.params.predictor),
+			np.array(z.slice(0, count * d)).reshape([count, d]),
+			np.array(z.slice(count * d, 2 * count * d)).reshape([count, d]),
+			np.array(new Float32Array(batch.actions)).reshape([count, 4])
+		);
+		const predicted = new Float32Array(await prediction.data());
+		const nearest = (distances: number[]): number | null => {
+			const minimum = Math.min(...distances);
+			// Retrieval must not depend on latent coordinate units. An absolute
+			// tolerance would turn a uniformly rescaled representation into ties.
+			// If the minimum is zero, only exact zero distances tie.
+			const tolerance = Math.abs(minimum) * 1e-6;
+			const tied = distances.flatMap((value, index) =>
+				value - minimum <= tolerance ? [index] : []
+			);
+			return tied.length === 1 ? tied[0] : null;
+		};
+		const result: FutureMatchingProbe = {
+			total: count,
+			correct: 0,
+			persistenceCorrect: 0,
+			ties: 0,
+			persistenceTies: 0,
+			candidatesPerExample: candidateCount,
+			examples: []
+		};
+		const displayed = new Set(
+			Array.from({ length: Math.min(6, count) }, (_, i) =>
+				Math.floor((i * count) / Math.min(6, count))
+			)
+		);
+		for (let i = 0; i < count; i++) {
+			const candidates = this.matchingCandidates[i];
+			const distances = candidates.map((index) => {
+				let distance = 0;
+				for (let j = 0; j < d; j++)
+					distance += (predicted[i * d + j] - z[(2 * count + index) * d + j]) ** 2 / d;
+				return distance;
+			});
+			const persistenceDistances = candidates.map((index) => {
+				let distance = 0;
+				for (let j = 0; j < d; j++)
+					distance += (z[(count + i) * d + j] - z[(2 * count + index) * d + j]) ** 2 / d;
+				return distance;
+			});
+			const correctIndex = candidates.indexOf(i);
+			const selectedIndex = nearest(distances);
+			const persistenceIndex = nearest(persistenceDistances);
+			if (selectedIndex === correctIndex) result.correct++;
+			if (persistenceIndex === correctIndex) result.persistenceCorrect++;
+			if (selectedIndex === null) result.ties++;
+			if (persistenceIndex === null) result.persistenceTies++;
+			if (displayed.has(i))
+				result.examples.push({
+					id: i,
+					previous: batch.pixels.slice(i * size, (i + 1) * size),
+					current: batch.pixels.slice((count + i) * size, (count + i + 1) * size),
+					previousAction: [batch.actions[i * 4], batch.actions[i * 4 + 1]],
+					action: [batch.actions[i * 4 + 2], batch.actions[i * 4 + 3]],
+					candidates: candidates.map((index) =>
+						batch.pixels.slice((2 * count + index) * size, (2 * count + index + 1) * size)
+					),
+					correctIndex,
+					selectedIndex,
+					persistenceIndex,
+					distances,
+					persistenceDistances
+				});
+		}
+		return result;
 	}
 
 	async evaluate(): Promise<WorldEvaluation> {
@@ -449,7 +594,8 @@ export class WorldCore {
 			minimumStd: Math.sqrt(Math.min(...variance)),
 			effectiveRank: covarianceSquare > 0 ? (trace * trace) / covarianceSquare : 0,
 			projection: Array.from({ length: n }, (_, i) => z[i * d]),
-			readout: this.readout?.metrics ?? null
+			readout: this.readout?.metrics ?? null,
+			futureMatching: await this.matchFutures(b, z)
 		};
 	}
 
@@ -633,6 +779,18 @@ export class WorldCore {
 		if (req.goal.length !== this.config.resolution ** 2)
 			throw new Error('A complete goal image is required');
 		const goal = await this.encodePixels(req.goal);
+		let comparisonGoals: Float32Array[] | undefined;
+		if (req.comparisonGoals?.length) {
+			const pixels = this.config.resolution ** 2;
+			if (req.comparisonGoals.some((image) => image.length !== pixels))
+				throw new Error('Complete comparison goal images are required');
+			const frames = new Float32Array(req.comparisonGoals.length * pixels);
+			req.comparisonGoals.forEach((image, i) => frames.set(image, i * pixels));
+			const encoded = await this.encodePixels(frames);
+			comparisonGoals = req.comparisonGoals.map((_, i) =>
+				encoded.slice(i * this.config.latent, (i + 1) * this.config.latent)
+			);
+		}
 		const horizon = req.horizon ?? 6;
 		if (!Number.isInteger(horizon) || horizon < 2 || horizon > 24)
 			throw new Error('Planning horizon must be 2–24');
@@ -655,10 +813,14 @@ export class WorldCore {
 			cost: result.cost,
 			ms: performance.now() - start,
 			poses: this.poses(result.latents),
-			candidates: result.candidates.map((candidate) => ({
+			// Always display the sequence we actually selected, plus two alternatives.
+			candidates: [result, ...result.candidates.slice(1)].map((candidate) => ({
 				cost: candidate.cost,
-				poses: this.poses(candidate.latents)
+				poses: this.poses(candidate.latents),
+				latents: candidate.latents,
+				actions: candidate.actions
 			})),
+			comparisonGoals,
 			readoutError: this.readout!.metrics.poseError
 		};
 	}
@@ -670,5 +832,6 @@ export class WorldCore {
 		this.params = null;
 		this.corpus = null;
 		this.readout = null;
+		this.matchingCandidates = null;
 	}
 }

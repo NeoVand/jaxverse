@@ -21,6 +21,7 @@ export class WorldLab {
 	backend = $state('');
 	metrics = $state.raw<WorldMetrics | null>(null);
 	evaluation = $state.raw<WorldEvaluation | null>(null);
+	initialEvaluation = $state.raw<WorldEvaluation | null>(null);
 	readout = $state.raw<ReadoutMetrics | null>(null);
 	history = $state.raw<WorldMetrics[]>([]);
 	comparison = $state.raw<Comparison | null>(null);
@@ -60,6 +61,10 @@ export class WorldLab {
 			if (this.disposed || revision !== this.revision) return;
 			this.info = result;
 			this.backend = result.backend;
+			const evaluation = await engine.evaluate();
+			if (this.disposed || revision !== this.revision) return;
+			this.initialEvaluation = evaluation;
+			this.evaluation = evaluation;
 			this.phase = 'ready';
 		} catch (error) {
 			if (revision === this.revision) this.fail(error);
@@ -213,7 +218,8 @@ export class WorldLab {
 			this.info = await this.run(() => this.engine!.reset());
 			this.metrics = null;
 			this.history = [];
-			this.evaluation = null;
+			this.evaluation = await this.run(() => this.engine!.evaluate());
+			this.initialEvaluation = this.evaluation;
 			this.comparison = null;
 			this.comparisonStep = 0;
 			this.readout = null;
@@ -236,6 +242,7 @@ export class WorldLab {
 		this.metrics = null;
 		this.history = [];
 		this.evaluation = null;
+		this.initialEvaluation = null;
 		this.comparison = null;
 		this.comparisonStep = 0;
 		this.readout = null;

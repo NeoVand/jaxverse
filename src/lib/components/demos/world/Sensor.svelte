@@ -31,4 +31,15 @@
 		image-rendering: pixelated;
 		border: 1px solid var(--line);
 	}
+	:global(.dark) canvas,
+	:global(.theme-dark) canvas {
+		filter: invert(1);
+		border-color: transparent;
+	}
+	@media (prefers-color-scheme: dark) {
+		:global(:root:not(.light)) canvas {
+			filter: invert(1);
+			border-color: transparent;
+		}
+	}
 </style>
