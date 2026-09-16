@@ -61,7 +61,7 @@
 	<title>jaxverse — a little universe of learning machines</title>
 	<meta
 		name="description"
-		content="An interactive book about deep learning. Train real neural networks — from a single neuron to a language model — live in your browser, and watch what they learn."
+		content="An interactive book about deep learning. Train real neural networks in your browser, from a single neuron to a world model used to plan actions."
 	/>
 </svelte:head>
 
@@ -79,7 +79,7 @@
 		style="font-variation-settings: 'opsz' 20;"
 	>
 		Every model in this book is real, and every one of them trains here, in your browser — from a
-		single neuron bending a line to a language model learning chess.
+		single neuron bending a line to a world model learning the consequences of a move.
 	</p>
 </section>
 
@@ -140,20 +140,27 @@
 		Machine learning has a reputation for mystery it doesn’t deserve. Under every headline model —
 		the ones that talk, draw, and play — sits one modest idea: build a smooth, adjustable function,
 		measure how wrong it is, and nudge every knob a little downhill. Do this a few million times.
-		That’s the whole trick. Everything else is architecture and appetite.
+		That’s the learning loop. The chapters change what we ask that function to learn, and what we do
+		with its answers.
 	</p>
 	<p>
-		This book makes that idea physical. It is arranged as a descent: a prologue, then chapter by
-		chapter, each one lower on the loss surface than the last. You’ll fit curves, bend space until
-		tangled spirals come apart, teach a network to read handwriting, watch a map of meaning assemble
-		itself without a single label, train a small language model three different ways — the same
-		pipeline, in miniature, that produced the models everyone is talking about — and end by pulling
-		pictures out of pure noise.
+		This book makes that idea physical. It begins with a descent down a loss surface, then follows
+		what that learning rule can build. You’ll fit curves, bend space until tangled spirals come
+		apart, teach a network to read handwriting, watch a map of meaning assemble itself without a
+		single label, train a small language model three different ways — the same pipeline, in
+		miniature, that produced the models everyone is talking about — and learn two routes from noise
+		to pictures.
 	</p>
 	<p>
-		Nothing here is a recording. The numbers move because a network is training on your GPU as you
-		watch, courtesy of <a href="https://jax-js.com" rel="external">jax-js</a>. Pause anywhere. Break
-		things. The models are small and do not mind.
+		Finally, you’ll train a world model from pictures and actions. Give it a destination afterward,
+		use it to rehearse possible movements, and test a prediction by acting. Change the goal and use
+		the same learned dynamics again. Learning how a world behaves and deciding what to do in it
+		become two distinct parts of one experiment.
+	</p>
+	<p>
+		The experiments are computed here, in your browser, with
+		<a href="https://jax-js.com" rel="external">jax-js</a>. Train, pause, change an input, and watch
+		what follows. Break things. The models are small and do not mind.
 	</p>
 </section>
 
@@ -170,9 +177,9 @@
 		the real jax-js code from this repository, annotated, with the stagecraft on its own tab.
 		Followed chapter by chapter, the blocks add up to a short course in
 		<a href="https://jax-js.com" rel="external">jax-js</a> itself: pytrees,
-		<code>valueAndGrad</code>, <code>jit</code>, devices, workers, a whole transformer. Each chapter
-		also ends with a downloadable lab — a standalone npm project that runs the same model with
-		nothing but <code>npm install</code>.
+		<code>valueAndGrad</code>, <code>jit</code>, devices, workers, a whole transformer, and planning
+		through a learned world model. Each chapter also ends with a downloadable lab — a standalone npm
+		project that runs the same model with nothing but <code>npm install</code>.
 	</p>
 </section>
 
