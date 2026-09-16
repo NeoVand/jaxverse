@@ -143,6 +143,9 @@ try {
 	assert.match(await plate('train').innerText(), /152,464 parameters/);
 	assert.match(await plate('train').innerText(), /16,384 collected transitions/);
 
+	const forecastStart = await plate('forecast')
+		.locator('.instrument polygon.arm')
+		.evaluateAll((arms) => arms.map((arm) => arm.getAttribute('points')));
 	await button('forecast', 'Forecast & replay').click();
 	await page.waitForFunction(
 		() => document.querySelector('#plate-forecast')?.textContent.includes('Rollout ghost error'),
@@ -152,7 +155,14 @@ try {
 	await report('forecast');
 	await capture('forecast', 'forecast-actions');
 	const pushGhost = await plate('forecast').locator('.ghost-line').getAttribute('d');
-	await plate('forecast').getByRole('button', { name: 'Reverse', exact: true }).click();
+	await plate('forecast').getByRole('button', { name: 'Reverse torques', exact: true }).click();
+	assert.deepEqual(
+		await plate('forecast')
+			.locator('.instrument polygon.arm')
+			.evaluateAll((arms) => arms.map((arm) => arm.getAttribute('points'))),
+		forecastStart,
+		'Every action choice has the same moving start'
+	);
 	await button('forecast', 'Forecast & replay').click();
 	await plate('forecast').getByText('Rollout ghost error', { exact: false }).waitFor();
 	assert.notEqual(
@@ -160,6 +170,39 @@ try {
 		pushGhost,
 		'Changing actions changes the prediction'
 	);
+	for (const horizon of [3, 20]) {
+		await plate('forecast').getByRole('button', { name: 'Release', exact: true }).click();
+		await plate('forecast')
+			.getByRole('group', { name: 'Forecast length', exact: true })
+			.getByRole('button', { name: String(horizon), exact: true })
+			.click();
+		const start = await plate('forecast')
+			.locator('.instrument polygon.arm')
+			.evaluateAll((arms) => arms.map((arm) => arm.getAttribute('points')));
+		assert.deepEqual(start, forecastStart, 'Changing the horizon preserves the starting history');
+		await page.emulateMedia({ reducedMotion: horizon === 20 ? 'no-preference' : 'reduce' });
+		await button('forecast', 'Forecast & replay').click();
+		await page.waitForFunction(
+			(initial) => {
+				const arms = [...document.querySelectorAll('#plate-forecast .instrument polygon.arm')];
+				return (
+					arms.length === 2 && arms.some((arm, i) => arm.getAttribute('points') !== initial[i])
+				);
+			},
+			start,
+			{ timeout: 30_000 }
+		);
+		await page.waitForFunction(
+			() =>
+				[...document.querySelectorAll('#plate-forecast button')].some(
+					(button) => button.textContent.trim() === 'Forecast & replay' && !button.disabled
+				),
+			null,
+			{ timeout: 30_000 }
+		);
+		await capture('forecast', `release-${horizon}`);
+	}
+	await page.emulateMedia({ reducedMotion: 'reduce' });
 	stage = 'planning';
 	await button('plan', 'Rehearse').click();
 	await page.waitForFunction(

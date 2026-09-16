@@ -13,6 +13,8 @@ The plates now hold questions fixed while the model's answers change. The MLP, t
 
 Plate II gives the visual test the main area; recorded experience and the loss curve are available in an expandable section. Later plates distinguish changing a request from changing physical damping. A fresh observation helps planning react to errors; it does not retrain the frozen world model.
 
+Plate III starts every action choice after the same 0.96-second push. Its two context pictures and connecting motor command come from that actual simulation. Keeping the push, reversing the torques, and releasing the motors each hold their selected commands for the entire forecast. Release therefore tests coasting from existing momentum, with the usual damping, instead of zero torque applied to a stationary arm. Long learned rollouts can still drift from the observed trajectory.
+
 ## The matching diagnostic
 
 The evaluation uses the existing fixed validation batch of 64 transitions. For each transition, the predictor receives two past pictures and their aligned actions. It predicts one future embedding. That vector is compared with the encoded actual next picture and five nearby-looking alternative next pictures from the validation batch. Candidate sets use pixel distance, exclude duplicate pictures, and remain fixed across checkpoints. The actual outcome defines the test but is never passed to the predictor. Six display examples are chosen at evenly spaced batch indices before training, independently of their scores.

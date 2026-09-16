@@ -17,6 +17,11 @@
 	import { renderSensor } from '$lib/world/sensor';
 	import type { WorldPlan, WorldForecast } from '$lib/world/engine';
 	import { rescoreFutures } from '$lib/world/future-choices';
+	import {
+		createForecastStart,
+		forecastCommands,
+		type ForecastProgram
+	} from '$lib/world/forecast-scenario';
 	import HistoryPlate from './HistoryPlate.svelte';
 	import Instrument from './Instrument.svelte';
 	import Projection from './Projection.svelte';
@@ -58,8 +63,12 @@
 	let goalIndex = $state(0);
 	let horizon = $state(6);
 	let forecastHorizon = $state(3);
-	let forecastProgram = $state(0);
-	const forecastPrograms = ['Push', 'Reverse', 'Release'];
+	let forecastProgram = $state<ForecastProgram>('push');
+	const forecastPrograms: { id: ForecastProgram; name: string }[] = [
+		{ id: 'push', name: 'Keep pushing' },
+		{ id: 'reverse', name: 'Reverse torques' },
+		{ id: 'release', name: 'Release' }
+	];
 	let hold = $state(true);
 	let damping = $state(DEFAULT_DAMPING);
 	let rehearsed = $state.raw<WorldPlan | null>(null);
@@ -94,14 +103,7 @@
 	const error = $derived(poseError(physical, goal));
 	const preview = $derived(lab.info?.preview);
 	const interval = $derived(lab.info?.dt ?? 0.24);
-	const displayed = $derived(
-		mode === 'train' ? (preview?.states[previewIndex] ?? initialArm()) : physical
-	);
-	const pixels = $derived(
-		mode === 'train' && preview
-			? preview.frames.slice(previewIndex * 1024, (previewIndex + 1) * 1024)
-			: renderSensor(displayed)
-	);
+	const forecastStart = $derived(createForecastStart(interval));
 	const canInfer = $derived(
 		lab.step > 0 && lab.phase === 'ready' && !executing && !running && !lab.motionOwner
 	);
@@ -130,6 +132,18 @@
 		lab.checkpoint === forecastCheckpoint && lab.step === forecastStep && !lab.training
 			? forecast
 			: null
+	);
+	const displayed = $derived(
+		mode === 'train'
+			? (preview?.states[previewIndex] ?? initialArm())
+			: mode === 'forecast' && !visibleForecast
+				? forecastStart.current
+				: physical
+	);
+	const pixels = $derived(
+		mode === 'train' && preview
+			? preview.frames.slice(previewIndex * 1024, (previewIndex + 1) * 1024)
+			: renderSensor(displayed)
 	);
 	const forecasts = $derived(
 		mode === 'forecast'
@@ -186,9 +200,9 @@
 	}
 	function resetInstrument() {
 		stopLocal();
-		physical = initialArm();
-		previous = initialArm();
-		previousAction = [0, 0];
+		physical = mode === 'forecast' ? forecastStart.current : initialArm();
+		previous = mode === 'forecast' ? forecastStart.previous : initialArm();
+		previousAction = mode === 'forecast' ? forecastStart.previousAction : [0, 0];
 		trail = [];
 		rehearsed = null;
 		forecast = null;
@@ -341,12 +355,7 @@
 	async function predict() {
 		resetInstrument();
 		lab.motionOwner = mode;
-		const actions = new Float32Array(forecastHorizon * 2);
-		for (let i = 0; i < forecastHorizon; i++) {
-			const direction = forecastProgram === 2 ? 0 : forecastProgram === 1 ? -1 : 1;
-			actions[2 * i] = direction * (i < 6 ? 0.55 : -0.3);
-			actions[2 * i + 1] = direction * (i < 6 ? -0.45 : 0.5);
-		}
+		const actions = forecastCommands(forecastProgram, forecastHorizon);
 		const token = generation;
 		const result = await lab.forecast({ observations: observations(), previousAction, actions });
 		if (!result || gone || token !== generation) {
@@ -375,9 +384,10 @@
 		}
 		executing = true;
 		let index = 0;
-		let last = 0;
+		let last: number | null = null;
 		const draw = (now: number) => {
 			if (gone || token !== generation) return;
+			last ??= now;
 			if (now - last >= interval * 1000) {
 				physical = forecastActual[index];
 				ghost = result.poses[index];
@@ -557,8 +567,9 @@
 						state={displayed}
 						compact={mode === 'plan' || mode === 'transfer'}
 						goal={mode === 'plan' || mode === 'transfer' ? goal : null}
-						{trail}
+						trail={mode === 'forecast' && !visibleForecast ? [] : trail}
 						{forecasts}
+						past={mode === 'forecast' && !visibleForecast ? [forecastStart.previous] : []}
 						ghost={visibleForecast ? ghost : visibleActionPrediction}
 						{pixels}
 						label="Actual instrument with diagnostic forecasts and a desired pose"
@@ -607,16 +618,16 @@
 				{:else if mode === 'forecast'}
 					<div class="controls forecast-controls">
 						<div class="choice-group" role="group" aria-label="Proposed actions">
-							<span class="eyebrow">Same start, different action</span>
-							<div class="seg">
-								{#each forecastPrograms as program, i (program)}<button
-										class={{ on: forecastProgram === i }}
-										aria-pressed={forecastProgram === i}
+							<span class="eyebrow">Same moving start, different action</span>
+							<div class="seg program-choices">
+								{#each forecastPrograms as program (program.id)}<button
+										class={{ on: forecastProgram === program.id }}
+										aria-pressed={forecastProgram === program.id}
 										disabled={lab.busy || executing}
 										onclick={() => {
-											forecastProgram = i;
+											forecastProgram = program.id;
 											resetInstrument();
-										}}>{program}</button
+										}}>{program.name}</button
 									>{/each}
 							</div>
 						</div>
@@ -646,6 +657,11 @@
 							><i class="actual"></i>Observed <i class="predicted"></i>Predicted readout</span
 						>
 					</div>
+					<p class="quiet">
+						All three choices begin after the same short push. Release turns the motors off;
+						existing motion continues and gradually slows. The faint pose shows the preceding
+						observation.
+					</p>
 					{#if visibleForecast && forecastError !== null}<p class="quiet">
 							Rollout ghost error <span class="num">{forecastError.toFixed(2)} rad</span> · readout
 							error on real held-out frames
@@ -785,6 +801,9 @@
 {/if}
 
 <style>
+	.program-choices {
+		flex-wrap: wrap;
+	}
 	.training-detail {
 		max-width: 820px;
 		margin: 24px auto 0;
