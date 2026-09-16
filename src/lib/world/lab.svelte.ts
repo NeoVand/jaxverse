@@ -106,10 +106,12 @@ export class WorldLab {
 							: history;
 				}
 				this.readout = null;
-				if (this.step % 100 === 0 || this.stopFlag)
-					this.evaluation = await this.run(() => this.engine!.evaluate());
 				// A finite first session leaves the reader free to try predictions.
 				if (this.step >= target) this.stopFlag = true;
+				// Pausing can end between chunk boundaries. Measure elapsed updates,
+				// and always measure the final weights, rather than relying on step % 100.
+				if (this.step - (this.evaluation?.step ?? 0) >= 100 || this.stopFlag)
+					this.evaluation = await this.run(() => this.engine!.evaluate());
 			}
 		} catch (error) {
 			if (revision === this.revision) this.fail(error);

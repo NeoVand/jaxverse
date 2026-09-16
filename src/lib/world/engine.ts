@@ -24,6 +24,7 @@ import {
 } from './planner';
 
 export interface WorldInit {
+	resolution?: number;
 	seed?: number;
 	batch?: number;
 	lr?: number;
@@ -225,6 +226,7 @@ export class WorldCore {
 		this.seed = options.seed ?? 17;
 		this.config = {
 			...WORLD_CONFIG,
+			resolution: options.resolution ?? WORLD_CONFIG.resolution,
 			hidden: options.hidden ?? WORLD_CONFIG.hidden,
 			predictorHidden: options.predictorHidden ?? WORLD_CONFIG.predictorHidden,
 			latent: options.latent ?? WORLD_CONFIG.latent,
@@ -242,6 +244,7 @@ export class WorldCore {
 				seed: this.seed + 303,
 				trainEpisodes: this.options.trainEpisodes ?? 256,
 				validationEpisodes: 12,
+				size: this.config.resolution,
 				stepsPerEpisode: this.options.stepsPerEpisode ?? 64,
 				dt: this.options.dt ?? WORLD_INTERVAL
 			});
@@ -289,6 +292,7 @@ export class WorldCore {
 				seed: seed + 303,
 				trainEpisodes: this.options.trainEpisodes ?? 256,
 				validationEpisodes: 12,
+				size: this.config.resolution,
 				stepsPerEpisode: this.options.stepsPerEpisode ?? 64,
 				dt: this.options.dt ?? WORLD_INTERVAL
 			});

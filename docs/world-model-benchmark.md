@@ -1,5 +1,7 @@
 # Browser world model: measured development results
 
+A [follow-up validation](world-model-validation.md) adds fresh seeds, a 64×64 resolution comparison, a small transformer predictor, and UI regression checks. The measurements below document the original development choices.
+
 The shipped model learns useful local control from pixels, but it is not a generally reliable controller. The default seed reaches all three local presets; failures across other seeds, distant targets, and longer open-loop rollouts remain visible. These are development measurements used to choose the chapter's defaults, not results on an untouched control benchmark.
 
 Measurements were collected on 2026-09-16 on Apple M4 using Chromium, WebGPU/Metal, and the repository's jax-js runtime. The [raw historical runs](world-model-benchmark-results.json) include unsuccessful configurations and all recorded trials. Some early runs predate later diagnostics; absent measurements are not zeros.

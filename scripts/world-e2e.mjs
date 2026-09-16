@@ -24,6 +24,9 @@ const progress = setInterval(async () => {
 	}
 }, 15_000);
 page.on('pageerror', (error) => errors.push(String(error)));
+page.on('framenavigated', (frame) => {
+	if (frame === page.mainFrame()) console.log(`Navigation: ${frame.url()}`);
+});
 page.on('response', (response) => {
 	if (response.status() >= 400 && response.url().includes('/_app/'))
 		errors.push(`Application asset failed: ${response.status()} ${response.url()}`);

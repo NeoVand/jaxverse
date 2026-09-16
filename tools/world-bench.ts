@@ -19,17 +19,31 @@ export async function runWorldBench(
 	const backend = devices.includes('webgpu') ? 'webgpu' : 'wasm';
 	defaultDevice(backend);
 	const model = new WorldCore(options);
+	const initStart = performance.now();
 	const info = await model.init();
+	const initMs = performance.now() - initStart;
+	const resolution = info.config.resolution;
+	const pixels = resolution ** 2;
 	console.log(
 		'WORLD info',
-		JSON.stringify({ backend, parameters: info.parameters, transitions: info.transitions })
+		JSON.stringify({
+			backend,
+			parameters: info.parameters,
+			transitions: info.transitions,
+			resolution,
+			initMs
+		})
 	);
 	const before = await model.evaluate();
 	console.log('WORLD before', JSON.stringify({ ...before, projection: undefined }));
+	const trainStart = performance.now();
 	const training = await model.train(options.steps ?? WORLD_TRAINING_STEPS, (m) => {
 		if (m.step % 1000 === 0 || m.step === 1) console.log('WORLD training', JSON.stringify(m));
 	});
+	const trainWallMs = performance.now() - trainStart;
+	const readoutStart = performance.now();
 	const readout = await model.fitReadout();
+	const readoutMs = performance.now() - readoutStart;
 	const after = await model.evaluate();
 	const rollouts = await model.evaluateRollouts();
 	console.log('WORLD after', JSON.stringify({ ...after, projection: undefined }));
@@ -65,13 +79,13 @@ export async function runWorldBench(
 			const errors = [],
 				times = [];
 			for (let t = 0; t < 40; t++) {
-				const observations = new Float32Array(2048);
-				observations.set(renderSensor(previous));
-				observations.set(renderSensor(current), 1024);
+				const observations = new Float32Array(2 * pixels);
+				observations.set(renderSensor(previous, resolution));
+				observations.set(renderSensor(current, resolution), pixels);
 				const plan = await model.plan({
 					observations,
 					previousAction,
-					goal: renderSensor(goal),
+					goal: renderSensor(goal, resolution),
 					horizon,
 					hold,
 					seed: 300 + t,
@@ -98,5 +112,21 @@ export async function runWorldBench(
 			controls.push(result);
 		}
 	model.dispose();
-	return { backend, training, before, after, readout, rollouts, controls };
+	return {
+		backend,
+		info: {
+			parameters: info.parameters,
+			config: info.config,
+			transitions: info.transitions,
+			validationTransitions: info.validationTransitions,
+			dt: info.dt
+		},
+		timing: { initMs, trainWallMs, readoutMs },
+		training,
+		before,
+		after,
+		readout,
+		rollouts,
+		controls
+	};
 }

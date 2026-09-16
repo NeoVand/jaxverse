@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { SENSOR_SIZE } from '$lib/world/sensor';
 	interface Props {
 		pixels: Float32Array;
 		size?: number;
 	}
-	let { pixels, size = 32 }: Props = $props();
+	let { pixels, size = SENSOR_SIZE }: Props = $props();
 	function draw(canvas: HTMLCanvasElement) {
 		const ctx = canvas.getContext('2d');
 		if (!ctx) return;
@@ -25,8 +26,8 @@
 
 <style>
 	canvas {
-		width: 64px;
-		height: 64px;
+		width: 128px;
+		height: 128px;
 		image-rendering: pixelated;
 		border: 1px solid var(--line);
 	}

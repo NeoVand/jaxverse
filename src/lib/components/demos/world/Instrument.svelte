@@ -134,7 +134,11 @@
 		{/if}
 	</svg>
 	{#if pixels}
-		<div class="sensor-inset"><Sensor {pixels} /><span>Model’s view</span></div>
+		<div class="sensor-inset">
+			<Sensor {pixels} size={Math.sqrt(pixels.length)} /><span
+				>Model’s view<br />{Math.sqrt(pixels.length)} × {Math.sqrt(pixels.length)} pixels</span
+			>
+		</div>
 	{/if}
 </div>
 
@@ -235,7 +239,7 @@
 		color: var(--ink-3);
 		font: 10px var(--font-sans);
 	}
-	@media (max-width: 440px) {
+	@media (max-width: 760px) {
 		.sensor-inset {
 			position: static;
 			display: flex;
