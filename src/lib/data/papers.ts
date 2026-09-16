@@ -918,6 +918,64 @@ export const papers = {
 		where: 'ICML 2023',
 		url: 'https://arxiv.org/abs/2303.01469',
 		note: 'Train the map from any point on the path straight to its endpoint, and the walk collapses into a single evaluation.'
+	},
+
+	// Predictive representations, learned dynamics, and goal-directed planning.
+	'lecun-2022-ami': {
+		authors: 'LeCun',
+		year: 2022,
+		title: 'A Path Towards Autonomous Machine Intelligence',
+		where: 'OpenReview position paper',
+		url: 'https://openreview.net/forum?id=BZ5a1r-kVsf',
+		note: 'The architectural proposal behind the chapter: learn predictive representations, express an objective separately, and search over actions using the model. Its proposed hierarchy and memory extend well beyond the small experiment here.'
+	},
+	'assran-2023-ijepa': {
+		authors: 'Assran et al.',
+		year: 2023,
+		title: 'Self-Supervised Learning from Images with a Joint-Embedding Predictive Architecture',
+		where: 'CVPR 2023',
+		url: 'https://arxiv.org/abs/2301.08243',
+		note: 'I-JEPA predicts representations of missing image regions. The prediction target lives in a learned space; the design of the context and target helps determine what that space preserves.'
+	},
+	'maes-2026-lewm': {
+		authors: 'Maes et al.',
+		year: 2026,
+		title: 'LeWorldModel: Stable End-to-End Joint-Embedding Predictive Architecture from Pixels',
+		where: 'arXiv preprint, v3',
+		url: 'https://arxiv.org/abs/2603.19312v3',
+		note: 'The method this chapter adapts: jointly train an image encoder and an action-conditioned next-embedding predictor, with SIGReg constraining the representation distribution. Its much larger models and control benchmarks do not establish the performance of our browser experiment.'
+	},
+	'balestriero-2025-lejepa': {
+		authors: 'Balestriero & LeCun',
+		year: 2025,
+		title: 'LeJEPA: Provable and Scalable Self-Supervised Learning Without the Heuristics',
+		where: 'arXiv preprint',
+		url: 'https://arxiv.org/abs/2511.08544',
+		note: 'Where SIGReg is introduced: compare random projections of the embedding distribution with a Gaussian target. The theoretical results have assumptions about representations and downstream tasks; they are not a guarantee that this mechanism will learn useful dynamics.'
+	},
+	'bardes-2024-vjepa': {
+		authors: 'Bardes et al.',
+		year: 2024,
+		title: 'Revisiting Feature Prediction for Learning Visual Representations from Video',
+		where: 'TMLR 2024',
+		url: 'https://arxiv.org/abs/2404.08471',
+		note: 'V-JEPA studies feature prediction as a video representation-learning objective. Predicting an embedding gives an encoder room to discard detail, while downstream tests establish what its representations can actually do.'
+	},
+	'assran-2025-vjepa2': {
+		authors: 'Assran et al.',
+		year: 2025,
+		title: 'V-JEPA 2: Self-Supervised Video Models Enable Understanding, Prediction and Planning',
+		where: 'arXiv preprint',
+		url: 'https://arxiv.org/abs/2506.09985',
+		note: 'Large-scale video pretraining followed by an action-conditioned predictor, used to plan robot movements toward image goals. Its training stages differ from ours; its discussion of rollout error and short planning horizons is directly relevant.'
+	},
+	'ha-2018-worldmodels': {
+		authors: 'Ha & Schmidhuber',
+		year: 2018,
+		title: 'World Models',
+		where: 'arXiv preprint and interactive article',
+		url: 'https://worldmodels.github.io/',
+		note: 'A different influential recipe: compress observations with a variational autoencoder, learn recurrent dynamics, then train a controller. A world model is the broader idea; JEPA is one way to build one.'
 	}
 } as const satisfies Record<string, Paper>;
 
@@ -928,6 +986,15 @@ export type PaperId = keyof typeof papers;
  * them. Position here is the numeral the reader sees.
  */
 export const citationOrder: Partial<Record<string, readonly PaperId[]>> = {
+	world: [
+		'lecun-2022-ami',
+		'assran-2023-ijepa',
+		'maes-2026-lewm',
+		'balestriero-2025-lejepa',
+		'bardes-2024-vjepa',
+		'assran-2025-vjepa2',
+		'ha-2018-worldmodels'
+	],
 	noise: [
 		'sohl-dickstein-2015',
 		'nichol-dhariwal-2021',

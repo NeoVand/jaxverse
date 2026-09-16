@@ -447,7 +447,9 @@ body {
 	display: none;
 }
 
-@media (hover: hover) and (pointer: fine) {
+/* The centered record needs space beside the prose column. At narrower
+   widths, the source list supplies the same detail without page overflow. */
+@media (hover: hover) and (pointer: fine) and (min-width: 64rem) {
 	.cite-card {
 		position: absolute;
 		bottom: calc(100% + 0.5rem);

@@ -10,7 +10,6 @@
 	import Studio from '$lib/components/demos/flow/Studio.svelte';
 	import Guidance from '$lib/components/demos/flow/Guidance.svelte';
 	import Morph from '$lib/components/demos/flow/Morph.svelte';
-	import { resolve } from '$app/paths';
 </script>
 
 <ChapterShell slug="flow">
@@ -231,16 +230,11 @@
 			open for the same reason.
 		</p>
 		<p>
-			And that is the last of them. In the Prologue there was a blind walker on a smooth landscape,
-			feeling the ground for a downhill direction and taking one small step. Everything since has
-			been that walker on richer ground: a curve bent to fit any shape you drew; space folded until
-			two tangled colours came apart; handwriting read out of 784 numbers and no picture; a map that
-			drew itself with nobody holding the pen; a sentence learning to guess its own next word; a
-			boat that found the wind with nothing but a clock; a judge fitted to your eye and then broken
-			by an optimizer; a pocket of numbers taught chess by nothing but games — and, these last two
-			chapters, a machine that is handed nothing at all and hands back a picture. If you want the
-			whole descent laid out, the <a href={resolve('/epilogue')}>epilogue</a> lists it, says who to thank,
-			and tells you where to go next.
+			These two chapters have taught a model to produce a picture. There is another use for a
+			learned representation: predict what an action will do, then use that prediction to choose the
+			action. <ChapterRef slug="world" /> returns to a physical mechanism, gives it experience, and asks
+			it to rehearse a movement before making it. The goal arrives after the model has learned. That changes
+			what we can ask of the same set of weights.
 		</p>
 	</Prose>
 </ChapterShell>

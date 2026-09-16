@@ -5,7 +5,7 @@ writing any chapter code. Deviating from it produces visual noise; don't.
 
 ## What this site is
 
-An interactive book: eleven chapters that teach deep learning by training real
+An interactive book: a prologue and eleven chapters that teach deep learning by training real
 models in the browser (jax-js on WebGPU, in Web Workers). Editorial, minimal,
 warm. Think "physics textbook designed by a gallery": prose in a serif reading
 column, demos as numbered _plates_ (figures), math interleaved and beautiful.
@@ -25,7 +25,6 @@ column, demos as numbered _plates_ (figures), math interleaved and beautiful.
 <script lang="ts">
 	import ChapterShell from '$lib/components/ui/ChapterShell.svelte';
 	import Prose from '$lib/components/ui/Prose.svelte';
-	import Wide from '$lib/components/ui/Wide.svelte';
 	import Math from '$lib/components/ui/Math.svelte';
 	import MyDemo from '$lib/components/demos/MyDemo.svelte';
 </script>
@@ -35,14 +34,12 @@ column, demos as numbered _plates_ (figures), math interleaved and beautiful.
 		<p>Opening paragraphs…</p>
 		<Math
 			display
-			tex={'\\theta_{t+1} = \\theta_t - \\gamma \\nabla_\\theta \\mathcal{L}(\\theta_t)'}
+			tex={'\\theta_{t+1} = \\theta_t - \\eta \\nabla_\\theta \\mathcal{L}(\\theta_t)'}
 		/>
 		<p>More prose…</p>
 	</Prose>
 
-	<Wide>
-		<MyDemo />
-	</Wide>
+	<MyDemo />
 
 	<Prose>
 		<p>Reflection on what the reader just saw…</p>
@@ -51,7 +48,8 @@ column, demos as numbered _plates_ (figures), math interleaved and beautiful.
 ```
 
 - `ChapterShell slug=` must match the route folder and `src/lib/data/chapters.ts`.
-- Prose column is 42rem; `Wide` (demos) is 64rem. Alternate them.
+- Alternate `Prose` with demos that own a `Plate`; the shared rail classes set
+  the reading column and wider figure bands.
 - All interlinks: `import { resolve } from '$app/paths'; href={resolve('/space')}`.
 - All static asset fetches: `import { base } from '$app/paths'; fetch(`${base}/data/foo.bin`)`.
 
@@ -65,14 +63,15 @@ column, demos as numbered _plates_ (figures), math interleaved and beautiful.
   ignored (and, in the diffusion chapters, for noise). Cool hues live inside
   the machine; warm hues come from outside it. Color only terms the
   surrounding prose or a demo refers to by that color.
-- `Plate` — every demo's frame. `<Plate n={1} title="The landscape" caption="…">
+- `Plate` — every demo's frame. `<Plate id="race" title="The landscape" caption="…">
 {#snippet status()}<span>…</span>{/snippet}
 {#snippet actions()}<Btn …>Train</Btn>{/snippet} …stage… </Plate>`.
-  `n` numbers plates _within a chapter_ starting at 1. The caption explains
+  Register its id in `src/lib/data/plates.ts`; the registry numbers plates
+  within a chapter. Refer to it in prose with `PlateRef`. The caption explains
   what the reader is looking at, italic, one or two sentences.
-- `Slider` — `<Slider label="learning rate γ" bind:value min max step format={(v) => …} tone="accent|warm|ink" />`
+- `Slider` — `<Slider label="learning rate η" bind:value min max step format={(v) => …} tone="accent|warm|ink" />`
 - `Btn` — `<Btn kind="primary" onclick={…}>Train</Btn>`; ghost by default.
-- `Prose`, `Wide`, `ChapterShell` as above.
+- `Prose`, `ChapterShell` as above.
 - Icons: `lucide-svelte`, named imports, `size={13|14|16}`, colored via
   `style="color: var(--…)"`, `aria-hidden="true"` when decorative.
 
@@ -176,9 +175,9 @@ Float32Array targets (autoencoder: pass y = x). 2-D toy datasets:
 
 ## Math notation (consistent across chapters)
 
-- Parameters θ, learning rate γ, loss ℒ (\mathcal{L}), gradient ∇ℒ,
+- Parameters θ, learning rate η, loss ℒ (\mathcal{L}), gradient ∇ℒ,
   dataset {(x⁽ⁱ⁾, y⁽ⁱ⁾)}, prediction ŷ = f(x; θ).
 - The update rule is written the same way in every chapter:
-  θ ← θ − γ∇ℒ.
+  θ ← θ − η∇ℒ.
 - Chapter-specific: softmax σ, cross-entropy H(p,q), KL divergence, reward R,
   policy π_θ, return G_t.

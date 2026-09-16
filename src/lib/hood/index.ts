@@ -16,6 +16,7 @@ import { taste } from './taste';
 import { rook } from './rook';
 import { noise } from './noise';
 import { flow } from './flow';
+import { world } from './world';
 
 export const hood: Record<string, HoodChapter> = {
 	home,
@@ -29,7 +30,8 @@ export const hood: Record<string, HoodChapter> = {
 	taste,
 	rook,
 	noise,
-	flow
+	flow,
+	world
 };
 
 export type { HoodChapter, HoodBlock, HoodSection, HoodCode } from './types';

@@ -29,7 +29,8 @@ const DATA = {
 	taste: [],
 	rook: ['rook-tokens.bin', 'rook-vocab.json'],
 	noise: FASHION,
-	flow: FASHION
+	flow: FASHION,
+	world: []
 };
 
 mkdirSync(outDir, { recursive: true });
@@ -38,6 +39,19 @@ for (const slug of readdirSync(join(root, 'labs'))) {
 	if (!(slug in DATA)) continue;
 	const labDir = join(root, 'labs', slug);
 	const files = DATA[slug];
+	// Ship the same implementation as the chapter, including its worker. Keep
+	// this generated copy out of version control so the two cannot drift.
+	if (slug === 'world') {
+		const source = join(root, 'src', 'lib', 'world');
+		const target = join(labDir, 'src', 'world');
+		rmSync(target, { recursive: true, force: true });
+		mkdirSync(target, { recursive: true });
+		for (const file of readdirSync(source)) {
+			if (file.endsWith('.ts') && !file.endsWith('.test.ts') && !file.endsWith('.svelte.ts')) {
+				cpSync(join(source, file), join(target, file));
+			}
+		}
+	}
 	rmSync(join(labDir, 'public'), { recursive: true, force: true });
 	if (files.length > 0) {
 		mkdirSync(join(labDir, 'public', 'data'), { recursive: true });
@@ -45,8 +59,12 @@ for (const slug of readdirSync(join(root, 'labs'))) {
 	}
 	const zipPath = join(outDir, `${slug}.zip`);
 	rmSync(zipPath, { force: true });
-	execFileSync('zip', ['-r', '-q', zipPath, slug, '-x', `${slug}/node_modules/*`], {
-		cwd: join(root, 'labs')
-	});
+	execFileSync(
+		'zip',
+		['-r', '-q', zipPath, slug, '-x', `${slug}/node_modules/*`, `${slug}/dist/*`],
+		{
+			cwd: join(root, 'labs')
+		}
+	);
 	console.log('packed', `${slug}.zip`);
 }

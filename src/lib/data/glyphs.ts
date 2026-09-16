@@ -9,6 +9,7 @@ import {
 	Map,
 	Mountain,
 	PenLine,
+	Route,
 	Scale,
 	Spline,
 	Sparkles,
@@ -30,7 +31,8 @@ export const chapterGlyphs: Record<ChapterSlug, Glyph> = {
 	taste: Scale,
 	rook: Castle,
 	noise: Sparkles,
-	flow: Waves
+	flow: Waves,
+	world: Route
 };
 
 /** The epilogue closes the book, so it gets the book. */

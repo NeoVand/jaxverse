@@ -130,7 +130,7 @@
 		</div>
 
 		<p class="note-p font-serif">
-			Now the question worth carrying into the last chapter: <em>why clip at all?</em> Generate a batch,
+			Now the question worth carrying into the next chapter: <em>why clip at all?</em> Generate a batch,
 			take exactly one gradient step on it, and the ratio is 1 everywhere — the fence is never touched
 			and the whole apparatus is dead weight. It earns its keep only when generation is expensive enough
 			that you take several steps per batch, and the data goes stale under you. How much clipping machinery

@@ -26,11 +26,22 @@ for (const slug of slugs) {
 		stdio: 'ignore'
 	});
 	try {
-		await new Promise((r) => setTimeout(r, 2500));
+		const url = `http://localhost:${port}/`;
+		const readyDeadline = Date.now() + 20_000;
+		while (true) {
+			try {
+				const response = await fetch(url);
+				if (response.ok) break;
+			} catch {
+				/* Vite may still be starting. */
+			}
+			if (Date.now() >= readyDeadline) throw new Error(`Vite did not become ready for ${slug}`);
+			await new Promise((r) => setTimeout(r, 250));
+		}
 		const page = await browser.newPage();
 		const errors = [];
 		page.on('pageerror', (e) => errors.push(String(e)));
-		await page.goto(`http://localhost:${port}/`, { waitUntil: 'load' });
+		await page.goto(url, { waitUntil: 'load' });
 		// wait until the lab reports progress (a step/episode line) or errors out
 		// progress = any step/episode/pairs counter beyond 1 (some labs update one
 		// status line in place rather than appending)

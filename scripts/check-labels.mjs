@@ -32,6 +32,7 @@ const PAGES = [
 	'taste',
 	'noise',
 	'flow',
+	'world',
 	'epilogue'
 ];
 /** Sub-unit overhangs are antialiasing, not a mistake. */

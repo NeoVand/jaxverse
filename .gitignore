@@ -27,6 +27,8 @@ test-results
 # Generated lab artifacts (rebuild with: npm run build:labs)
 labs/*/public
 labs/*/node_modules
+labs/*/dist
+labs/world/src/world
 /static/labs
 .cache/
 

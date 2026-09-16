@@ -12,7 +12,8 @@ export type ChapterSlug =
 	| 'taste'
 	| 'rook'
 	| 'noise'
-	| 'flow';
+	| 'flow'
+	| 'world';
 
 export interface Chapter {
 	slug: ChapterSlug;
@@ -127,6 +128,15 @@ export const chapters: Chapter[] = [
 		kicker: 'Flow matching',
 		deck: 'Aim the model at the shortest route from noise to picture, then learn to steer it. Ask for a boot, or walk the label from sneaker to boot, and watch it draw a garment it was never shown.',
 		minutes: 16,
+		live: true
+	},
+	{
+		slug: 'world',
+		n: 11,
+		title: 'Before the Move',
+		kicker: 'World models',
+		deck: 'A little mechanism learns from pictures and actions. Give it a destination afterward, and watch it rehearse a movement before making it.',
+		minutes: 18,
 		live: true
 	}
 ];

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Lab 11 · Before the Move</title>
+		<style>
+			:root {
+				color-scheme: light dark;
+				--paper: #faf9f5;
+				--ink: #1d1c18;
+				--muted: #746f60;
+				--line: #e5e2d8;
+				--accent: #2b45d8;
+				--warm: #d3541f;
+			}
+			@media (prefers-color-scheme: dark) {
+				:root {
+					--paper: #141310;
+					--ink: #e9e6dc;
+					--muted: #aaa598;
+					--line: #37342b;
+					--accent: #93a3ff;
+					--warm: #ff8e57;
+				}
+			}
+			body {
+				margin: 0 auto;
+				max-width: 760px;
+				padding: 2rem 1.25rem 4rem;
+				background: var(--paper);
+				color: var(--ink);
+				font:
+					13px/1.6 ui-monospace,
+					'SF Mono',
+					Menlo,
+					monospace;
+			}
+			h1 {
+				font-size: 18px;
+				font-weight: 600;
+			}
+			.blurb,
+			.legend {
+				color: var(--muted);
+			}
+			canvas {
+				width: 100%;
+				border: 1px solid var(--line);
+				border-radius: 8px;
+				display: block;
+			}
+			.controls {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 10px;
+				align-items: center;
+				margin: 14px 0;
+			}
+			button,
+			select {
+				background: var(--paper);
+				color: var(--ink);
+				border: 1px solid var(--line);
+				border-radius: 4px;
+				padding: 9px 12px;
+				font: inherit;
+			}
+			button:not(:disabled) {
+				cursor: pointer;
+			}
+			button:disabled {
+				opacity: 0.4;
+			}
+			button:focus-visible,
+			select:focus-visible,
+			input:focus-visible {
+				outline: 2px solid var(--accent);
+				outline-offset: 3px;
+			}
+			label {
+				display: flex;
+				gap: 8px;
+				align-items: center;
+			}
+			pre {
+				white-space: pre-wrap;
+				overflow-wrap: anywhere;
+				min-height: 8em;
+			}
+			a {
+				color: inherit;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Lab 11 · Before the Move</h1>
+		<p class="blurb">
+			Learn consequences from experience, then ask for a destination. From
+			<a href="https://github.com/NeoVand/jaxverse">jaxverse</a> — the little universe of learning
+			machines.
+		</p>
+		<canvas
+			id="stage"
+			width="900"
+			height="620"
+			aria-label="Actual mechanism, goal outline, and decoded candidate futures"
+		></canvas>
+		<p class="legend">
+			Ink: actual · warm: goal · blue: predicted poses. Ghosts are diagnostic readouts, not sensor
+			inputs.
+		</p>
+		<div class="controls">
+			<button id="train" disabled>Train 5,000 more steps</button>
+			<button id="plan" disabled>Consider a move</button>
+			<button id="apply" disabled>Apply first action</button>
+			<button id="reset" disabled>Reset mechanism</button>
+		</div>
+		<div class="controls">
+			<label
+				>Goal
+				<select id="goal">
+					<option value="0">Unfold</option>
+					<option value="1">Return</option>
+					<option value="2">Curl</option>
+				</select></label
+			>
+			<label
+				><input id="hold" type="checkbox" /> Stay near the goal over the last four
+				predictions</label
+			>
+		</div>
+		<pre id="out" aria-live="polite">Generating exploratory experience…</pre>
+		<script type="module" src="/src/main.ts"></script>
+	</body>
+</html>

@@ -17,7 +17,8 @@ const CHAPTERS = {
 	reward: 2,
 	rook: 3,
 	noise: 2,
-	flow: 1
+	flow: 1,
+	world: 3
 };
 
 const browser = await chromium.launch({ headless: true });

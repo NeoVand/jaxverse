@@ -51,9 +51,15 @@
 			</li>
 			<li>
 				<a href="https://github.com/zalandoresearch/fashion-mnist" rel="external">Fashion-MNIST</a>
-				(Zalando Research, MIT) — the ten classes of clothing the last two chapters learn to draw, a drop-in
-				replacement for MNIST that is still small enough to train on in a browser tab and various enough
-				that a silhouette can be judged by eye.
+				(Zalando Research, MIT) — the ten classes of clothing the diffusion and flow chapters learn to
+				draw, a drop-in replacement for MNIST that is still small enough to train on in a browser tab
+				and various enough that a silhouette can be judged by eye.
+			</li>
+			<li>
+				<a href="https://github.com/lucas-maes/le-wm" rel="external">LeWorldModel</a>
+				by Maes and collaborators — the openly available training recipe behind the last chapter's jointly
+				learned encoder and dynamics model. The browser mechanism, smaller architecture, and control experiments
+				are this book's adaptation.
 			</li>
 			<li>
 				Kenneth Li et&nbsp;al.,

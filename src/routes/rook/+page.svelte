@@ -346,18 +346,18 @@
 			single move ahead.<Cite id="ruoss-2024" />
 		</p>
 		<p>
-			And that is every machine in this book that answers a question. A loss surface and a step
-			downhill; a neuron, a bump of influence; space bent until classes come apart; handwriting read
-			out of 784 numbers and no picture; a map that draws itself; a game of guess-the-next-word; a
-			policy beating to windward with nothing to go on but a clock; a judge fitted to your own eye
-			and then broken by an optimizer — and here, all of it at once, teaching a pocket of numbers to
-			play a game whose rules nobody told it. None of it stayed mysterious once you could watch the
-			gradients move. That was the point.
+			Look at how the machines so far fit together. A loss surface and a step downhill; a neuron, a
+			bump of influence; space bent until classes come apart; handwriting read out of 784 numbers
+			and no picture; a map that draws itself; a game of guess-the-next-word; a policy beating to
+			windward with nothing to go on but a clock; a judge fitted to your own eye and then broken by
+			an optimizer — and here, all of it at once, teaching a pocket of numbers to play a game whose
+			rules nobody told it. None of it stayed mysterious once you could watch the gradients move.
+			That was the point.
 		</p>
 		<p>
-			Two chapters are left, and they are about the other thing a machine can do with what it has
-			learned. Everything so far was handed something and asked about it. What remains is handed
-			nothing at all.
+			The next two chapters ask a model to make pictures. The final chapter will return to a
+			physical world and use learned predictions to choose actions. First, let a machine start with
+			noise and draw something you can recognize.
 		</p>
 	</Prose>
 </ChapterShell>
